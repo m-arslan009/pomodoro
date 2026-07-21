@@ -4,7 +4,7 @@ import LogInPage from './pages/LogInPage.jsx'
 import SignUpPage from './pages/SignUpPage.jsx'
 import TimerPage from './pages/TimerPage.jsx'
 import HistoryPage from './pages/HistoryPage.jsx'
-import StatsPage from './pages/StatsPage.jsx'
+import SettingPage from './pages/SettingPage.jsx'
 import ProfilePage from './pages/ProfilePage.jsx'
 
 function App() {
@@ -16,7 +16,7 @@ function App() {
       <Route path="/signup" element={<SignUpPage />} />
       <Route path="/timer" element={<TimerPage />} />
       <Route path="/history" element={<HistoryPage />} />
-      <Route path="/stats" element={<StatsPage />} />
+      <Route path="/settings" element={<SettingPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -65,3 +65,9 @@
 `Title`: Build responsive History page aggregating performance records into glassmorphic KPI and chart tiles
 
 `User prompt`: Implement a modern, fully responsive History page that aggregates a user's historical performance records and current productivity status using a clean layout of four to five glassmorphic tiles, following the foresty theme. The dashboard must use a flexible layout that renders as a balanced grid on desktop with generous gaps between components, while collapsing into a single, vertically prioritized column on mobile. Textually and graphically present current user status metrics—accumulated points, completed tasks, completed sessions, incomplete tasks, and terminated sessions—distributed across specialized tiles. Feature a high-level summary tile presenting key textual KPIs using fluid typography that never crowds the container on intermediate screen sizes, paired with premium interactive charts (glassmorphic area, line, or comparative bar graphs using vibrant, low-opacity glowing accent lines) to map and compare progress over daily, weekly, or monthly intervals. Every tile must adhere to the design language: deep translucent backgrounds, intense backdrop blur, a crisp ultra-thin low-opacity border, soft ambient drop shadows, and ample internal breathing room so labels, legends, and lists scale down smoothly without clipping or congestion toward the mobile breakpoint.
+
+## Settings page — editable timer durations
+
+`Title`: Repurpose Stats page into a foresty glassmorphic Settings page for editing session and break durations
+
+`User prompt`: Implement the setting page. Change the current page src/pages/StatsPage.jsx to src/pages/SettingPage.jsx and also update the routes. This page allows the user to edit time duration for session and break for now. Later when implementing phase 2 and phase 3 the setting page will be updated as moving further. Keep the foresty and glassmorphic theme.

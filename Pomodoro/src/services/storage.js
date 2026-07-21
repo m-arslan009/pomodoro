@@ -145,3 +145,57 @@ export function getGamification() {
 export function saveGamification(value) {
   return write(GAMIFICATION_KEY, value)
 }
+
+/* ------------------------------------------------------------ Settings -- */
+/*
+ * User preferences. Phase 1 only exposes the two Pomodoro durations; theme,
+ * custom labels, etc. (see idea.md's schema) are layered on in later phases,
+ * so getSettings preserves any unknown persisted fields and only sanitizes the
+ * ones it owns.
+ *
+ *   settings -> { workMinutes:25, breakMinutes:5, ... }
+ */
+
+const SETTINGS_KEY = 'settings'
+
+/** Factory defaults for the durations the Settings page can edit. */
+export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5 }
+
+/** Safe editable ranges (whole minutes) for each duration. */
+export const DURATION_LIMITS = {
+  work: { min: 1, max: 120 },
+  break: { min: 1, max: 60 },
+}
+
+/** Round to a whole number and clamp into [min, max]; fall back when invalid. */
+function clampMinutes(value, min, max, fallback) {
+  const n = Math.round(Number(value))
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, n))
+}
+
+/** Persisted settings, merged over defaults with the durations sanitized. */
+export function getSettings() {
+  const value = read(SETTINGS_KEY, null)
+  const base = value && typeof value === 'object' ? value : {}
+  return {
+    ...base,
+    workMinutes: clampMinutes(
+      base.workMinutes,
+      DURATION_LIMITS.work.min,
+      DURATION_LIMITS.work.max,
+      DEFAULT_SETTINGS.workMinutes,
+    ),
+    breakMinutes: clampMinutes(
+      base.breakMinutes,
+      DURATION_LIMITS.break.min,
+      DURATION_LIMITS.break.max,
+      DEFAULT_SETTINGS.breakMinutes,
+    ),
+  }
+}
+
+/** Persist the full settings object. */
+export function saveSettings(value) {
+  return write(SETTINGS_KEY, value)
+}

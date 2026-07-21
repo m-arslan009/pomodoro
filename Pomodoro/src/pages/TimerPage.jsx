@@ -14,6 +14,7 @@ import {
   saveSessions,
   getGamification,
   saveGamification,
+  getSettings,
 } from '../services/storage.js'
 import '../styles/TimerPage.css'
 
@@ -44,8 +45,6 @@ const POINTS = {
   terminatePenalty: 200,
 }
 
-const WORK_MINUTES = 25
-const BREAK_MINUTES = 5
 const DAILY_GOAL = 4
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -90,6 +89,11 @@ function pruneSessions(sessions, now = Date.now()) {
 }
 
 function TimerPage() {
+  // Focus/break lengths come from the user's saved Settings, read once on mount;
+  // navigating back from Settings remounts this page so a change takes effect on
+  // the next session without disrupting one already running.
+  const [{ workMinutes, breakMinutes }] = useState(() => getSettings())
+
   // Hydrate from storage, applying retention rules once on mount.
   const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()))
   const [sessions, setSessions] = useState(() => pruneSessions(getSessions()))
@@ -169,7 +173,7 @@ function TimerPage() {
         {
           id: makeId(),
           taskTitle,
-          durationMs: WORK_MINUTES * 60 * 1000,
+          durationMs: workMinutes * 60 * 1000,
           endedAt: new Date().toISOString(),
           status: 'completed',
         },
@@ -183,12 +187,12 @@ function TimerPage() {
           : `Session complete! +${POINTS.complete} points. Break time.`,
       })
     },
-    [activeTask, activeTaskId, streak],
+    [activeTask, activeTaskId, streak, workMinutes],
   )
 
   const timer = usePomodoroTimer({
-    workMinutes: WORK_MINUTES,
-    breakMinutes: BREAK_MINUTES,
+    workMinutes,
+    breakMinutes,
     onComplete: handleComplete,
   })
 

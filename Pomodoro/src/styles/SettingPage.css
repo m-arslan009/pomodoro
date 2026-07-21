@@ -1,0 +1,315 @@
+/*
+ * SettingPage — a single glassmorphic settings card scoped inside the forest
+ * .app-shell. It reuses the shell's forest + glass tokens (--fg-*, --glass-*)
+ * so the aesthetic matches the Timer and History dashboards: translucent fills,
+ * intense backdrop blur, ultra-thin borders and soft ambient shadows.
+ *
+ * FULLY FLUID: one clamp-based type/space scale (mirrors HistoryPage) drives
+ * every size, so the card and its duration controls contract smoothly toward
+ * the mobile breakpoint. Mobile-first: the two duration fields stack in a single
+ * column and split into two from 640px where there is room.
+ */
+
+.settings-page {
+  /* Shared crimson danger accent (matches the Timer/History error tone) */
+  --sp-bad: #e0736b;
+  --sp-bad-bg: rgba(224, 115, 107, 0.16);
+  --sp-bad-border: rgba(224, 115, 107, 0.45);
+
+  /* Fluid type scale */
+  --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
+  --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  --fs-body: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  --fs-page-title: clamp(1.5rem, 1rem + 2.4vw, 2.35rem);
+
+  /* Fluid spacing scale */
+  --gap-1: clamp(6px, 0.4vw + 4px, 10px);
+  --gap-2: clamp(10px, 0.6vw + 6px, 16px);
+  --gap-3: clamp(14px, 1vw + 8px, 22px);
+  --card-pad: clamp(18px, 1.4vw + 12px, 30px);
+
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------- Head */
+.settings-page__head {
+  margin-bottom: var(--gap-3);
+}
+
+.settings-page__title {
+  margin: 0 0 var(--gap-1);
+  font-size: var(--fs-page-title);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--fg-brand);
+}
+
+.settings-page__subtitle {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- The card */
+.settings-card {
+  box-sizing: border-box;
+  padding: var(--card-pad);
+  border-radius: clamp(16px, 1vw + 12px, 22px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    0 18px 40px -18px rgba(4, 10, 6, 0.7),
+    0 2px 8px -4px rgba(4, 10, 6, 0.5);
+}
+
+.settings-card__head {
+  margin-bottom: var(--gap-3);
+}
+
+.settings-card__title {
+  margin: 0 0 6px;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
+}
+
+.settings-card__hint {
+  margin: 0;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------- Duration fields */
+.settings-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap-3);
+}
+
+@media (min-width: 640px) {
+  .settings-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.duration-field {
+  min-width: 0;
+  padding: var(--gap-3);
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
+  background-color: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(243, 247, 236, 0.06);
+}
+
+.duration-field__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.duration-field__desc {
+  margin: 0 0 var(--gap-2);
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+
+/* Stepper − / value / + row */
+.duration-field__control {
+  display: flex;
+  align-items: stretch;
+  gap: var(--gap-1);
+}
+
+.duration-field__step {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  line-height: 1;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.duration-field__step:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+  background: var(--glass-hover);
+  color: var(--fg-wood);
+}
+
+.duration-field__step:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.duration-field__step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Value box: number input plus its trailing unit, framed as one control */
+.duration-field__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 var(--gap-1);
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.duration-field__value:focus-within {
+  border-color: var(--fg-wood);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.duration-field__input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg-brand);
+  font: inherit;
+  font-size: clamp(1.15rem, 0.9rem + 0.9vw, 1.45rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.duration-field__input::-webkit-outer-spin-button,
+.duration-field__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.duration-field__input:focus {
+  outline: none;
+}
+
+.duration-field__unit {
+  flex-shrink: 0;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.duration-field__range {
+  margin: var(--gap-1) 0 0;
+  font-size: var(--fs-eyebrow);
+  color: var(--fg-muted);
+}
+
+/* Field on error: red frame + inline message */
+.duration-field__value:has(.duration-field__input[aria-invalid='true']) {
+  border-color: var(--sp-bad-border);
+  background: var(--sp-bad-bg);
+}
+
+.duration-field__error {
+  margin: var(--gap-1) 0 0;
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  color: var(--sp-bad);
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------- Actions */
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gap-2);
+  margin-top: var(--gap-3);
+  padding-top: var(--gap-3);
+  border-top: 1px solid var(--glass-border);
+}
+
+.settings-btn {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+@media (min-width: 480px) {
+  .settings-btn {
+    flex: 0 0 auto;
+  }
+}
+
+.settings-btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.settings-btn--ghost {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-text);
+}
+
+.settings-btn--ghost:hover {
+  border-color: var(--fg-wood);
+  color: var(--fg-wood);
+  background: var(--glass-hover);
+}
+
+.settings-btn--primary {
+  background: var(--fg-accent);
+  border: 1px solid var(--fg-accent);
+  color: #10230f;
+}
+
+.settings-btn--primary:hover:not(:disabled) {
+  background: var(--fg-leaf);
+  border-color: var(--fg-leaf);
+}
+
+.settings-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------- Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .duration-field__step,
+  .duration-field__value,
+  .settings-btn {
+    transition: none;
+  }
+}
