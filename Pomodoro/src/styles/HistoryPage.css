@@ -1,0 +1,646 @@
+/*
+ * HistoryPage — a responsive dashboard of glassmorphic tiles scoped inside the
+ * forest .app-shell. It reuses the shell's forest + glass tokens (--fg-*,
+ * --glass-*) so the aesthetic stays identical to the Timer dashboard: deep
+ * translucent fills, intense backdrop blur, crisp ultra-thin borders and soft
+ * ambient shadows. The only added colours are the shared crimson danger accent
+ * and a couple of chart-glow helpers.
+ *
+ * FULLY FLUID: one clamp-based type/space scale drives every font size and
+ * interior gap so labels, legends and lists contract smoothly toward the mobile
+ * breakpoint without clipping or congestion.
+ *
+ * Grid: a single vertically-prioritised column by default; a balanced two-column
+ * layout from 992px where the summary header and the recent-sessions log span
+ * the full width and the two charts share a row.
+ */
+
+.history-page {
+  /* Shared danger accent (matches the Timer's crimson) */
+  --hp-bad: #e0736b;
+  --hp-bad-bg: rgba(224, 115, 107, 0.16);
+  --hp-bad-border: rgba(224, 115, 107, 0.45);
+
+  /* Semantic tones for KPIs / bars */
+  --hp-good: var(--fg-accent);
+  --hp-neutral: var(--fg-wood);
+  --hp-muted: var(--fg-muted);
+
+  /* Fluid type scale */
+  --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
+  --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  --fs-body: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  --fs-stat: clamp(1.3rem, 1rem + 1.4vw, 1.9rem);
+  --fs-score: clamp(2.3rem, 1.5rem + 3.8vw, 3.5rem);
+  --fs-page-title: clamp(1.5rem, 1rem + 2.4vw, 2.35rem);
+
+  /* Fluid spacing scale */
+  --sp-1: clamp(6px, 0.4vw + 4px, 10px);
+  --sp-2: clamp(10px, 0.6vw + 6px, 16px);
+  --sp-3: clamp(14px, 1vw + 8px, 22px);
+  --tile-pad: clamp(18px, 1.4vw + 12px, 30px);
+
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------- Head */
+.history-page__head {
+  margin-bottom: var(--sp-3);
+}
+
+.history-page__title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-page-title);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--fg-brand);
+}
+
+.history-page__subtitle {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ Dashboard grid */
+.history-dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(16px, 2vw, 26px);
+  align-items: stretch;
+}
+
+@media (min-width: 992px) {
+  .history-dashboard {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* The KPI header spans the full width above the paired charts. */
+  .hp-summary {
+    grid-column: 1 / -1;
+  }
+}
+
+/* --------------------------------------------------------------- Base tile */
+.hp-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 200px;
+  box-sizing: border-box;
+  padding: var(--tile-pad);
+  border-radius: clamp(16px, 1vw + 12px, 22px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    0 18px 40px -18px rgba(4, 10, 6, 0.7),
+    0 2px 8px -4px rgba(4, 10, 6, 0.5);
+}
+
+.hp-tile__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+/* On chart tiles the control/legend can wrap under the title on narrow widths. */
+.hp-tile__head--stacked {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.hp-tile__title {
+  margin: 0;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-muted);
+}
+
+.hp-tile__subtitle {
+  margin: 4px 0 0;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+
+.hp-tile__meta {
+  flex-shrink: 0;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  white-space: nowrap;
+}
+
+.hp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -------------------------------------------------------------- Empty state */
+.hp-empty {
+  margin: auto 0;
+  padding: var(--sp-3) 4px;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ------------------------------------------------------ Shared meter / bar */
+.hp-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.hp-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--fg-leaf), var(--fg-accent));
+  transition: width 0.5s ease;
+}
+
+.hp-bar__fill--good {
+  background: linear-gradient(90deg, var(--fg-leaf), var(--fg-accent));
+}
+
+.hp-bar__fill--bad {
+  background: linear-gradient(90deg, rgba(224, 115, 107, 0.6), var(--hp-bad));
+}
+
+.hp-bar__fill--neutral {
+  background: linear-gradient(90deg, rgba(213, 155, 108, 0.55), var(--fg-wood));
+}
+
+.hp-bar__fill--muted {
+  background: linear-gradient(90deg, rgba(174, 191, 160, 0.4), var(--fg-muted));
+}
+
+/* =============================================================== Summary */
+.hp-summary__hero {
+  margin-bottom: var(--sp-3);
+}
+
+.hp-summary__score {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-1);
+  margin: 0;
+}
+
+.hp-summary__score-value {
+  font-size: var(--fs-score);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fg-brand);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.hp-summary__score-unit {
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+
+.hp-summary__score-caption {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+
+/* Auto-fit so the four KPIs flow 4 → 2 → 1 without ever crowding. */
+.hp-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+}
+
+.hp-kpi {
+  min-width: 0;
+  padding: var(--sp-2) calc(var(--sp-2) + 2px);
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
+  background-color: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(243, 247, 236, 0.06);
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.hp-kpi:hover {
+  border-color: rgba(243, 247, 236, 0.28);
+}
+
+.hp-kpi__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: var(--fs-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  line-height: 1.3;
+}
+
+/* Small tone indicator replaces the old left accent border. */
+.hp-kpi__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--glass-border);
+}
+
+.hp-kpi--good .hp-kpi__dot {
+  background: var(--hp-good);
+  box-shadow: 0 0 8px 0 rgba(207, 230, 180, 0.55);
+}
+
+.hp-kpi--bad .hp-kpi__dot {
+  background: var(--hp-bad);
+  box-shadow: 0 0 8px 0 rgba(224, 115, 107, 0.5);
+}
+
+.hp-kpi--muted .hp-kpi__dot {
+  background: var(--hp-muted);
+}
+
+.hp-kpi__value {
+  margin: 0;
+  font-size: var(--fs-stat);
+  font-weight: 600;
+  color: var(--fg-brand);
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-summary__rate {
+  margin-top: auto;
+}
+
+.hp-summary__rate-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+
+/* ==================================================== Segmented control */
+.hp-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  flex-wrap: wrap;
+}
+
+.hp-segment__btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.hp-segment__btn:hover {
+  color: var(--fg-brand);
+}
+
+.hp-segment__btn--active {
+  background: var(--glass-bg-strong);
+  color: var(--fg-brand);
+  box-shadow: 0 1px 6px -2px rgba(4, 10, 6, 0.6);
+}
+
+.hp-segment__btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/* ================================================================ Legend */
+.hp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-label);
+  color: var(--fg-text);
+}
+
+.hp-legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.hp-legend__swatch--good {
+  background: var(--hp-good);
+  box-shadow: 0 0 8px 0 rgba(207, 230, 180, 0.55);
+}
+
+.hp-legend__swatch--bad {
+  background: var(--hp-bad);
+  box-shadow: 0 0 8px 0 rgba(224, 115, 107, 0.5);
+}
+
+/* ================================================================= Charts */
+/*
+ * The plot is measured pixel-for-pixel (see AreaTrendChart / ComparisonBarChart);
+ * this wrapper is the positioning context for the absolutely-placed HTML labels
+ * and tooltip, so nothing about the chart depends on a stretched viewBox.
+ */
+.hp-chart {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 210px;
+}
+
+.hp-chart__svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.hp-chart__grid {
+  stroke: var(--glass-border);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.hp-chart__baseline {
+  stroke: var(--glass-border);
+  stroke-width: 1;
+}
+
+/* Vibrant low-opacity glow on the accent line and bars. */
+.hp-chart__line {
+  filter: drop-shadow(0 0 6px rgba(207, 230, 180, 0.55));
+}
+
+.hp-chart__bar {
+  transition: opacity 0.18s ease;
+}
+
+.hp-chart__bar--good {
+  filter: drop-shadow(0 0 5px rgba(207, 230, 180, 0.45));
+}
+
+.hp-chart__bar--bad {
+  filter: drop-shadow(0 0 5px rgba(224, 115, 107, 0.4));
+}
+
+.hp-chart__dot {
+  stroke: var(--glass-bg-strong);
+  stroke-width: 2;
+  transition: r 0.15s ease;
+}
+
+.hp-chart__dot--active {
+  filter: drop-shadow(0 0 6px rgba(207, 230, 180, 0.7));
+}
+
+.hp-chart__crosshair {
+  stroke: var(--glass-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+/* ---- X-axis labels: real HTML so they stay readable and never clip ---- */
+.hp-chart__labels {
+  position: relative;
+  height: 1.4em;
+  margin-top: 6px;
+}
+
+.hp-chart__label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: var(--fs-eyebrow);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+/* ---- Tooltip: floats above the active mark ---- */
+.hp-chart__tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 10px 28px -12px rgba(4, 10, 6, 0.8);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.hp-chart__tooltip-label {
+  font-size: var(--fs-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+
+.hp-chart__tooltip-value {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.hp-chart__tooltip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-label);
+  color: var(--fg-text);
+}
+
+.hp-chart__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.hp-chart__swatch--good {
+  background: var(--hp-good);
+}
+
+.hp-chart__swatch--bad {
+  background: var(--hp-bad);
+}
+
+/* ======================================================== Task outcomes */
+.hp-outcome__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.hp-outcome__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+}
+
+.hp-outcome__label {
+  font-size: var(--fs-body);
+  color: var(--fg-text);
+}
+
+.hp-outcome__count {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--fg-brand);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.hp-outcome__share {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+
+/* ====================================================== Recent sessions */
+.hp-recent__scroll {
+  overflow: auto;
+  /* Header + ~5 rows, then scroll; the tile height stays stable as the log
+     grows. Scrollbar hidden for a cleaner look (still scrolls). */
+  max-height: calc(5 * 3.1rem + 2.75rem);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hp-recent__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hp-recent__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-label);
+}
+
+.hp-recent__table th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  font-weight: 500;
+  font-size: var(--fs-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  padding: var(--sp-1) 10px;
+  background: var(--glass-bg-strong);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.hp-recent__table td {
+  padding: var(--sp-2) 10px;
+  color: var(--fg-text);
+  border-bottom: 1px solid var(--glass-border);
+  vertical-align: middle;
+}
+
+.hp-recent__table tr:last-child td {
+  border-bottom: none;
+}
+
+.hp-recent__task {
+  overflow-wrap: anywhere;
+}
+
+.hp-recent__when {
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+
+.hp-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid var(--glass-border);
+}
+
+.hp-badge--completed {
+  color: var(--fg-accent);
+  background: var(--glass-hover);
+  border-color: var(--fg-accent);
+}
+
+.hp-badge--terminated {
+  color: var(--hp-bad);
+  background: var(--hp-bad-bg);
+  border-color: var(--hp-bad-border);
+}
+
+/* --------------------------------------------------------- Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .hp-bar__fill,
+  .hp-chart__bar,
+  .hp-chart__dot,
+  .hp-segment__btn,
+  .hp-kpi {
+    transition: none;
+  }
+}
