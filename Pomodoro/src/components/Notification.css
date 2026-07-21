@@ -1,0 +1,140 @@
+/*
+ * Notification / toast — fixed to the top of the viewport, above all content.
+ * Semantic colors per type; readable in both light and dark schemes.
+ * Never wider than the screen; wraps long messages instead of overflowing.
+ */
+
+.toast-region {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: min(92vw, 440px);
+  pointer-events: none; /* let clicks pass through the empty region… */
+}
+
+.toast {
+  pointer-events: auto; /* …but the toast itself is interactive */
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--toast-border);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.55);
+  animation: toast-in 0.22s ease-out;
+}
+
+.toast__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--toast-accent);
+}
+
+.toast__message {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+.toast__label {
+  font-weight: 700;
+  color: var(--toast-accent);
+}
+
+.toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.toast__close:hover {
+  opacity: 1;
+  background: rgba(127, 127, 127, 0.16);
+}
+
+.toast__close:focus-visible {
+  outline: 2px solid var(--toast-accent);
+  outline-offset: 1px;
+  opacity: 1;
+}
+
+/* -------------------------------------------------- Semantic color roles -- */
+.toast--success {
+  --toast-bg: #ecfdf3;
+  --toast-fg: #08351d;
+  --toast-border: #a7e3c0;
+  --toast-accent: #12864e;
+}
+
+.toast--error {
+  --toast-bg: #fef2f2;
+  --toast-fg: #3f1212;
+  --toast-border: #f3b4b4;
+  --toast-accent: #c0322b;
+}
+
+.toast--warning {
+  --toast-bg: #fffbeb;
+  --toast-fg: #3d2c04;
+  --toast-border: #f2d68a;
+  --toast-accent: #a9760a;
+}
+
+@media (prefers-color-scheme: dark) {
+  .toast--success {
+    --toast-bg: #0f2a1c;
+    --toast-fg: #d6f5e3;
+    --toast-border: #1f5738;
+    --toast-accent: #4ade80;
+  }
+
+  .toast--error {
+    --toast-bg: #2c1414;
+    --toast-fg: #fbdada;
+    --toast-border: #5f2626;
+    --toast-accent: #f87171;
+  }
+
+  .toast--warning {
+    --toast-bg: #2b2410;
+    --toast-fg: #f7ecc8;
+    --toast-border: #5c4a1c;
+    --toast-accent: #fbbf24;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

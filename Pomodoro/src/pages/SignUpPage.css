@@ -1,0 +1,291 @@
+/*
+ * Sign Up page — same forest aesthetic as the landing page, applied to a
+ * centered auth card. Palette is scoped to `.signup` so the global theme in
+ * index.css stays untouched (per convention.md). Mobile-first; the only
+ * layout breakpoint (name fields side-by-side → stacked) is 576px.
+ */
+
+/*
+ * Break out of the centered 1126px #root column so the forest background
+ * fills the viewport. Scoped with :has() so other pages keep the column.
+ * Unlike the landing page, the auth page is allowed to scroll vertically
+ * because a tall form must never be clipped on short screens.
+ */
+#root:has(.signup) {
+  width: 100%;
+  max-width: 100%;
+  border-inline: none;
+  text-align: left;
+}
+
+.signup {
+  --su-brand: #cfe6b4;
+  --su-moss: #a9c98d;
+  --su-wood: #d59b6c;
+  --su-wood-strong: #e6b184;
+  --su-heading: #f3f7ec;
+  --su-text: #d3ddca;
+  --su-muted: #aab8a0;
+  --su-line: rgba(243, 247, 236, 0.22);
+  --su-on-brand: #10200f;
+  --su-danger: #f2a3a3;
+
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  color: var(--su-text);
+
+  background-image:
+    linear-gradient(
+      105deg,
+      rgba(8, 18, 12, 0.86) 0%,
+      rgba(8, 18, 12, 0.62) 55%,
+      rgba(8, 18, 12, 0.5) 100%
+    ),
+    url('../assets/forest-bg.svg');
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-position: center, center bottom;
+  background-attachment: fixed;
+}
+
+/* ------------------------------------------------------------------ Main -- */
+.signup-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 4vw, 48px) clamp(16px, 5vw, 48px);
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 460px;
+  padding: clamp(24px, 5vw, 40px);
+  border-radius: 18px;
+  border: 1px solid var(--su-line);
+  background: rgba(10, 22, 15, 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+}
+
+.signup-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--su-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.signup-brand:focus-visible {
+  outline: 2px solid var(--su-wood);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.signup-leaf {
+  color: var(--su-moss);
+  font-size: 1.4em;
+  flex-shrink: 0;
+}
+
+.signup-title {
+  margin: 20px 0 0;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--su-heading);
+}
+
+.signup-subtitle {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--su-muted);
+}
+
+/* ------------------------------------------------------------------ Form -- */
+.signup-form {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* First + last name: two columns from the small breakpoint up. */
+.signup-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.signup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.signup-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--su-heading);
+}
+
+.signup-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.signup-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--su-line);
+  background: rgba(8, 16, 11, 0.6);
+  color: var(--su-heading);
+  font: inherit;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+/* Reserve room so text never slides under the Show/Hide toggle. */
+.signup-control:has(.signup-toggle) .signup-input {
+  padding-right: 68px;
+}
+
+.signup-input::placeholder {
+  color: var(--su-muted);
+}
+
+.signup-input:hover {
+  border-color: rgba(243, 247, 236, 0.35);
+}
+
+.signup-input:focus-visible {
+  outline: none;
+  border-color: var(--su-moss);
+  box-shadow: 0 0 0 3px rgba(169, 201, 141, 0.25);
+}
+
+.signup-field--invalid .signup-input {
+  border-color: var(--su-danger);
+}
+
+.signup-field--invalid .signup-input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(242, 163, 163, 0.25);
+}
+
+.signup-error {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--su-danger);
+  overflow-wrap: break-word;
+}
+
+.signup-toggle {
+  position: absolute;
+  right: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--su-moss);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.signup-toggle:hover {
+  background: rgba(169, 201, 141, 0.14);
+}
+
+.signup-toggle:focus-visible {
+  outline: 2px solid var(--su-wood);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------- Actions -- */
+.signup-submit {
+  margin-top: 4px;
+  width: 100%;
+  padding: 13px 24px;
+  border-radius: 10px;
+  border: 1.5px solid var(--su-moss);
+  background: var(--su-moss);
+  color: var(--su-on-brand);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.signup-submit:hover:not(:disabled) {
+  background: var(--su-brand);
+  border-color: var(--su-brand);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.7);
+}
+
+.signup-submit:focus-visible {
+  outline: 2px solid var(--su-wood-strong);
+  outline-offset: 2px;
+}
+
+.signup-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.signup-redirect {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--su-muted);
+}
+
+.signup-redirect__link {
+  color: var(--su-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signup-redirect__link:hover {
+  text-decoration: underline;
+}
+
+.signup-redirect__link:focus-visible {
+  outline: 2px solid var(--su-wood);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* -------------------------------------------- Small breakpoint (>576px) -- */
+@media (min-width: 577px) {
+  .signup-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signup-submit,
+  .signup-input,
+  .signup-toggle {
+    transition: none;
+  }
+}
