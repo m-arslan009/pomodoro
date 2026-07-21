@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import './Notification.css'
+import '../styles/Notification.css'
 
 /*
  * Notification — reusable global toast for major event outcomes.

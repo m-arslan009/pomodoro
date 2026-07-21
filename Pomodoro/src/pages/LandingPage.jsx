@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import './LandingPage.css'
+import '../styles/LandingPage.css'
 
 const APP_NAME = 'Evergrove'
 

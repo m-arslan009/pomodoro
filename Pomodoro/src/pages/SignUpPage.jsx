@@ -15,7 +15,7 @@ import {
   findUserByEmail,
   findUserByUsername,
 } from '../services/storage.js'
-import './SignUpPage.css'
+import '../styles/SignUpPage.css'
 
 const APP_NAME = 'Evergrove'
 
