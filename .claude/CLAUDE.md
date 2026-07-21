@@ -16,7 +16,8 @@ focus on daily tasks and stay motivated through a points-and-titles gamification
   doubling thresholds unlocks titles, each of which unlocks a previewable, gated feature.
 - **Personalization:** editable profile, focus/break durations, and theme.
 
-Full product plan lives in [`idea.md`](idea.md); 
+Full product plan lives in [`idea.md`](idea.md); significant prompts are logged in
+[`../prompt.md`](../prompt.md).
 
 ## Commands
 Run from the `Pomodoro/` app directory.
@@ -32,7 +33,8 @@ Run from the `Pomodoro/` app directory.
 
 ## Directory architecture
 ```
-.claude/                <- governance: this file, convention.md, locked_decisions.md, rules/
+.claude/                <- governance: this file, convention.md, locked_decisions.md,
+│                          idea.md (product plan), rules/
 Pomodoro/               <- the Vite + React app (run npm commands here)
 └── src/
     ├── main.jsx        <- entry: BrowserRouter > App
@@ -45,8 +47,7 @@ Pomodoro/               <- the Vite + React app (run npm commands here)
     ├── services/       <- storage.js (localStorage), gamification.js (points/titles)
     ├── styles/         <- shared CSS
     └── assets/         <- images and static assets
-idea.md                 <- full product plan / architecture
-prompt.md               <- log of significant user prompts
+prompt.md               <- log of significant user prompts (repo root)
 ```
 
 ## Reference rules (progressive disclosure)
@@ -56,5 +57,7 @@ Consult these before writing code or making structural decisions:
   git/prompt/responsive rules. *Read before writing or changing code.*
 - **[`locked_decisions.md`](locked_decisions.md)** — settled architecture and tech-stack
   constraints. *Read before proposing structural changes.*
-- **[`rules/`](rules/)** — task-specific workflow rules (GitHub, prompt recording,
-  responsive design). *Follow the one relevant to the task at hand.*
+- **[`rules/`](rules/)** — task-specific workflow rules: **general-coding** (frontend
+  guardrails — always applies), **github** (commits/push), **prompt-recording**
+  (`prompt.md` logging), **responsive-design** (breakpoints). *Follow the one relevant to
+  the task at hand.*

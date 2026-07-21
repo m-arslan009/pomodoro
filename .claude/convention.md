@@ -3,6 +3,10 @@
 Granular implementation and design rules. `CLAUDE.md` links here so the root file stays
 lean; keep everything about *how code should be written* in this file.
 
+> **Baseline:** [`rules/general-coding.md`](rules/general-coding.md) is the frontend
+> guardrail set (reuse, components, a11y, state/error handling, performance) and applies
+> to every change. The rules below are project-specific choices layered on top of it.
+
 ## Language & paradigm
 - **JavaScript only** (`.jsx`), never TypeScript.
 - Keep components functional; keep hooks pure (respect `react/rules-of-hooks`).
