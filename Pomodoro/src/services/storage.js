@@ -92,3 +92,56 @@ export function saveUser({ firstName, lastName, email, username }) {
   write(USERS_KEY, users)
   return profile
 }
+
+/* ----------------------------------------------------------- Dashboard -- */
+/*
+ * Persisted dashboard records so nothing is lost on refresh. Three flat arrays /
+ * objects, each a thin pass-through — expiry and 7-day pruning are domain rules
+ * applied by the caller (see TimerPage) before saving, keeping this layer thin.
+ *
+ *   tasks    -> [ { id, title, status:'todo'|'completed'|'terminated'|'expired',
+ *                   createdAt, endedAt? } ]      (kept ~7 days for stats)
+ *   sessions -> [ { id, taskTitle, durationMs, endedAt, status } ]  (kept ~7 days)
+ *   gamification -> { points, streak }           (lifetime running totals)
+ */
+
+const TASKS_KEY = 'tasks'
+const SESSIONS_KEY = 'sessions'
+const GAMIFICATION_KEY = 'gamification'
+
+/** Persisted task records (always an array). */
+export function getTasks() {
+  const items = read(TASKS_KEY, [])
+  return Array.isArray(items) ? items : []
+}
+
+/** Persist the full task record list. */
+export function saveTasks(items) {
+  return write(TASKS_KEY, items)
+}
+
+/** Persisted session/history records (always an array). */
+export function getSessions() {
+  const items = read(SESSIONS_KEY, [])
+  return Array.isArray(items) ? items : []
+}
+
+/** Persist the full session record list. */
+export function saveSessions(items) {
+  return write(SESSIONS_KEY, items)
+}
+
+/** Persisted gamification totals; safe defaults when absent/corrupt. */
+export function getGamification() {
+  const value = read(GAMIFICATION_KEY, null)
+  if (!value || typeof value !== 'object') return { points: 0, streak: 0 }
+  return {
+    points: Number.isFinite(value.points) ? value.points : 0,
+    streak: Number.isFinite(value.streak) ? value.streak : 0,
+  }
+}
+
+/** Persist gamification totals. */
+export function saveGamification(value) {
+  return write(GAMIFICATION_KEY, value)
+}
