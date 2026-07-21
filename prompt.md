@@ -71,3 +71,9 @@
 `Title`: Repurpose Stats page into a foresty glassmorphic Settings page for editing session and break durations
 
 `User prompt`: Implement the setting page. Change the current page src/pages/StatsPage.jsx to src/pages/SettingPage.jsx and also update the routes. This page allows the user to edit time duration for session and break for now. Later when implementing phase 2 and phase 3 the setting page will be updated as moving further. Keep the foresty and glassmorphic theme.
+
+## Profile page — view and edit account details and password
+
+`Title`: Implement editable, foresty glassmorphic Profile page (name, username, password; email fixed)
+
+`User prompt`: implement profilepage so that user can not only see his or her information but can edit or change as well including password. email does not change. keep the theme remain forest and glassmorphic
