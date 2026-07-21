@@ -1,0 +1,266 @@
+/*
+ * Log In page — same forest aesthetic as the Sign Up page, applied to a
+ * centered auth card. Palette is scoped to `.login` so the global theme in
+ * index.css stays untouched (per convention.md). Mobile-first; the form is a
+ * single column at every width (only two fields), so no layout breakpoint is
+ * needed beyond the fluid clamp() sizing.
+ */
+
+/*
+ * Break out of the centered 1126px #root column so the forest background fills
+ * the viewport. Scoped with :has() so other pages keep the column. The auth
+ * page may scroll vertically so a short screen never clips the card.
+ */
+#root:has(.login) {
+  width: 100%;
+  max-width: 100%;
+  border-inline: none;
+  text-align: left;
+}
+
+.login {
+  --lg-brand: #cfe6b4;
+  --lg-moss: #a9c98d;
+  --lg-wood: #d59b6c;
+  --lg-wood-strong: #e6b184;
+  --lg-heading: #f3f7ec;
+  --lg-text: #d3ddca;
+  --lg-muted: #aab8a0;
+  --lg-line: rgba(243, 247, 236, 0.22);
+  --lg-on-brand: #10200f;
+
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  color: var(--lg-text);
+
+  background-image:
+    linear-gradient(
+      105deg,
+      rgba(8, 18, 12, 0.86) 0%,
+      rgba(8, 18, 12, 0.62) 55%,
+      rgba(8, 18, 12, 0.5) 100%
+    ),
+    url('../assets/forest-bg.svg');
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-position: center, center bottom;
+  background-attachment: fixed;
+}
+
+/* ------------------------------------------------------------------ Main -- */
+.login-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 4vw, 48px) clamp(16px, 5vw, 48px);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  padding: clamp(24px, 5vw, 40px);
+  border-radius: 18px;
+  border: 1px solid var(--lg-line);
+  background: rgba(10, 22, 15, 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+}
+
+.login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--lg-heading);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.login-brand:focus-visible {
+  outline: 2px solid var(--lg-wood);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.login-leaf {
+  color: var(--lg-moss);
+  font-size: 1.4em;
+  flex-shrink: 0;
+}
+
+.login-title {
+  margin: 20px 0 0;
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--lg-heading);
+}
+
+.login-subtitle {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--lg-muted);
+}
+
+/* ------------------------------------------------------------------ Form -- */
+.login-form {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.login-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--lg-heading);
+}
+
+.login-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--lg-line);
+  background: rgba(8, 16, 11, 0.6);
+  color: var(--lg-heading);
+  font: inherit;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+/* Reserve room so text never slides under the Show/Hide toggle. */
+.login-control:has(.login-toggle) .login-input {
+  padding-right: 68px;
+}
+
+.login-input::placeholder {
+  color: var(--lg-muted);
+}
+
+.login-input:hover {
+  border-color: rgba(243, 247, 236, 0.35);
+}
+
+.login-input:focus-visible {
+  outline: none;
+  border-color: var(--lg-moss);
+  box-shadow: 0 0 0 3px rgba(169, 201, 141, 0.25);
+}
+
+.login-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.login-toggle {
+  position: absolute;
+  right: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--lg-moss);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.login-toggle:hover {
+  background: rgba(169, 201, 141, 0.14);
+}
+
+.login-toggle:focus-visible {
+  outline: 2px solid var(--lg-wood);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------- Actions -- */
+.login-submit {
+  margin-top: 4px;
+  width: 100%;
+  padding: 13px 24px;
+  border-radius: 10px;
+  border: 1.5px solid var(--lg-moss);
+  background: var(--lg-moss);
+  color: var(--lg-on-brand);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.login-submit:hover:not(:disabled) {
+  background: var(--lg-brand);
+  border-color: var(--lg-brand);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.7);
+}
+
+.login-submit:focus-visible {
+  outline: 2px solid var(--lg-wood-strong);
+  outline-offset: 2px;
+}
+
+.login-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.login-redirect {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--lg-muted);
+}
+
+.login-redirect__link {
+  color: var(--lg-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-redirect__link:hover {
+  text-decoration: underline;
+}
+
+.login-redirect__link:focus-visible {
+  outline: 2px solid var(--lg-wood);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-submit,
+  .login-input,
+  .login-toggle {
+    transition: none;
+  }
+}
