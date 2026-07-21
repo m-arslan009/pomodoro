@@ -1,59 +1,60 @@
-## Purpose
-This file is the top-level index for the `.claude` workspace. It explains what belongs in each directory, how the pieces fit together, and where to look first.
+# CLAUDE.md — Project Governance & Map
 
-## Directory Structure
+> Entry point Claude Code reads first. Its job is to *govern* and *map* the project — not
+> document it exhaustively. Granular rules live in the linked sub-files (progressive
+> disclosure) so this file stays a short, stable table of contents.
+
+## Project overview
+A **frontend-only React web app** built around the Pomodoro technique that helps users
+focus on daily tasks and stay motivated through a points-and-titles gamification system.
+
+- **Timer:** default 25 min focus / 5 min break, both adjustable; start, pause/resume,
+  restart, terminate.
+- **Tasks ↔ sessions:** every session links to a task and is recorded as `completed` or
+  `terminated`, with history and statistics.
+- **Gamification:** points per session drive a **lifetime**-points economy; crossing
+  doubling thresholds unlocks titles, each of which unlocks a previewable, gated feature.
+- **Personalization:** editable profile, focus/break durations, and theme.
+
+Full product plan lives in [`idea.md`](idea.md); 
+
+## Commands
+Run from the `Pomodoro/` app directory.
+
+| Task  | Command         |
+|-------|-----------------|
+| Setup | `npm install`   |
+| Run   | `npm run dev`   |
+| Build | `npm run build` |
+| Lint  | `npm run lint`  |
+
+> No test runner is configured yet; `npm run build` is the current pass/fail gate.
+
+## Directory architecture
 ```
-.claude/
-├── CLAUDE.md
-├── rules/
-│   ├── github.md
-│   └── prompt-recording.md
-└── skills/
-    └── <skill-directory-name>/
-        ├── SKILL.md
-        ├── references/   # Optional supporting documentation
-        ├── examples/     # Optional examples
-        ├── templates/    # Optional reusable templates
-        └── scripts/      # Optional helper scripts
+.claude/                <- governance: this file, convention.md, locked_decisions.md, rules/
+Pomodoro/               <- the Vite + React app (run npm commands here)
+└── src/
+    ├── main.jsx        <- entry: BrowserRouter > App
+    ├── App.jsx         <- route definitions for every page
+    ├── components/     <- shared UI: AppLayout, Nav, FeatureGate, TaskPicker, TitleBadge
+    ├── pages/          <- one file per view: Landing, SignIn, SignUp, Timer, History,
+    │                      Stats, Profile
+    ├── context/        <- AppProvider (Context + useReducer) — planned
+    ├── hooks/          <- usePomodoroTimer, useFeatureGate — planned
+    ├── services/       <- storage.js (localStorage), gamification.js (points/titles)
+    ├── styles/         <- shared CSS
+    └── assets/         <- images and static assets
+idea.md                 <- full product plan / architecture
+prompt.md               <- log of significant user prompts
 ```
 
-## How To Use This Folder
-1. Read this file first.
-2. Check `rules/` for persistent instructions that apply whenever the rule is relevant.
-3. Check `skills/` for task-specific workflows or reusable procedures.
-4. Treat each rule or skill file as the authoritative source for its subject.
-5. When a user prompt changes direction, workflow, scope, or requirements in a meaningful way, update `prompt.md` with a concise entry.
+## Reference rules (progressive disclosure)
+Consult these before writing code or making structural decisions:
 
-## rules/
-The `rules/` directory contains persistent instructions that should be followed whenever they apply.
-
-Current rules:
-- [github.md](rules/github.md) defines how to handle status checks, staging, commit messages, and pushing code.
-- [prompt-recording.md](rules/prompt-recording.md) defines when significant user prompts should be recorded and how entries should be written.
-
-Each rule should:
-- Have one clear responsibility.
-- Use a descriptive Markdown filename.
-- Contain the complete and authoritative instructions for its topic.
-- Be written so it can stand on its own without needing extra explanation.
-
-## skills/
-The `skills/` directory contains reusable, task-specific capabilities and workflows.
-
-Each skill should:
-- Live in its own directory.
-- Use `SKILL.md` as the entry file.
-- State clearly when the skill should be used and what it does.
-- Keep supporting references, examples, templates, and scripts inside the same skill directory.
-
-## Adding New Content
-- Add a new rule when you need a persistent instruction that applies across tasks.
-- Add a new skill when you want to capture a repeatable workflow or specialized process.
-- Keep filenames descriptive and prefer one topic per file.
-
-## Current State
-The `skills/` directory is currently empty. Add a new skill folder there when a reusable workflow is needed.
-
-The workspace root also contains [prompt.md](../prompt.md), which is used to record significant user prompts.
-
-When pushing code, follow [rules/github.md](rules/github.md) exactly and keep commit subjects short, scoped, and limited to the actual change. Do not add unrelated details such as tool names or commentary about the editor or agent.
+- **[`convention.md`](convention.md)** — coding paradigms, styling, naming, and
+  git/prompt/responsive rules. *Read before writing or changing code.*
+- **[`locked_decisions.md`](locked_decisions.md)** — settled architecture and tech-stack
+  constraints. *Read before proposing structural changes.*
+- **[`rules/`](rules/)** — task-specific workflow rules (GitHub, prompt recording,
+  responsive design). *Follow the one relevant to the task at hand.*
