@@ -1,5 +1,11 @@
+import AppLayout from '../components/AppLayout.jsx'
+
 function HistoryPage() {
-  return <h1>Coming Soon</h1>
+  return (
+    <AppLayout>
+      <h1>Coming Soon</h1>
+    </AppLayout>
+  )
 }
 
 export default HistoryPage

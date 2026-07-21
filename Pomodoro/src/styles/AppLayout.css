@@ -1,0 +1,341 @@
+/*
+ * AppLayout / Nav — the shared shell for authenticated pages.
+ *
+ * Glassmorphic forest aesthetic: the exact landing-page forest image is pinned
+ * beneath the whole shell for visual continuity, and every navigation surface
+ * floats over it as frosted, translucent glass (subtle background + high blur +
+ * crisp thin borders + generous gaps). Scoped to `.app-shell` so the global
+ * light/dark theme in index.css is left untouched. Light text is used in BOTH
+ * color schemes because the surface is always the dark forest.
+ *
+ * Mobile-first: base rules describe the ≤576px layout (fixed top header + a
+ * slide-in overlay). The docked split-screen sidebar is layered on from 577px.
+ */
+
+/*
+ * Break the global centered 1126px #root column (index.css) so app pages fill
+ * the viewport. Scoped with :has() so only the app shell is affected.
+ */
+#root:has(.app-shell) {
+  width: 100%;
+  max-width: 100%;
+  border-inline: none;
+  text-align: left;
+}
+
+.app-shell {
+  /* Layout metrics */
+  --sidebar-w: 264px;
+  --topbar-h: 56px;
+
+  /* Forest palette (light text on the dark forest surface, both schemes) */
+  --fg-brand: #f3f7ec;
+  --fg-leaf: #a9c98d;
+  --fg-text: #d3ddca;
+  --fg-muted: #aebfa0;
+  --fg-accent: #cfe6b4;
+  --fg-wood: #d59b6c;
+
+  /* Glassmorphism tokens */
+  --glass-bg: rgba(14, 27, 18, 0.42);
+  --glass-bg-strong: rgba(12, 23, 16, 0.6);
+  --glass-border: rgba(243, 247, 236, 0.16);
+  --glass-hover: rgba(243, 247, 236, 0.08);
+  --glass-blur: blur(18px) saturate(130%);
+
+  flex: 1;
+  width: 100%;
+  min-height: 100svh;
+  box-sizing: border-box;
+  color: var(--fg-text);
+
+  /* Exact landing forest image, pinned to the viewport so it stays beneath all
+     navigation structures as content and overlays move over it. */
+  background-image:
+    linear-gradient(
+      105deg,
+      rgba(8, 18, 12, 0.82) 0%,
+      rgba(8, 18, 12, 0.5) 45%,
+      rgba(8, 18, 12, 0.32) 100%
+    ),
+    url('../assets/forest-bg.svg');
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-position: center, center bottom;
+  background-attachment: fixed, fixed;
+}
+
+/* ------------------------------------------------- Mobile top header (≤576) */
+.app-topbar {
+  position: fixed;
+  inset: 0 0 auto 0; /* pinned to the top, uncaught by page scroll */
+  height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  z-index: 30;
+}
+
+.app-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.app-menu-btn:hover {
+  background: var(--glass-hover);
+  border-color: var(--fg-wood);
+}
+
+.app-menu-btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------- Brand */
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--fg-brand);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.app-brand__leaf {
+  color: var(--fg-leaf);
+  font-size: 1.4em;
+  flex-shrink: 0;
+}
+
+.app-brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-brand:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------ Overlay backdrop (mobile) */
+.app-backdrop {
+  position: fixed;
+  inset: var(--topbar-h) 0 0 0;
+  background: rgba(6, 12, 8, 0.5);
+  z-index: 20;
+}
+
+/* --------------------------------------------------------------- Sidebar */
+/*
+ * On mobile this is the frosted slide-in overlay: hidden off-canvas by default,
+ * revealed below the fixed header when [data-open]. `visibility` toggles keep
+ * the links out of the tab order while the panel is closed.
+ */
+.app-sidebar {
+  position: fixed;
+  inset: var(--topbar-h) auto 0 0;
+  width: min(84vw, 320px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px; /* generous spatial gaps between the primary UI groups */
+  padding: 16px 14px;
+  box-sizing: border-box;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--glass-border);
+  z-index: 25;
+  overflow-y: auto;
+  visibility: hidden;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease, visibility 0.25s ease;
+}
+
+.app-sidebar[data-open='true'] {
+  visibility: visible;
+  transform: translateX(0);
+}
+
+.app-sidebar__top {
+  display: none; /* brand lives in the top header on mobile */
+  align-items: center;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.app-sidebar__bottom {
+  margin-top: auto; /* anchor Log Out to the absolute bottom */
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-border);
+}
+
+/* ----------------------------------------------------------- Nav links */
+.app-nav {
+  padding: 4px 0;
+}
+
+.app-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* generous tap gaps between options */
+}
+
+.app-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--fg-text);
+  text-decoration: none;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.2;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.app-nav__link:hover {
+  background: var(--glass-hover);
+  color: var(--fg-brand);
+}
+
+/*
+ * Active state stays fully within the glass theme — no solid fill. The tab is
+ * marked by brighter text plus a delicate underline accent under the label.
+ */
+.app-nav__link--active {
+  color: var(--fg-brand);
+  font-weight: 600;
+}
+
+.app-nav__label {
+  padding-bottom: 2px;
+  border-bottom: 2px solid transparent; /* reserved so active adds no shift */
+}
+
+.app-nav__link--active .app-nav__label {
+  border-bottom-color: var(--fg-accent);
+}
+
+.app-nav__link:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.app-nav__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* -------------------------------------------------------------- Log Out */
+.app-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.app-logout:hover {
+  border-color: var(--fg-wood);
+  color: var(--fg-wood);
+  background: var(--glass-hover);
+}
+
+.app-logout:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------- Main content */
+.app-main {
+  padding: calc(var(--topbar-h) + 20px) 16px 32px;
+  min-height: 100svh;
+  box-sizing: border-box;
+  color: var(--fg-text);
+}
+
+/* Keep page content legible over the dark forest surface. */
+.app-main h1,
+.app-main h2 {
+  color: var(--fg-brand);
+}
+
+/* -------------------------------------------- Tablet & desktop (≥577px) */
+@media (min-width: 577px) {
+  .app-topbar,
+  .app-backdrop {
+    display: none;
+  }
+
+  /* Docked, always-visible, full-height frosted split-screen sidebar */
+  .app-sidebar {
+    inset: 0 auto 0 0;
+    height: 100svh;
+    width: var(--sidebar-w);
+    padding: 18px 16px;
+    gap: 16px;
+    border-right: 1px solid var(--glass-border);
+    visibility: visible;
+    transform: none;
+    transition: none;
+  }
+
+  .app-sidebar__top {
+    display: flex;
+  }
+
+  .app-main {
+    margin-left: var(--sidebar-w);
+    padding: clamp(24px, 4vw, 48px);
+    min-height: 100svh;
+  }
+}
+
+/* --------------------------------------------------------- Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar,
+  .app-menu-btn,
+  .app-nav__link,
+  .app-logout {
+    transition: none;
+  }
+}
