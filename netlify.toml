@@ -1,0 +1,11 @@
+# App lives in the pomodoro/ subdirectory, so point Netlify there.
+[build]
+  base = "pomodoro"
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: serve index.html for client-side routes (React Router).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
