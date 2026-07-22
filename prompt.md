@@ -91,3 +91,19 @@
 `User prompt`: read remaining.md and check what we have left behind for historyPage and implement the missing functionality. also log the prompt in detail about what you have done in prompt.md as well. follow the rules and conventions discuss in their respected markdown files.
 
 Implementation summary: the History charts existed but shipped always-on. Added a reusable `components/history/GatedTile.jsx` that reuses the already-built `useFeatureGate` hook + `gamification` service to render each chart tile as a normal card when unlocked, or as a dimmed, `inert`, previewable card with a lock chip and "Reach {Title} to unlock" hint when still locked. Wired `TrendTile` behind Catalyst (`timeUtilization`) with its interval control hidden while locked, and `ComparisonTile` + `OutcomeTile` behind Vanguard (`graphicalReports`). The KPI summary and recent-sessions log stay ungated as the always-available baseline, with the log serving as the accessible data fallback while charts are locked. Added scoped `.hp-tile__viz`, `.hp-lock-chip`, and `.hp-lock-hint` styles (plus reduced-motion handling) to HistoryPage.css. Lint and build pass.
+
+## Wire the gamification engine and titles into the Timer page
+
+`Title`: Implement the Timer page's remaining title/gamification functionality from remaining.md
+
+`User prompt`: read remaining.md file and check what remain to implement in TimerPage and by following the rules and convention implement the missing functionalities.
+
+Implementation summary: closed out the four Timer-row gaps in remaining.md. Replaced the inline point/streak/penalty math in `TimerPage.jsx` with the pure functions from `services/gamification.js` — `applyCompletion` (streak advance, +100 with the every-3rd +50 bonus, and the titles it crosses) and `applyTermination` (balance floored after the −200 penalty, streak reset, lifetime untouched). Split state into a spendable `balance` (penalty-affected, shown as the score) and monotonic `lifetimePoints` (drives titles), persisted alongside the legacy `points`/`streak` fields the History page still reads. Built the real `components/TitleBadge.jsx` (current rank + progress bar toward the next threshold with remaining lifetime points) from its placeholder, with a self-contained `styles/TitleBadge.css`, and rendered it inside `PointsTile`. Added new-title-unlock detection: a crossed threshold fires a celebratory success toast naming the title instead of the ordinary completion toast. Lint and build pass.
+
+## Implement protected routing (public vs authenticated pages)
+
+`Title`: Implement protected routing
+
+`User prompt`: now implement protected routing. user can not navigate to main application before login. landing page, sign up and login page are publically available while the remaining pages should be protected. once the user logged in he or she won't be allowed to navigate to public pages until user logged out.
+
+Implementation summary: added two route guards reusing the existing `getSession()` from `services/auth.js`. `components/RequireAuth.jsx` redirects unauthenticated users to `/login` (with `replace` and the requested location stashed in nav state) so `/timer`, `/history`, `/settings`, `/profile` are unreachable while signed out. `components/RequireGuest.jsx` redirects signed-in users to `/timer` so the public pages (`/`, `/login`, `/signin`, `/signup`) are unreachable until logout. Wired both into `App.jsx` by wrapping each route element; the catch-all still redirects to `/`. Lint and build pass.
