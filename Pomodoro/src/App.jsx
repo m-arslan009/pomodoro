@@ -22,14 +22,6 @@ function App() {
         }
       />
       <Route
-        path="/signin"
-        element={
-          <RequireGuest>
-            <LogInPage />
-          </RequireGuest>
-        }
-      />
-      <Route
         path="/login"
         element={
           <RequireGuest>
