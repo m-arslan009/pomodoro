@@ -1,6 +1,11 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import AppLayout from '../components/AppLayout.jsx'
 import Notification from '../components/Notification.jsx'
+import FeatureGate from '../components/FeatureGate.jsx'
+import BaseTheme from '../components/settings/BaseTheme.jsx'
+import ThemeEditor from '../components/settings/ThemeEditor.jsx'
+import BackgroundLabels from '../components/settings/BackgroundLabels.jsx'
+import Scheduling from '../components/settings/Scheduling.jsx'
 import {
   getSettings,
   saveSettings,
@@ -14,13 +19,19 @@ import '../styles/SettingPage.css'
  * the shared glass/forest tokens (--fg-*, --glass-*) exactly like the Timer and
  * History dashboards.
  *
- * PHASE 1 SCOPE: only the two Pomodoro durations (focus session + short break)
- * are editable here. Theme, custom labels, and background (see idea.md) land in
- * later phases; storage.getSettings already preserves unknown persisted fields
- * so this page can grow without a migration.
+ * Sections, top to bottom:
+ *   - Timer durations (always available) — the two Pomodoro lengths.
+ *   - Base theme (always available) — System / Light / Dark colour scheme.
+ *   - Theme editor (gated: The Anchor) — recolour the forest palette.
+ *   - Background & labels (gated: The Pace Setter) — shell background + timer labels.
+ *   - Scheduling (gated: The Paragon) — a recurring focus plan.
  *
- * The saved durations drive TimerPage, which reads them on mount — so a change
- * here takes effect on the user's next session.
+ * Gated sections stay visible-but-previewable via <FeatureGate>, which unlocks
+ * them once the required title's lifetime-point threshold is reached. Each
+ * section persists through storage.getSettings/saveSettings, which preserves
+ * unknown fields, so the page grows without a migration. Saved durations and
+ * labels drive TimerPage, which reads them on mount — so a change here takes
+ * effect on the user's next session.
  */
 
 // Reusable spec for the two identical duration controls (stepper + number input).
@@ -129,6 +140,9 @@ function SettingPage() {
   const [errors, setErrors] = useState({})
   const [notification, setNotification] = useState(null)
 
+  // Shared toast channel for every section (durations + the gated features).
+  const notify = useCallback((type, message) => setNotification({ type, message }), [])
+
   const isDirty = FIELDS.some(({ key }) => values[key] !== String(saved[key]))
 
   function setField(key, next) {
@@ -204,50 +218,79 @@ function SettingPage() {
         <header className="settings-page__head">
           <h1 className="settings-page__title">Settings</h1>
           <p className="settings-page__subtitle">
-            Tune how long you focus and rest. More options arrive as you unlock them.
+            Tune how long you focus and rest, and personalize the app. Some options
+            unlock as you earn titles.
           </p>
         </header>
 
-        <form className="settings-card" onSubmit={handleSubmit} noValidate>
-          <div className="settings-card__head">
-            <h2 className="settings-card__title">Timer durations</h2>
-            <p className="settings-card__hint">
-              Applied to your next Pomodoro — a session already running is left untouched.
-            </p>
-          </div>
+        <div className="settings-stack">
+          <form className="settings-card" onSubmit={handleSubmit} noValidate>
+            <div className="settings-card__head">
+              <h2 className="settings-card__title">Timer durations</h2>
+              <p className="settings-card__hint">
+                Applied to your next Pomodoro — a session already running is left untouched.
+              </p>
+            </div>
 
-          <div className="settings-fields">
-            {FIELDS.map(({ key, label, description, limits }) => (
-              <DurationField
-                key={key}
-                id={key}
-                label={label}
-                description={description}
-                limits={limits}
-                value={values[key]}
-                error={errors[key]}
-                onValue={(next) => setField(key, next)}
-              />
-            ))}
-          </div>
+            <div className="settings-fields">
+              {FIELDS.map(({ key, label, description, limits }) => (
+                <DurationField
+                  key={key}
+                  id={key}
+                  label={label}
+                  description={description}
+                  limits={limits}
+                  value={values[key]}
+                  error={errors[key]}
+                  onValue={(next) => setField(key, next)}
+                />
+              ))}
+            </div>
 
-          <div className="settings-actions">
-            <button
-              type="button"
-              className="settings-btn settings-btn--ghost"
-              onClick={handleReset}
-            >
-              Reset to defaults
-            </button>
-            <button
-              type="submit"
-              className="settings-btn settings-btn--primary"
-              disabled={!isDirty}
-            >
-              Save changes
-            </button>
-          </div>
-        </form>
+            <div className="settings-actions">
+              <button
+                type="button"
+                className="settings-btn settings-btn--ghost"
+                onClick={handleReset}
+              >
+                Reset to defaults
+              </button>
+              <button
+                type="submit"
+                className="settings-btn settings-btn--primary"
+                disabled={!isDirty}
+              >
+                Save changes
+              </button>
+            </div>
+          </form>
+
+          <BaseTheme onNotify={notify} />
+
+          <FeatureGate
+            feature="themeEditor"
+            title="Theme editor"
+            description="Recolour the forest palette to make the app your own."
+          >
+            <ThemeEditor onNotify={notify} />
+          </FeatureGate>
+
+          <FeatureGate
+            feature="backgroundAndLabels"
+            title="Background & labels"
+            description="Change the shell background and rename the timer's phase labels."
+          >
+            <BackgroundLabels onNotify={notify} />
+          </FeatureGate>
+
+          <FeatureGate
+            feature="scheduling"
+            title="Scheduling"
+            description="Plan a recurring focus block on the days and time you choose."
+          >
+            <Scheduling onNotify={notify} />
+          </FeatureGate>
+        </div>
       </div>
     </AppLayout>
   )

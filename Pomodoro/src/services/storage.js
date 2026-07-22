@@ -131,19 +131,61 @@ export function saveSessions(items) {
   return write(SESSIONS_KEY, items)
 }
 
+/*
+ * Gamification totals. The legacy shape was { points, streak } (a single
+ * penalty-affected total). Titles, however, key off LIFETIME points which must
+ * never regress (locked decision), so we additionally track a monotonic
+ * `lifetimePoints` maintained here — it only ever climbs, even when a terminate
+ * penalty drops the running `points`. getGamification therefore returns a
+ * superset ({ points, streak, balance, lifetimePoints, currentStreak }) so the
+ * existing timer/history consumers keep working while the title layer reads
+ * lifetimePoints.
+ */
+
 /** Persisted gamification totals; safe defaults when absent/corrupt. */
 export function getGamification() {
   const value = read(GAMIFICATION_KEY, null)
-  if (!value || typeof value !== 'object') return { points: 0, streak: 0 }
-  return {
-    points: Number.isFinite(value.points) ? value.points : 0,
-    streak: Number.isFinite(value.streak) ? value.streak : 0,
-  }
+  const v = value && typeof value === 'object' ? value : {}
+  const points = Number.isFinite(v.points) ? v.points : 0
+  const streak = Number.isFinite(v.streak) ? v.streak : 0
+  const balance = Number.isFinite(v.balance) ? v.balance : points
+  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : streak
+  // Lifetime never decreases; seed it from the running total for legacy records.
+  const lifetimePoints = Math.max(
+    Number.isFinite(v.lifetimePoints) ? v.lifetimePoints : 0,
+    points,
+    balance,
+  )
+  return { points, streak, balance, currentStreak, lifetimePoints }
 }
 
-/** Persist gamification totals. */
+/**
+ * Persist gamification totals, keeping `lifetimePoints` monotonically increasing
+ * regardless of the shape the caller writes. So even the current timer, which
+ * still saves { points, streak }, transparently accrues a lifetime total that
+ * penalties can never claw back.
+ */
 export function saveGamification(value) {
-  return write(GAMIFICATION_KEY, value)
+  const prev = read(GAMIFICATION_KEY, null)
+  const prevLifetime =
+    prev && Number.isFinite(prev.lifetimePoints) ? prev.lifetimePoints : 0
+  const incoming = value && typeof value === 'object' ? value : {}
+  const runningTotal = Number.isFinite(incoming.points)
+    ? incoming.points
+    : Number.isFinite(incoming.balance)
+      ? incoming.balance
+      : 0
+  const lifetimePoints = Math.max(
+    prevLifetime,
+    Number.isFinite(incoming.lifetimePoints) ? incoming.lifetimePoints : 0,
+    runningTotal,
+  )
+  return write(GAMIFICATION_KEY, { ...incoming, lifetimePoints })
+}
+
+/** Convenience reader for the title/feature ladder — lifetime points only. */
+export function getLifetimePoints() {
+  return getGamification().lifetimePoints
 }
 
 /* ------------------------------------------------------------ Settings -- */
@@ -158,8 +200,11 @@ export function saveGamification(value) {
 
 const SETTINGS_KEY = 'settings'
 
-/** Factory defaults for the durations the Settings page can edit. */
-export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5 }
+/** Factory defaults for the core preferences the Settings page can edit. */
+export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5, theme: 'system' }
+
+/** Allowed base colour schemes for the always-available theme toggle. */
+export const THEME_VALUES = ['system', 'light', 'dark']
 
 /** Safe editable ranges (whole minutes) for each duration. */
 export const DURATION_LIMITS = {
@@ -192,6 +237,7 @@ export function getSettings() {
       DURATION_LIMITS.break.max,
       DEFAULT_SETTINGS.breakMinutes,
     ),
+    theme: THEME_VALUES.includes(base.theme) ? base.theme : DEFAULT_SETTINGS.theme,
   }
 }
 

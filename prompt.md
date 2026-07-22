@@ -77,3 +77,9 @@
 `Title`: Implement editable, foresty glassmorphic Profile page (name, username, password; email fixed)
 
 `User prompt`: implement profilepage so that user can not only see his or her information but can edit or change as well including password. email does not change. keep the theme remain forest and glassmorphic
+
+## Implement Phase 2 & 3 Settings-page features
+
+`Title`: Build title-gated Settings features (theme editor, background + labels, scheduling) and gating foundation
+
+`User prompt`: read remaining.md file and implement what we have left to implement in setting page so far. follow rules and conventions.

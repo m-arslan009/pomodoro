@@ -46,6 +46,7 @@ function TimerEngineTile({
   canStart,
   hasBacklog,
   activeTaskTitle,
+  labels,
   onStart,
   onPause,
   onResume,
@@ -55,7 +56,9 @@ function TimerEngineTile({
   const progress = totalMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalMs)) : 0
   const dashOffset = RING_CIRC * (1 - progress)
   const clock = formatClock(remainingMs)
-  const phaseLabel = PHASE_LABEL[phase]
+  // The work/break phases can carry a user-defined label (Pace Setter feature);
+  // an empty override falls back to the built-in name. Idle stays "Ready".
+  const phaseLabel = labels?.[phase]?.trim() || PHASE_LABEL[phase]
 
   return (
     <section

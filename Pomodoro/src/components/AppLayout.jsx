@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Nav from './Nav.jsx'
 import { endSession } from '../services/auth.js'
+import { getSettings } from '../services/storage.js'
+import {
+  applyBaseTheme,
+  applyCustomTheme,
+  applyBackground,
+} from '../services/appearance.js'
 import '../styles/AppLayout.css'
 
 /*
@@ -61,8 +67,20 @@ function AppLayout({ children }) {
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuButtonRef = useRef(null)
+  const shellRef = useRef(null)
 
   const closeMenu = () => setMenuOpen(false)
+
+  // Apply the user's saved personalization on mount. Base theme is document-wide;
+  // the forest palette + background are inline overrides on the shell (cleared
+  // by the appearance helpers when the setting is default). Re-runs on every
+  // page mount, which is when a Settings change navigates back into the app.
+  useEffect(() => {
+    const settings = getSettings()
+    applyBaseTheme(settings.theme)
+    applyCustomTheme(shellRef.current, settings.customTheme)
+    applyBackground(shellRef.current, settings.backgroundImage)
+  }, [])
 
   // While the mobile overlay is open, Escape dismisses it and returns focus to
   // the toggle so keyboard users are never stranded.
@@ -84,7 +102,7 @@ function AppLayout({ children }) {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" ref={shellRef}>
       {/* Mobile-only top header: fixed, non-scrolling, menu toggle on the far left. */}
       <header className="app-topbar">
         <button

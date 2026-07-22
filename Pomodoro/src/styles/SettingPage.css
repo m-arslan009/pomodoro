@@ -305,11 +305,363 @@
   cursor: not-allowed;
 }
 
+/* ------------------------------------------------------- Stacked sections */
+.settings-stack {
+  display: grid;
+  gap: var(--gap-3);
+}
+
+/* ---------------------------------------------------- Base theme segment */
+.theme-segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-1);
+  padding: 5px;
+  border-radius: 14px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.theme-segment__btn {
+  flex: 1 1 auto;
+  min-width: 84px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.theme-segment__btn:hover:not(.theme-segment__btn--active) {
+  color: var(--fg-brand);
+  background: var(--glass-hover);
+}
+
+.theme-segment__btn--active {
+  color: #10230f;
+  background: var(--fg-accent);
+  border-color: var(--fg-accent);
+}
+
+.theme-segment__btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------ Theme editor */
+.theme-editor__rows {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap-2);
+}
+
+@media (min-width: 520px) {
+  .theme-editor__rows {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+.theme-swatch {
+  min-width: 0;
+  padding: var(--gap-2);
+  border-radius: 12px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+}
+
+.theme-swatch__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.theme-swatch__control {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.theme-swatch__input {
+  flex-shrink: 0;
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.theme-swatch__input::-webkit-color-swatch-wrapper {
+  padding: 3px;
+}
+
+.theme-swatch__input::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.theme-swatch__input:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.theme-swatch__value {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: var(--fs-label);
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------- Background presets grid */
+.bg-presets {
+  margin: 0 0 var(--gap-3);
+  padding: 0;
+  border: none;
+}
+
+.bg-presets__legend {
+  padding: 0;
+  margin-bottom: var(--gap-2);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.bg-presets__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--gap-2);
+}
+
+.bg-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-text);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.bg-preset:hover {
+  border-color: var(--fg-wood);
+}
+
+.bg-preset--active {
+  border-color: var(--fg-accent);
+  box-shadow: 0 0 0 2px rgba(207, 230, 180, 0.35);
+}
+
+.bg-preset:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.bg-preset__swatch {
+  height: 46px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--glass-border);
+}
+
+/* The forest default preview mirrors the shell's own gradient + green tone. */
+.bg-preset__swatch[data-forest='true'] {
+  background-image: linear-gradient(150deg, #14321f, #0b1a10);
+}
+
+.bg-preset__name {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ Label fields */
+.label-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap-2);
+}
+
+@media (min-width: 520px) {
+  .label-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.label-field {
+  min-width: 0;
+}
+
+.label-field__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.label-field__input,
+.schedule__time {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  font: inherit;
+  font-size: var(--fs-body);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.label-field__input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.7;
+}
+
+.label-field__input:focus,
+.schedule__time:focus {
+  outline: none;
+  border-color: var(--fg-wood);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.bg-labels__note {
+  margin: var(--gap-2) 0 0;
+  font-size: var(--fs-eyebrow);
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------- Scheduling */
+.schedule {
+  display: grid;
+  gap: var(--gap-3);
+}
+
+.schedule__toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-body);
+  color: var(--fg-brand);
+  cursor: pointer;
+}
+
+.schedule__checkbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--fg-accent);
+  cursor: pointer;
+}
+
+.schedule__checkbox:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.schedule__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-2);
+}
+
+.schedule__field {
+  display: grid;
+  gap: 6px;
+  min-width: min(200px, 100%);
+}
+
+.schedule__field-label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.schedule__days {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.schedule__days-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-1);
+  margin-top: 8px;
+}
+
+.schedule__day {
+  min-width: 46px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.schedule__day:hover:not(.schedule__day--active) {
+  color: var(--fg-brand);
+  border-color: var(--fg-wood);
+}
+
+.schedule__day--active {
+  color: #10230f;
+  background: var(--fg-accent);
+  border-color: var(--fg-accent);
+}
+
+.schedule__day:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.schedule__next {
+  margin: 0;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+.schedule__next strong {
+  color: var(--fg-brand);
+  font-weight: 600;
+}
+
 /* --------------------------------------------------------- Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .duration-field__step,
   .duration-field__value,
-  .settings-btn {
+  .settings-btn,
+  .theme-segment__btn,
+  .bg-preset,
+  .label-field__input,
+  .schedule__time,
+  .schedule__day {
     transition: none;
   }
 }

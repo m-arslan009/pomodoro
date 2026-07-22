@@ -92,7 +92,7 @@ function TimerPage() {
   // Focus/break lengths come from the user's saved Settings, read once on mount;
   // navigating back from Settings remounts this page so a change takes effect on
   // the next session without disrupting one already running.
-  const [{ workMinutes, breakMinutes }] = useState(() => getSettings())
+  const [{ workMinutes, breakMinutes, customLabels }] = useState(() => getSettings())
 
   // Hydrate from storage, applying retention rules once on mount.
   const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()))
@@ -292,6 +292,7 @@ function TimerPage() {
             canStart={Boolean(activeTaskId)}
             hasBacklog={hasBacklog}
             activeTaskTitle={activeTask?.title ?? ''}
+            labels={customLabels}
             onStart={handleStart}
             onPause={timer.pause}
             onResume={timer.resume}
