@@ -267,7 +267,10 @@
   color: var(--fg-brand);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .timer-btn:hover:not(:disabled) {
@@ -455,7 +458,9 @@
   border-radius: 50%;
   background: var(--glass-hover);
   border: 1px solid var(--glass-border);
-  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .points-tile__dot--on {
@@ -543,7 +548,10 @@
   color: #0f1c12;
   background: var(--fg-accent);
   border: 1px solid var(--fg-accent);
-  transition: background-color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    opacity 0.18s ease;
 }
 
 .add-task__btn:hover:not(:disabled) {
@@ -589,7 +597,9 @@
   border-radius: 12px;
   background: var(--glass-hover);
   border: 1px solid transparent;
-  transition: border-color 0.18s ease, background-color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .tasks-tile__item:hover {
@@ -626,7 +636,10 @@
   color: var(--fg-brand);
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .tasks-tile__action:hover:not(:disabled) {

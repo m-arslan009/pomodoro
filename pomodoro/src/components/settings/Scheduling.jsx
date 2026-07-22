@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { getSettings, saveSettings } from '../../services/storage.js'
+import { useState } from 'react';
+import { getSettings, saveSettings } from '../../services/storage.js';
 
 /*
  * Scheduling — the Paragon-gated feature: set a recurring daily focus time on
@@ -19,65 +19,65 @@ const WEEKDAYS = [
   { value: 5, label: 'Fri' },
   { value: 6, label: 'Sat' },
   { value: 0, label: 'Sun' },
-]
+];
 
-const LONG_WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const LONG_WEEKDAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function defaultSchedule(settings) {
-  const schedule = settings.schedule ?? {}
+  const schedule = settings.schedule ?? {};
   return {
     enabled: Boolean(schedule.enabled),
     startTime: typeof schedule.startTime === 'string' ? schedule.startTime : '09:00',
     days: Array.isArray(schedule.days) ? schedule.days : [1, 2, 3, 4, 5],
-  }
+  };
 }
 
 // The next datetime matching the chosen days + time, searching up to a week out.
 function nextOccurrence(days, startTime, from = new Date()) {
-  if (!days.length || !startTime) return null
-  const [hours, minutes] = startTime.split(':').map(Number)
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
+  if (!days.length || !startTime) return null;
+  const [hours, minutes] = startTime.split(':').map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
 
   for (let offset = 0; offset < 8; offset += 1) {
-    const candidate = new Date(from)
-    candidate.setDate(from.getDate() + offset)
-    candidate.setHours(hours, minutes, 0, 0)
+    const candidate = new Date(from);
+    candidate.setDate(from.getDate() + offset);
+    candidate.setHours(hours, minutes, 0, 0);
     if (days.includes(candidate.getDay()) && candidate.getTime() > from.getTime()) {
-      return candidate
+      return candidate;
     }
   }
-  return null
+  return null;
 }
 
 function formatNext(date) {
-  const day = LONG_WEEKDAY[date.getDay()]
-  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  return `${day} at ${time}`
+  const day = LONG_WEEKDAY[date.getDay()];
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `${day} at ${time}`;
 }
 
 function Scheduling({ onNotify }) {
-  const [schedule, setSchedule] = useState(() => defaultSchedule(getSettings()))
+  const [schedule, setSchedule] = useState(() => defaultSchedule(getSettings()));
 
   function toggleDay(value) {
     setSchedule((prev) => {
-      const active = prev.days.includes(value)
+      const active = prev.days.includes(value);
       const days = active
         ? prev.days.filter((day) => day !== value)
-        : [...prev.days, value].sort((a, b) => a - b)
-      return { ...prev, days }
-    })
+        : [...prev.days, value].sort((a, b) => a - b);
+      return { ...prev, days };
+    });
   }
 
   function handleSave() {
-    const next = { ...getSettings(), schedule }
+    const next = { ...getSettings(), schedule };
     if (!saveSettings(next)) {
-      onNotify?.('error', 'Could not save your schedule.')
-      return
+      onNotify?.('error', 'Could not save your schedule.');
+      return;
     }
-    onNotify?.('success', 'Focus schedule saved.')
+    onNotify?.('success', 'Focus schedule saved.');
   }
 
-  const upcoming = schedule.enabled ? nextOccurrence(schedule.days, schedule.startTime) : null
+  const upcoming = schedule.enabled ? nextOccurrence(schedule.days, schedule.startTime) : null;
 
   return (
     <div className="schedule">
@@ -86,9 +86,7 @@ function Scheduling({ onNotify }) {
           type="checkbox"
           className="schedule__checkbox"
           checked={schedule.enabled}
-          onChange={(event) =>
-            setSchedule((prev) => ({ ...prev, enabled: event.target.checked }))
-          }
+          onChange={(event) => setSchedule((prev) => ({ ...prev, enabled: event.target.checked }))}
         />
         <span>Enable a recurring focus schedule</span>
       </label>
@@ -111,7 +109,7 @@ function Scheduling({ onNotify }) {
         <legend className="schedule__field-label">Active days</legend>
         <div className="schedule__days-grid">
           {WEEKDAYS.map(({ value, label }) => {
-            const active = schedule.days.includes(value)
+            const active = schedule.days.includes(value);
             return (
               <button
                 key={value}
@@ -122,7 +120,7 @@ function Scheduling({ onNotify }) {
               >
                 {label}
               </button>
-            )
+            );
           })}
         </div>
       </fieldset>
@@ -142,16 +140,12 @@ function Scheduling({ onNotify }) {
       </p>
 
       <div className="settings-actions">
-        <button
-          type="button"
-          className="settings-btn settings-btn--primary"
-          onClick={handleSave}
-        >
+        <button type="button" className="settings-btn settings-btn--primary" onClick={handleSave}>
           Save schedule
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export default Scheduling
+export default Scheduling;

@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { getSettings, saveSettings } from '../../services/storage.js'
-import { applyBaseTheme, THEME_OPTIONS } from '../../services/appearance.js'
+import { useState } from 'react';
+import { getSettings, saveSettings } from '../../services/storage.js';
+import { applyBaseTheme, THEME_OPTIONS } from '../../services/appearance.js';
 
 /*
  * BaseTheme — the always-available base colour-scheme toggle (System / Light /
@@ -11,17 +11,17 @@ import { applyBaseTheme, THEME_OPTIONS } from '../../services/appearance.js'
  */
 
 function BaseTheme({ onNotify }) {
-  const [theme, setTheme] = useState(() => getSettings().theme)
+  const [theme, setTheme] = useState(() => getSettings().theme);
 
   function choose(next) {
-    if (next === theme) return
-    const settings = { ...getSettings(), theme: next }
+    if (next === theme) return;
+    const settings = { ...getSettings(), theme: next };
     if (!saveSettings(settings)) {
-      onNotify?.('error', 'Could not save your theme preference.')
-      return
+      onNotify?.('error', 'Could not save your theme preference.');
+      return;
     }
-    applyBaseTheme(next)
-    setTheme(next)
+    applyBaseTheme(next);
+    setTheme(next);
   }
 
   return (
@@ -51,7 +51,7 @@ function BaseTheme({ onNotify }) {
         ))}
       </div>
     </section>
-  )
+  );
 }
 
-export default BaseTheme
+export default BaseTheme;

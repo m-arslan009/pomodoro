@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import AppLayout from '../components/AppLayout.jsx'
-import Notification from '../components/Notification.jsx'
-import TimerEngineTile from '../components/timer/TimerEngineTile.jsx'
-import PointsTile from '../components/timer/PointsTile.jsx'
-import TasksTile from '../components/timer/TasksTile.jsx'
-import HistoryTile from '../components/timer/HistoryTile.jsx'
-import AddTask from '../components/timer/AddTask.jsx'
-import usePomodoroTimer from '../hooks/usePomodoroTimer.js'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import AppLayout from '../components/AppLayout.jsx';
+import Notification from '../components/Notification.jsx';
+import TimerEngineTile from '../components/timer/TimerEngineTile.jsx';
+import PointsTile from '../components/timer/PointsTile.jsx';
+import TasksTile from '../components/timer/TasksTile.jsx';
+import HistoryTile from '../components/timer/HistoryTile.jsx';
+import AddTask from '../components/timer/AddTask.jsx';
+import usePomodoroTimer from '../hooks/usePomodoroTimer.js';
 import {
   getTasks,
   saveTasks,
@@ -15,15 +15,15 @@ import {
   getGamification,
   saveGamification,
   getSettings,
-} from '../services/storage.js'
+} from '../services/storage.js';
 import {
   POINTS,
   TITLES,
   titlesFor,
   applyCompletion,
   applyTermination,
-} from '../services/gamification.js'
-import '../styles/TimerPage.css'
+} from '../services/gamification.js';
+import '../styles/TimerPage.css';
 
 /*
  * TimerPage — the app's main view, laid out as a 2×2 glassmorphic dashboard, and
@@ -50,29 +50,29 @@ import '../styles/TimerPage.css'
  *     an earned title never regresses.
  */
 
-const DAILY_GOAL = 4
+const DAILY_GOAL = 4;
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const WEEK_MS = 7 * DAY_MS
+const DAY_MS = 24 * 60 * 60 * 1000;
+const WEEK_MS = 7 * DAY_MS;
 
 function makeId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function timeOf(iso) {
-  const t = new Date(iso).getTime()
-  return Number.isNaN(t) ? 0 : t
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? 0 : t;
 }
 
 function isToday(iso) {
-  const d = new Date(iso)
-  const now = new Date()
+  const d = new Date(iso);
+  const now = new Date();
   return (
     d.getFullYear() === now.getFullYear() &&
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate()
-  )
+  );
 }
 
 // Drop task records older than 7 days, then expire any to-do left unstarted for
@@ -82,53 +82,53 @@ function reconcileTasks(tasks, now = Date.now()) {
     .filter((task) => now - timeOf(task.createdAt) < WEEK_MS)
     .map((task) => {
       if (task.status === 'todo' && now - timeOf(task.createdAt) >= DAY_MS) {
-        return { ...task, status: 'expired', endedAt: new Date(now).toISOString() }
+        return { ...task, status: 'expired', endedAt: new Date(now).toISOString() };
       }
-      return task
-    })
+      return task;
+    });
 }
 
 // Keep only the last 7 days of session history.
 function pruneSessions(sessions, now = Date.now()) {
-  return sessions.filter((session) => now - timeOf(session.endedAt) < WEEK_MS)
+  return sessions.filter((session) => now - timeOf(session.endedAt) < WEEK_MS);
 }
 
 function TimerPage() {
   // Focus/break lengths come from the user's saved Settings, read once on mount;
   // navigating back from Settings remounts this page so a change takes effect on
   // the next session without disrupting one already running.
-  const [{ workMinutes, breakMinutes, customLabels }] = useState(() => getSettings())
+  const [{ workMinutes, breakMinutes, customLabels }] = useState(() => getSettings());
 
   // Hydrate from storage, applying retention rules once on mount.
-  const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()))
-  const [sessions, setSessions] = useState(() => pruneSessions(getSessions()))
+  const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()));
+  const [sessions, setSessions] = useState(() => pruneSessions(getSessions()));
   // Gamification state mirrors the shape services/gamification.js consumes and
   // returns: a spendable `balance` (penalty-affected) split from `lifetimePoints`
   // (monotonic, drives titles), plus the running streak and unlocked titles.
   const [gamification, setGamification] = useState(() => {
-    const g = getGamification()
+    const g = getGamification();
     return {
       lifetimePoints: g.lifetimePoints,
       balance: g.balance,
       currentStreak: g.currentStreak,
       unlockedTitles: titlesFor(g.lifetimePoints),
-    }
-  })
+    };
+  });
 
-  const [activeTaskId, setActiveTaskId] = useState(null)
-  const [lastDelta, setLastDelta] = useState(0)
-  const [notification, setNotification] = useState(null)
+  const [activeTaskId, setActiveTaskId] = useState(null);
+  const [lastDelta, setLastDelta] = useState(0);
+  const [notification, setNotification] = useState(null);
 
   // Persist every record set so refreshes never lose information. The saved
   // gamification object keeps the legacy `points`/`streak` fields (read by the
   // History page) alongside the balance/lifetime split; storage.js additionally
   // guards lifetimePoints as monotonic.
   useEffect(() => {
-    saveTasks(tasks)
-  }, [tasks])
+    saveTasks(tasks);
+  }, [tasks]);
   useEffect(() => {
-    saveSessions(sessions)
-  }, [sessions])
+    saveSessions(sessions);
+  }, [sessions]);
   useEffect(() => {
     saveGamification({
       points: gamification.balance,
@@ -137,58 +137,58 @@ function TimerPage() {
       currentStreak: gamification.currentStreak,
       lifetimePoints: gamification.lifetimePoints,
       unlockedTitles: gamification.unlockedTitles,
-    })
-  }, [gamification])
+    });
+  }, [gamification]);
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.id === activeTaskId) ?? null,
-    [tasks, activeTaskId],
-  )
-  const hasBacklog = useMemo(() => tasks.some((task) => task.status === 'todo'), [tasks])
+    [tasks, activeTaskId]
+  );
+  const hasBacklog = useMemo(() => tasks.some((task) => task.status === 'todo'), [tasks]);
   // Whether the user has already resolved a task today (session or manual), so
   // the empty backlog can read as "all handled" rather than "add your first".
   const handledToday = useMemo(
     () => tasks.some((task) => task.status !== 'todo' && task.endedAt && isToday(task.endedAt)),
-    [tasks],
-  )
+    [tasks]
+  );
 
   // The dashboard only ever surfaces *today's* records; the rest stays archived
   // in storage for stats.
   const todaySessions = useMemo(
     () => sessions.filter((session) => isToday(session.endedAt)),
-    [sessions],
-  )
+    [sessions]
+  );
   const completedCount = useMemo(
     () => todaySessions.filter((session) => session.status === 'completed').length,
-    [todaySessions],
-  )
+    [todaySessions]
+  );
   const terminatedCount = useMemo(
     () => todaySessions.filter((session) => session.status === 'terminated').length,
-    [todaySessions],
-  )
+    [todaySessions]
+  );
 
   // Fired by the timer hook when a phase reaches 0. Work completions score,
   // record the task as completed, and append history; break completions just
   // quietly return to idle.
   const handleComplete = useCallback(
     (finishedPhase) => {
-      if (finishedPhase !== 'work') return
+      if (finishedPhase !== 'work') return;
 
-      const taskTitle = activeTask?.title ?? 'Focus session'
-      const { state, delta, bonus, unlocked } = applyCompletion(gamification)
+      const taskTitle = activeTask?.title ?? 'Focus session';
+      const { state, delta, bonus, unlocked } = applyCompletion(gamification);
 
-      setGamification(state)
-      setLastDelta(delta)
+      setGamification(state);
+      setLastDelta(delta);
 
       if (activeTaskId) {
         setTasks((prev) =>
           prev.map((task) =>
             task.id === activeTaskId
               ? { ...task, status: 'completed', endedAt: new Date().toISOString() }
-              : task,
-          ),
-        )
-        setActiveTaskId(null)
+              : task
+          )
+        );
+        setActiveTaskId(null);
       }
 
       setSessions((prev) => [
@@ -200,67 +200,67 @@ function TimerPage() {
           status: 'completed',
         },
         ...prev,
-      ])
+      ]);
 
       // A crossed title is the headline; otherwise report points (+ any bonus).
       if (unlocked.length > 0) {
         const names = unlocked
           .map((key) => TITLES.find((title) => title.key === key)?.name)
           .filter(Boolean)
-          .join(', ')
+          .join(', ');
         setNotification({
           type: 'success',
           message: `New title unlocked — ${names}! +${delta} points and a new feature to explore.`,
-        })
+        });
       } else {
         setNotification({
           type: 'success',
           message: bonus
             ? `Session complete! +${POINTS.sessionComplete} points and a +${bonus} streak bonus.`
             : `Session complete! +${POINTS.sessionComplete} points. Break time.`,
-        })
+        });
       }
     },
-    [activeTask, activeTaskId, gamification, workMinutes],
-  )
+    [activeTask, activeTaskId, gamification, workMinutes]
+  );
 
   const timer = usePomodoroTimer({
     workMinutes,
     breakMinutes,
     onComplete: handleComplete,
-  })
+  });
 
   function handleAddTask(title) {
     setTasks((prev) => [
       ...prev,
       { id: makeId(), title, status: 'todo', createdAt: new Date().toISOString() },
-    ])
+    ]);
   }
 
   function handleStart() {
-    if (!activeTaskId) return
-    timer.start()
+    if (!activeTaskId) return;
+    timer.start();
   }
 
   function handleTerminate() {
     // Only a focus block is penalized/logged; abandoning a break just ends it.
     if (timer.phase === 'work') {
-      const taskTitle = activeTask?.title ?? 'Focus session'
-      const elapsedMs = Math.max(0, timer.totalMs - timer.remainingMs)
-      const { state, delta } = applyTermination(gamification)
+      const taskTitle = activeTask?.title ?? 'Focus session';
+      const elapsedMs = Math.max(0, timer.totalMs - timer.remainingMs);
+      const { state, delta } = applyTermination(gamification);
 
-      setGamification(state)
-      setLastDelta(delta)
+      setGamification(state);
+      setLastDelta(delta);
 
       if (activeTaskId) {
         setTasks((prev) =>
           prev.map((task) =>
             task.id === activeTaskId
               ? { ...task, status: 'terminated', endedAt: new Date().toISOString() }
-              : task,
-          ),
-        )
-        setActiveTaskId(null)
+              : task
+          )
+        );
+        setActiveTaskId(null);
       }
 
       setSessions((prev) => [
@@ -272,31 +272,29 @@ function TimerPage() {
           status: 'terminated',
         },
         ...prev,
-      ])
+      ]);
 
       setNotification({
         type: 'warning',
         message: `Session terminated. −${POINTS.terminatePenalty} points and your streak reset.`,
-      })
+      });
     }
 
-    timer.terminate()
+    timer.terminate();
   }
 
   function handleFocusTask(id) {
-    if (!timer.isIdle) return
-    setActiveTaskId(id)
+    if (!timer.isIdle) return;
+    setActiveTaskId(id);
   }
 
   function handleCompleteTask(id) {
     setTasks((prev) =>
       prev.map((task) =>
-        task.id === id
-          ? { ...task, status: 'completed', endedAt: new Date().toISOString() }
-          : task,
-      ),
-    )
-    if (id === activeTaskId) setActiveTaskId(null)
+        task.id === id ? { ...task, status: 'completed', endedAt: new Date().toISOString() } : task
+      )
+    );
+    if (id === activeTaskId) setActiveTaskId(null);
   }
 
   return (
@@ -360,7 +358,7 @@ function TimerPage() {
         </div>
       </div>
     </AppLayout>
-  )
+  );
 }
 
-export default TimerPage
+export default TimerPage;

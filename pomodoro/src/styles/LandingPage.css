@@ -52,7 +52,9 @@
     url('../assets/forest-bg.svg');
   background-repeat: no-repeat, no-repeat;
   background-size: cover, cover;
-  background-position: center, center bottom;
+  background-position:
+    center,
+    center bottom;
 }
 
 /* ---------------------------------------------------------------- Header -- */

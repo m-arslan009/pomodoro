@@ -7,27 +7,27 @@
 
 function formatWhen(iso) {
   try {
-    const d = new Date(iso)
+    const d = new Date(iso);
     return d.toLocaleString([], {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    })
+    });
   } catch {
-    return ''
+    return '';
   }
 }
 
 function formatDuration(ms) {
-  const minutes = Math.max(0, Math.round((Number.isFinite(ms) ? ms : 0) / 60000))
-  return `${minutes} min`
+  const minutes = Math.max(0, Math.round((Number.isFinite(ms) ? ms : 0) / 60000));
+  return `${minutes} min`;
 }
 
 function RecentTile({ sessions }) {
   const ordered = [...sessions].sort(
-    (a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime(),
-  )
+    (a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime()
+  );
 
   return (
     <section className="hp-tile hp-recent" aria-labelledby="hp-recent-heading">
@@ -40,8 +40,7 @@ function RecentTile({ sessions }) {
 
       {ordered.length === 0 ? (
         <p className="hp-empty">
-          No sessions logged in the last 7 days. Completed and terminated blocks
-          will list here.
+          No sessions logged in the last 7 days. Completed and terminated blocks will list here.
         </p>
       ) : (
         <div className="hp-recent__scroll">
@@ -75,7 +74,7 @@ function RecentTile({ sessions }) {
         </div>
       )}
     </section>
-  )
+  );
 }
 
-export default RecentTile
+export default RecentTile;

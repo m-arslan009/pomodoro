@@ -1,5 +1,5 @@
-import useFeatureGate from '../hooks/useFeatureGate.js'
-import '../styles/FeatureGate.css'
+import useFeatureGate from '../hooks/useFeatureGate.js';
+import '../styles/FeatureGate.css';
 
 /*
  * FeatureGate — wraps a title-gated feature as a self-contained glass section.
@@ -32,13 +32,13 @@ function LockIcon() {
       <rect x="4" y="11" width="16" height="10" rx="2" />
       <path d="M8 11V7a4 4 0 0 1 8 0v4" />
     </svg>
-  )
+  );
 }
 
 function FeatureGate({ feature, title, description, children }) {
-  const { unlocked, requiredTitle, lifetimePoints } = useFeatureGate(feature)
-  const remaining = requiredTitle ? Math.max(0, requiredTitle.threshold - lifetimePoints) : 0
-  const headingId = `gate-${feature}`
+  const { unlocked, requiredTitle, lifetimePoints } = useFeatureGate(feature);
+  const remaining = requiredTitle ? Math.max(0, requiredTitle.threshold - lifetimePoints) : 0;
+  const headingId = `gate-${feature}`;
 
   return (
     <section
@@ -68,13 +68,12 @@ function FeatureGate({ feature, title, description, children }) {
 
       {!unlocked && requiredTitle && (
         <p className="feature-section__hint" role="note">
-          Reach <strong>{requiredTitle.name}</strong> at{' '}
-          {requiredTitle.threshold.toLocaleString()} lifetime points to unlock —{' '}
-          {remaining.toLocaleString()} to go.
+          Reach <strong>{requiredTitle.name}</strong> at {requiredTitle.threshold.toLocaleString()}{' '}
+          lifetime points to unlock — {remaining.toLocaleString()} to go.
         </p>
       )}
     </section>
-  )
+  );
 }
 
-export default FeatureGate
+export default FeatureGate;

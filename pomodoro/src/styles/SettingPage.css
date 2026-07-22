@@ -106,8 +106,7 @@
   min-width: 0;
   padding: var(--gap-3);
   border-radius: 14px;
-  background:
-    linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
+  background: linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
   background-color: var(--glass-hover);
   border: 1px solid var(--glass-border);
   box-shadow: inset 0 1px 0 rgba(243, 247, 236, 0.06);
@@ -149,7 +148,10 @@
   border: 1px solid var(--glass-border);
   color: var(--fg-brand);
   cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .duration-field__step:hover:not(:disabled) {
@@ -181,7 +183,9 @@
   border-radius: 12px;
   background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .duration-field__value:focus-within {
@@ -262,7 +266,10 @@
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease,
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
     opacity 0.2s ease;
 }
 
@@ -335,7 +342,10 @@
   font-size: var(--fs-body);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .theme-segment__btn:hover:not(.theme-segment__btn--active) {
@@ -454,7 +464,9 @@
   color: var(--fg-text);
   font: inherit;
   cursor: pointer;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .bg-preset:hover {
@@ -528,7 +540,9 @@
   color: var(--fg-brand);
   font: inherit;
   font-size: var(--fs-body);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .label-field__input::placeholder {
@@ -621,7 +635,10 @@
   font-size: var(--fs-label);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .schedule__day:hover:not(.schedule__day--active) {

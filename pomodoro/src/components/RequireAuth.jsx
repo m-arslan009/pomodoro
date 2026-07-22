@@ -1,5 +1,5 @@
-import { Navigate, useLocation } from 'react-router-dom'
-import { getSession } from '../services/auth.js'
+import { Navigate, useLocation } from 'react-router-dom';
+import { getSession } from '../services/auth.js';
 
 /*
  * RequireAuth — guards the internal application pages. When there is no active
@@ -9,13 +9,13 @@ import { getSession } from '../services/auth.js'
  * later if desired.
  */
 function RequireAuth({ children }) {
-  const location = useLocation()
+  const location = useLocation();
 
   if (!getSession()) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  return children
+  return children;
 }
 
-export default RequireAuth
+export default RequireAuth;

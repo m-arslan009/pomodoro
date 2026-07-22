@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import useElementWidth from '../../../hooks/useElementWidth.js'
+import { useState } from 'react';
+import useElementWidth from '../../../hooks/useElementWidth.js';
 
 /*
  * ComparisonBarChart — grouped bars comparing two outcomes (completed vs
@@ -11,13 +11,13 @@ import useElementWidth from '../../../hooks/useElementWidth.js'
  * baseline; per-group hover tooltip listing both values.
  */
 
-const PAD = { top: 18, right: 12, bottom: 8, left: 12 }
-const GROUP_GAP = 2 // surface gap between the two bars in a pair
+const PAD = { top: 18, right: 12, bottom: 8, left: 12 };
+const GROUP_GAP = 2; // surface gap between the two bars in a pair
 
 /** Path for a rectangle with only its top corners rounded, grown from baseline. */
 function topRoundedRect(x, y, w, h, r) {
-  if (h <= 0 || w <= 0) return ''
-  const radius = Math.min(r, w / 2, h)
+  if (h <= 0 || w <= 0) return '';
+  const radius = Math.min(r, w / 2, h);
   return [
     `M ${x} ${y + h}`,
     `L ${x} ${y + radius}`,
@@ -26,36 +26,36 @@ function topRoundedRect(x, y, w, h, r) {
     `Q ${x + w} ${y} ${x + w} ${y + radius}`,
     `L ${x + w} ${y + h}`,
     'Z',
-  ].join(' ')
+  ].join(' ');
 }
 
 function ComparisonBarChart({ data, completedColor, terminatedColor }) {
-  const [wrapRef, width] = useElementWidth()
-  const [active, setActive] = useState(null)
+  const [wrapRef, width] = useElementWidth();
+  const [active, setActive] = useState(null);
 
-  const height = width && width < 460 ? 188 : 216
-  const plotW = Math.max(0, width - PAD.left - PAD.right)
-  const plotH = height - PAD.top - PAD.bottom
-  const baseline = PAD.top + plotH
-  const max = Math.max(1, ...data.flatMap((d) => [d.completed, d.terminated]))
+  const height = width && width < 460 ? 188 : 216;
+  const plotW = Math.max(0, width - PAD.left - PAD.right);
+  const plotH = height - PAD.top - PAD.bottom;
+  const baseline = PAD.top + plotH;
+  const max = Math.max(1, ...data.flatMap((d) => [d.completed, d.terminated]));
 
-  const groupW = data.length > 0 ? plotW / data.length : 0
-  const groupPad = Math.min(groupW * 0.16, 14)
-  const barW = Math.max(0, (groupW - groupPad * 2 - GROUP_GAP) / 2)
+  const groupW = data.length > 0 ? plotW / data.length : 0;
+  const groupPad = Math.min(groupW * 0.16, 14);
+  const barW = Math.max(0, (groupW - groupPad * 2 - GROUP_GAP) / 2);
 
   const groups = data.map((d, i) => {
-    const gx = PAD.left + i * groupW + groupPad
-    const cH = (d.completed / max) * plotH
-    const tH = (d.terminated / max) * plotH
+    const gx = PAD.left + i * groupW + groupPad;
+    const cH = (d.completed / max) * plotH;
+    const tH = (d.terminated / max) * plotH;
     return {
       ...d,
       center: PAD.left + i * groupW + groupW / 2,
       completedRect: { x: gx, y: baseline - cH, w: barW, h: cH },
       terminatedRect: { x: gx + barW + GROUP_GAP, y: baseline - tH, w: barW, h: tH },
-    }
-  })
+    };
+  });
 
-  const gridYs = [0.25, 0.5, 0.75, 1].map((f) => baseline - f * plotH)
+  const gridYs = [0.25, 0.5, 0.75, 1].map((f) => baseline - f * plotH);
 
   return (
     <div className="hp-chart" ref={wrapRef}>
@@ -91,21 +91,33 @@ function ComparisonBarChart({ data, completedColor, terminatedColor }) {
             />
 
             {groups.map((g, i) => {
-              const dim = active != null && active !== i
+              const dim = active != null && active !== i;
               return (
                 <g key={g.label} style={{ opacity: dim ? 0.4 : 1 }}>
                   <path
                     className="hp-chart__bar hp-chart__bar--good"
-                    d={topRoundedRect(g.completedRect.x, g.completedRect.y, g.completedRect.w, g.completedRect.h, 4)}
+                    d={topRoundedRect(
+                      g.completedRect.x,
+                      g.completedRect.y,
+                      g.completedRect.w,
+                      g.completedRect.h,
+                      4
+                    )}
                     fill={completedColor}
                   />
                   <path
                     className="hp-chart__bar hp-chart__bar--bad"
-                    d={topRoundedRect(g.terminatedRect.x, g.terminatedRect.y, g.terminatedRect.w, g.terminatedRect.h, 4)}
+                    d={topRoundedRect(
+                      g.terminatedRect.x,
+                      g.terminatedRect.y,
+                      g.terminatedRect.w,
+                      g.terminatedRect.h,
+                      4
+                    )}
                     fill={terminatedColor}
                   />
                 </g>
-              )
+              );
             })}
 
             {/* Full-height hover targets, one per group. */}
@@ -155,7 +167,7 @@ function ComparisonBarChart({ data, completedColor, terminatedColor }) {
         </>
       )}
     </div>
-  )
+  );
 }
 
-export default ComparisonBarChart
+export default ComparisonBarChart;

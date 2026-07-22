@@ -15,7 +15,7 @@ export const THEME_VARS = [
   { key: 'accent', cssVar: '--fg-accent', label: 'Accent', fallback: '#cfe6b4' },
   { key: 'leaf', cssVar: '--fg-leaf', label: 'Highlight', fallback: '#a9c98d' },
   { key: 'wood', cssVar: '--fg-wood', label: 'Focus ring', fallback: '#d59b6c' },
-]
+];
 
 /**
  * Background choices for the gated Pace Setter feature. `image: null` is the
@@ -40,53 +40,53 @@ export const BACKGROUND_PRESETS = [
     label: 'Midnight',
     image: 'linear-gradient(160deg, #10161f 0%, #131b2b 55%, #1a1330 100%)',
   },
-]
+];
 
 /** Base colour-scheme options for the always-available theme toggle. */
 export const THEME_OPTIONS = [
   { key: 'system', label: 'System' },
   { key: 'light', label: 'Light' },
   { key: 'dark', label: 'Dark' },
-]
+];
 
 /**
  * Apply the base colour scheme at the document level. 'system' clears the
  * override so the OS preference (via prefers-color-scheme) wins again.
  */
 export function applyBaseTheme(theme) {
-  const root = document.documentElement
+  const root = document.documentElement;
   if (theme === 'light' || theme === 'dark') {
-    root.style.colorScheme = theme
-    root.dataset.theme = theme
+    root.style.colorScheme = theme;
+    root.dataset.theme = theme;
   } else {
-    root.style.removeProperty('color-scheme')
-    delete root.dataset.theme
+    root.style.removeProperty('color-scheme');
+    delete root.dataset.theme;
   }
 }
 
 /** Override (or clear) the forest palette variables on the shell element. */
 export function applyCustomTheme(element, customTheme) {
-  if (!element) return
+  if (!element) return;
   for (const { key, cssVar } of THEME_VARS) {
-    const value = customTheme?.[key]
-    if (value) element.style.setProperty(cssVar, value)
-    else element.style.removeProperty(cssVar)
+    const value = customTheme?.[key];
+    if (value) element.style.setProperty(cssVar, value);
+    else element.style.removeProperty(cssVar);
   }
 }
 
 /** Swap the shell background to a preset, or clear it to restore the forest. */
 export function applyBackground(element, presetKey) {
-  if (!element) return
-  const preset = BACKGROUND_PRESETS.find((option) => option.key === presetKey)
+  if (!element) return;
+  const preset = BACKGROUND_PRESETS.find((option) => option.key === presetKey);
   if (!preset || !preset.image) {
-    element.style.removeProperty('background-image')
-    element.style.removeProperty('background-size')
-    element.style.removeProperty('background-position')
-    element.style.removeProperty('background-attachment')
-    return
+    element.style.removeProperty('background-image');
+    element.style.removeProperty('background-size');
+    element.style.removeProperty('background-position');
+    element.style.removeProperty('background-attachment');
+    return;
   }
-  element.style.backgroundImage = preset.image
-  element.style.backgroundSize = 'cover'
-  element.style.backgroundPosition = 'center'
-  element.style.backgroundAttachment = 'fixed'
+  element.style.backgroundImage = preset.image;
+  element.style.backgroundSize = 'cover';
+  element.style.backgroundPosition = 'center';
+  element.style.backgroundAttachment = 'fixed';
 }

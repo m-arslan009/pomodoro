@@ -1,4 +1,4 @@
-import GatedTile from './GatedTile.jsx'
+import GatedTile from './GatedTile.jsx';
 
 /*
  * OutcomeTile — how the tracked tasks resolved, as horizontal share bars. Each
@@ -10,8 +10,8 @@ import GatedTile from './GatedTile.jsx'
  */
 
 function OutcomeTile({ outcomes }) {
-  const total = outcomes.reduce((sum, o) => sum + o.count, 0)
-  const max = Math.max(1, ...outcomes.map((o) => o.count))
+  const total = outcomes.reduce((sum, o) => sum + o.count, 0);
+  const max = Math.max(1, ...outcomes.map((o) => o.count));
 
   return (
     <GatedTile
@@ -23,13 +23,12 @@ function OutcomeTile({ outcomes }) {
     >
       {total === 0 ? (
         <p className="hp-empty">
-          No tasks tracked yet. Add tasks on the timer and their outcomes will
-          break down here.
+          No tasks tracked yet. Add tasks on the timer and their outcomes will break down here.
         </p>
       ) : (
         <ul className="hp-outcome__list">
           {outcomes.map((o) => {
-            const share = total > 0 ? Math.round((o.count / total) * 100) : 0
+            const share = total > 0 ? Math.round((o.count / total) * 100) : 0;
             return (
               <li key={o.key} className="hp-outcome__row">
                 <div className="hp-outcome__meta">
@@ -46,12 +45,12 @@ function OutcomeTile({ outcomes }) {
                   />
                 </div>
               </li>
-            )
+            );
           })}
         </ul>
       )}
     </GatedTile>
-  )
+  );
 }
 
-export default OutcomeTile
+export default OutcomeTile;

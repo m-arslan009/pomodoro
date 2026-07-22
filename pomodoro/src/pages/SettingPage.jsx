@@ -1,18 +1,18 @@
-import { useCallback, useState } from 'react'
-import AppLayout from '../components/AppLayout.jsx'
-import Notification from '../components/Notification.jsx'
-import FeatureGate from '../components/FeatureGate.jsx'
-import BaseTheme from '../components/settings/BaseTheme.jsx'
-import ThemeEditor from '../components/settings/ThemeEditor.jsx'
-import BackgroundLabels from '../components/settings/BackgroundLabels.jsx'
-import Scheduling from '../components/settings/Scheduling.jsx'
+import { useCallback, useState } from 'react';
+import AppLayout from '../components/AppLayout.jsx';
+import Notification from '../components/Notification.jsx';
+import FeatureGate from '../components/FeatureGate.jsx';
+import BaseTheme from '../components/settings/BaseTheme.jsx';
+import ThemeEditor from '../components/settings/ThemeEditor.jsx';
+import BackgroundLabels from '../components/settings/BackgroundLabels.jsx';
+import Scheduling from '../components/settings/Scheduling.jsx';
 import {
   getSettings,
   saveSettings,
   DEFAULT_SETTINGS,
   DURATION_LIMITS,
-} from '../services/storage.js'
-import '../styles/SettingPage.css'
+} from '../services/storage.js';
+import '../styles/SettingPage.css';
 
 /*
  * SettingPage — user preferences, scoped to the forest .app-shell so it reuses
@@ -48,22 +48,22 @@ const FIELDS = [
     description: 'The rest that follows a completed focus block.',
     limits: DURATION_LIMITS.break,
   },
-]
+];
 
 function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
+  return Math.min(max, Math.max(min, value));
 }
 
 // A single labelled duration control: −/＋ steppers around a numeric input, with
 // its own inline range hint and validation message.
 function DurationField({ id, label, description, limits, value, error, onValue }) {
-  const errorId = `${id}-error`
-  const hintId = `${id}-hint`
-  const numeric = Number(value)
+  const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const numeric = Number(value);
 
   function step(delta) {
-    const base = Number.isFinite(numeric) ? Math.round(numeric) : limits.min
-    onValue(String(clamp(base + delta, limits.min, limits.max)))
+    const base = Number.isFinite(numeric) ? Math.round(numeric) : limits.min;
+    onValue(String(clamp(base + delta, limits.min, limits.max)));
   }
 
   return (
@@ -126,75 +126,76 @@ function DurationField({ id, label, description, limits, value, error, onValue }
         </p>
       )}
     </div>
-  )
+  );
 }
 
 function SettingPage() {
   // The persisted baseline; updated only after a successful save so the form can
   // track "unsaved changes" and revert cleanly.
-  const [saved, setSaved] = useState(() => getSettings())
+  const [saved, setSaved] = useState(() => getSettings());
   const [values, setValues] = useState(() => ({
     workMinutes: String(saved.workMinutes),
     breakMinutes: String(saved.breakMinutes),
-  }))
-  const [errors, setErrors] = useState({})
-  const [notification, setNotification] = useState(null)
+  }));
+  const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState(null);
 
   // Shared toast channel for every section (durations + the gated features).
-  const notify = useCallback((type, message) => setNotification({ type, message }), [])
+  const notify = useCallback((type, message) => setNotification({ type, message }), []);
 
-  const isDirty = FIELDS.some(({ key }) => values[key] !== String(saved[key]))
+  const isDirty = FIELDS.some(({ key }) => values[key] !== String(saved[key]));
 
   function setField(key, next) {
-    setValues((prev) => ({ ...prev, [key]: next }))
+    setValues((prev) => ({ ...prev, [key]: next }));
     // Clear a field's error as soon as the user edits it.
-    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev))
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
 
   function validate() {
-    const next = {}
+    const next = {};
     for (const { key, label, limits } of FIELDS) {
-      const raw = values[key].trim()
-      const n = Number(raw)
+      const raw = values[key].trim();
+      const n = Number(raw);
       if (raw === '' || !Number.isInteger(n) || n < limits.min || n > limits.max) {
-        next[key] = `${label} must be a whole number between ${limits.min} and ${limits.max} minutes.`
+        next[key] =
+          `${label} must be a whole number between ${limits.min} and ${limits.max} minutes.`;
       }
     }
-    return next
+    return next;
   }
 
   function handleSubmit(event) {
-    event.preventDefault()
+    event.preventDefault();
 
-    const nextErrors = validate()
-    setErrors(nextErrors)
+    const nextErrors = validate();
+    setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       setNotification({
         type: 'error',
         message: 'Please fix the highlighted durations before saving.',
-      })
-      return
+      });
+      return;
     }
 
     const nextSettings = {
       ...saved,
       workMinutes: Number(values.workMinutes),
       breakMinutes: Number(values.breakMinutes),
-    }
+    };
 
     if (!saveSettings(nextSettings)) {
       setNotification({
         type: 'error',
         message: 'Could not save your settings. Please try again.',
-      })
-      return
+      });
+      return;
     }
 
-    setSaved(nextSettings)
+    setSaved(nextSettings);
     setNotification({
       type: 'success',
       message: 'Durations saved. Your next session will use them.',
-    })
+    });
   }
 
   // Populate the form with factory defaults; the user still saves to apply.
@@ -202,8 +203,8 @@ function SettingPage() {
     setValues({
       workMinutes: String(DEFAULT_SETTINGS.workMinutes),
       breakMinutes: String(DEFAULT_SETTINGS.breakMinutes),
-    })
-    setErrors({})
+    });
+    setErrors({});
   }
 
   return (
@@ -218,8 +219,8 @@ function SettingPage() {
         <header className="settings-page__head">
           <h1 className="settings-page__title">Settings</h1>
           <p className="settings-page__subtitle">
-            Tune how long you focus and rest, and personalize the app. Some options
-            unlock as you earn titles.
+            Tune how long you focus and rest, and personalize the app. Some options unlock as you
+            earn titles.
           </p>
         </header>
 
@@ -293,7 +294,7 @@ function SettingPage() {
         </div>
       </div>
     </AppLayout>
-  )
+  );
 }
 
-export default SettingPage
+export default SettingPage;

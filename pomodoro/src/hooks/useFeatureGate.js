@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { getLifetimePoints } from '../services/storage.js'
-import { featureTitle, isFeatureUnlocked } from '../services/gamification.js'
+import { useState } from 'react';
+import { getLifetimePoints } from '../services/storage.js';
+import { featureTitle, isFeatureUnlocked } from '../services/gamification.js';
 
 /*
  * useFeatureGate — resolves whether a title-gated feature is available to the
@@ -11,10 +11,10 @@ import { featureTitle, isFeatureUnlocked } from '../services/gamification.js'
  * preview.
  */
 export default function useFeatureGate(feature) {
-  const [lifetimePoints] = useState(() => getLifetimePoints())
+  const [lifetimePoints] = useState(() => getLifetimePoints());
   return {
     unlocked: isFeatureUnlocked(lifetimePoints, feature),
     requiredTitle: featureTitle(feature),
     lifetimePoints,
-  }
+  };
 }

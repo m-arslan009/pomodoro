@@ -10,15 +10,15 @@
 
 function formatTime(iso) {
   try {
-    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch {
-    return ''
+    return '';
   }
 }
 
 function formatDuration(ms) {
-  const minutes = Math.round(ms / 60000)
-  return `${minutes} min`
+  const minutes = Math.round(ms / 60000);
+  return `${minutes} min`;
 }
 
 function HistoryTile({ entries }) {
@@ -38,9 +38,7 @@ function HistoryTile({ entries }) {
       ) : (
         <div className="history-tile__scroll">
           <table className="history-tile__table">
-            <caption className="timer-visually-hidden">
-              Processed focus blocks for today
-            </caption>
+            <caption className="timer-visually-hidden">Processed focus blocks for today</caption>
             <thead>
               <tr>
                 <th scope="col">Task</th>
@@ -56,9 +54,7 @@ function HistoryTile({ entries }) {
                   <td>{formatDuration(entry.durationMs)}</td>
                   <td>{formatTime(entry.endedAt)}</td>
                   <td>
-                    <span
-                      className={`history-badge history-badge--${entry.status}`}
-                    >
+                    <span className={`history-badge history-badge--${entry.status}`}>
                       {entry.status === 'completed' ? 'Completed' : 'Terminated'}
                     </span>
                   </td>
@@ -69,7 +65,7 @@ function HistoryTile({ entries }) {
         </div>
       )}
     </section>
-  )
+  );
 }
 
-export default HistoryTile
+export default HistoryTile;

@@ -15,14 +15,14 @@ function SummaryTile({ summary }) {
     incompleteTasks,
     completionRate,
     focusMinutes,
-  } = summary
+  } = summary;
 
   const kpis = [
     { label: 'Completed sessions', value: completedSessions, tone: 'good' },
     { label: 'Terminated sessions', value: terminatedSessions, tone: 'bad' },
     { label: 'Completed tasks', value: completedTasks, tone: 'good' },
     { label: 'Incomplete tasks', value: incompleteTasks, tone: 'muted' },
-  ]
+  ];
 
   return (
     <section className="hp-tile hp-summary" aria-labelledby="hp-summary-heading">
@@ -70,7 +70,7 @@ function SummaryTile({ summary }) {
         </div>
       </div>
     </section>
-  )
+  );
 }
 
-export default SummaryTile
+export default SummaryTile;

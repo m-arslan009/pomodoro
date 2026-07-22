@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /*
  * usePomodoroTimer — the timer state machine for the dashboard prototype.
@@ -21,115 +21,111 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Status:  'idle' | 'running' | 'paused' | 'completed'
  */
 
-const TICK_MS = 250
+const TICK_MS = 250;
 
 function minutesToMs(minutes) {
-  return Math.round(minutes * 60 * 1000)
+  return Math.round(minutes * 60 * 1000);
 }
 
-export default function usePomodoroTimer({
-  workMinutes = 25,
-  breakMinutes = 5,
-  onComplete,
-} = {}) {
-  const [phase, setPhase] = useState('idle') // 'idle' | 'work' | 'break'
-  const [status, setStatus] = useState('idle') // 'idle' | 'running' | 'paused' | 'completed'
-  const [remainingMs, setRemainingMs] = useState(minutesToMs(workMinutes))
+export default function usePomodoroTimer({ workMinutes = 25, breakMinutes = 5, onComplete } = {}) {
+  const [phase, setPhase] = useState('idle'); // 'idle' | 'work' | 'break'
+  const [status, setStatus] = useState('idle'); // 'idle' | 'running' | 'paused' | 'completed'
+  const [remainingMs, setRemainingMs] = useState(minutesToMs(workMinutes));
 
   // Absolute timestamp the current interval ends at (while running). When paused,
   // we instead keep the frozen remaining time in `pausedRemainingRef`.
-  const endTimeRef = useRef(null)
-  const pausedRemainingRef = useRef(null)
+  const endTimeRef = useRef(null);
+  const pausedRemainingRef = useRef(null);
   // Keep the latest onComplete without re-subscribing the interval each render.
-  const onCompleteRef = useRef(onComplete)
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    onCompleteRef.current = onComplete
-  }, [onComplete])
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const durationFor = useCallback(
     (which) => minutesToMs(which === 'break' ? breakMinutes : workMinutes),
-    [workMinutes, breakMinutes],
-  )
+    [workMinutes, breakMinutes]
+  );
 
   // Begin (or restart) a phase's countdown from its full duration.
   const beginPhase = useCallback(
     (which) => {
-      const total = durationFor(which)
-      pausedRemainingRef.current = null
-      endTimeRef.current = Date.now() + total
-      setPhase(which)
-      setStatus('running')
-      setRemainingMs(total)
+      const total = durationFor(which);
+      pausedRemainingRef.current = null;
+      endTimeRef.current = Date.now() + total;
+      setPhase(which);
+      setStatus('running');
+      setRemainingMs(total);
     },
-    [durationFor],
-  )
+    [durationFor]
+  );
 
   // The single ticking effect — active only while running.
   useEffect(() => {
-    if (status !== 'running') return undefined
+    if (status !== 'running') return undefined;
 
     function tick() {
-      const left = Math.max(0, (endTimeRef.current ?? 0) - Date.now())
-      setRemainingMs(left)
+      const left = Math.max(0, (endTimeRef.current ?? 0) - Date.now());
+      setRemainingMs(left);
 
-      if (left > 0) return
+      if (left > 0) return;
 
       // Interval elapsed. Transition based on the phase that just finished.
-      const finishedPhase = phase
-      onCompleteRef.current?.(finishedPhase)
+      const finishedPhase = phase;
+      onCompleteRef.current?.(finishedPhase);
 
       if (finishedPhase === 'work') {
-        beginPhase('break')
+        beginPhase('break');
       } else {
-        endTimeRef.current = null
-        setPhase('idle')
-        setStatus('idle')
-        setRemainingMs(durationFor('work'))
+        endTimeRef.current = null;
+        setPhase('idle');
+        setStatus('idle');
+        setRemainingMs(durationFor('work'));
       }
     }
 
-    const id = window.setInterval(tick, TICK_MS)
-    return () => window.clearInterval(id)
-  }, [status, phase, beginPhase, durationFor])
+    const id = window.setInterval(tick, TICK_MS);
+    return () => window.clearInterval(id);
+  }, [status, phase, beginPhase, durationFor]);
 
   const start = useCallback(() => {
-    beginPhase('work')
-  }, [beginPhase])
+    beginPhase('work');
+  }, [beginPhase]);
 
   const pause = useCallback(() => {
-    if (status !== 'running') return
-    const left = Math.max(0, (endTimeRef.current ?? 0) - Date.now())
-    pausedRemainingRef.current = left
-    endTimeRef.current = null
-    setRemainingMs(left)
-    setStatus('paused')
-  }, [status])
+    if (status !== 'running') return;
+    const left = Math.max(0, (endTimeRef.current ?? 0) - Date.now());
+    pausedRemainingRef.current = left;
+    endTimeRef.current = null;
+    setRemainingMs(left);
+    setStatus('paused');
+  }, [status]);
 
   const resume = useCallback(() => {
-    if (status !== 'paused') return
-    const left = pausedRemainingRef.current ?? 0
-    endTimeRef.current = Date.now() + left
-    pausedRemainingRef.current = null
-    setStatus('running')
-  }, [status])
+    if (status !== 'paused') return;
+    const left = pausedRemainingRef.current ?? 0;
+    endTimeRef.current = Date.now() + left;
+    pausedRemainingRef.current = null;
+    setStatus('running');
+  }, [status]);
 
   // Reset the CURRENT interval back to full — no penalty, keeps the same phase.
   const restart = useCallback(() => {
-    if (phase === 'idle') return
-    beginPhase(phase)
-  }, [phase, beginPhase])
+    if (phase === 'idle') return;
+    beginPhase(phase);
+  }, [phase, beginPhase]);
 
   // Abandon the block early and return to idle. The page decides scoring.
   const terminate = useCallback(() => {
-    endTimeRef.current = null
-    pausedRemainingRef.current = null
-    setPhase('idle')
-    setStatus('idle')
-    setRemainingMs(durationFor('work'))
-  }, [durationFor])
+    endTimeRef.current = null;
+    pausedRemainingRef.current = null;
+    setPhase('idle');
+    setStatus('idle');
+    setRemainingMs(durationFor('work'));
+  }, [durationFor]);
 
-  const totalMs = durationFor(phase === 'break' ? 'break' : 'work')
+  const totalMs = durationFor(phase === 'break' ? 'break' : 'work');
 
   return {
     phase,
@@ -144,5 +140,5 @@ export default function usePomodoroTimer({
     resume,
     restart,
     terminate,
-  }
+  };
 }

@@ -4,11 +4,11 @@
  * every key is namespaced + versioned so future migrations are isolated.
  */
 
-const NAMESPACE = 'pomodoro.v1'
+const NAMESPACE = 'pomodoro.v1';
 
 /** Build a fully-qualified, namespaced key from a short logical name. */
 function key(name) {
-  return `${NAMESPACE}.${name}`
+  return `${NAMESPACE}.${name}`;
 }
 
 /**
@@ -17,31 +17,31 @@ function key(name) {
  */
 export function read(name, fallback = null) {
   try {
-    const raw = window.localStorage.getItem(key(name))
-    return raw === null ? fallback : JSON.parse(raw)
+    const raw = window.localStorage.getItem(key(name));
+    return raw === null ? fallback : JSON.parse(raw);
   } catch {
-    return fallback
+    return fallback;
   }
 }
 
 /** JSON-serialize and persist a value. Returns true on success. */
 export function write(name, value) {
   try {
-    window.localStorage.setItem(key(name), JSON.stringify(value))
-    return true
+    window.localStorage.setItem(key(name), JSON.stringify(value));
+    return true;
   } catch {
     // e.g. quota exceeded or storage disabled (private mode)
-    return false
+    return false;
   }
 }
 
 /** Remove a namespaced key. */
 export function remove(name) {
   try {
-    window.localStorage.removeItem(key(name))
-    return true
+    window.localStorage.removeItem(key(name));
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -51,24 +51,24 @@ export function remove(name) {
  * profile fields are stored here — never the password.
  */
 
-const USERS_KEY = 'users'
+const USERS_KEY = 'users';
 
 /** All registered user profiles (always an array). */
 export function getUsers() {
-  const users = read(USERS_KEY, [])
-  return Array.isArray(users) ? users : []
+  const users = read(USERS_KEY, []);
+  return Array.isArray(users) ? users : [];
 }
 
 /** Case-insensitive lookup by email. */
 export function findUserByEmail(email) {
-  const target = String(email).trim().toLowerCase()
-  return getUsers().find((u) => u.email?.toLowerCase() === target) ?? null
+  const target = String(email).trim().toLowerCase();
+  return getUsers().find((u) => u.email?.toLowerCase() === target) ?? null;
 }
 
 /** Case-insensitive lookup by username. */
 export function findUserByUsername(username) {
-  const target = String(username).trim().toLowerCase()
-  return getUsers().find((u) => u.username?.toLowerCase() === target) ?? null
+  const target = String(username).trim().toLowerCase();
+  return getUsers().find((u) => u.username?.toLowerCase() === target) ?? null;
 }
 
 /**
@@ -78,19 +78,17 @@ export function findUserByUsername(username) {
 export function saveUser({ firstName, lastName, email, username }) {
   const profile = {
     id:
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : String(Date.now()),
+      typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     firstName: firstName.trim(),
     lastName: lastName.trim(),
     email: email.trim(),
     username: username.trim(),
     createdAt: new Date().toISOString(),
-  }
-  const users = getUsers()
-  users.push(profile)
-  write(USERS_KEY, users)
-  return profile
+  };
+  const users = getUsers();
+  users.push(profile);
+  write(USERS_KEY, users);
+  return profile;
 }
 
 /* ----------------------------------------------------------- Dashboard -- */
@@ -105,30 +103,30 @@ export function saveUser({ firstName, lastName, email, username }) {
  *   gamification -> { points, streak }           (lifetime running totals)
  */
 
-const TASKS_KEY = 'tasks'
-const SESSIONS_KEY = 'sessions'
-const GAMIFICATION_KEY = 'gamification'
+const TASKS_KEY = 'tasks';
+const SESSIONS_KEY = 'sessions';
+const GAMIFICATION_KEY = 'gamification';
 
 /** Persisted task records (always an array). */
 export function getTasks() {
-  const items = read(TASKS_KEY, [])
-  return Array.isArray(items) ? items : []
+  const items = read(TASKS_KEY, []);
+  return Array.isArray(items) ? items : [];
 }
 
 /** Persist the full task record list. */
 export function saveTasks(items) {
-  return write(TASKS_KEY, items)
+  return write(TASKS_KEY, items);
 }
 
 /** Persisted session/history records (always an array). */
 export function getSessions() {
-  const items = read(SESSIONS_KEY, [])
-  return Array.isArray(items) ? items : []
+  const items = read(SESSIONS_KEY, []);
+  return Array.isArray(items) ? items : [];
 }
 
 /** Persist the full session record list. */
 export function saveSessions(items) {
-  return write(SESSIONS_KEY, items)
+  return write(SESSIONS_KEY, items);
 }
 
 /*
@@ -144,19 +142,19 @@ export function saveSessions(items) {
 
 /** Persisted gamification totals; safe defaults when absent/corrupt. */
 export function getGamification() {
-  const value = read(GAMIFICATION_KEY, null)
-  const v = value && typeof value === 'object' ? value : {}
-  const points = Number.isFinite(v.points) ? v.points : 0
-  const streak = Number.isFinite(v.streak) ? v.streak : 0
-  const balance = Number.isFinite(v.balance) ? v.balance : points
-  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : streak
+  const value = read(GAMIFICATION_KEY, null);
+  const v = value && typeof value === 'object' ? value : {};
+  const points = Number.isFinite(v.points) ? v.points : 0;
+  const streak = Number.isFinite(v.streak) ? v.streak : 0;
+  const balance = Number.isFinite(v.balance) ? v.balance : points;
+  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : streak;
   // Lifetime never decreases; seed it from the running total for legacy records.
   const lifetimePoints = Math.max(
     Number.isFinite(v.lifetimePoints) ? v.lifetimePoints : 0,
     points,
-    balance,
-  )
-  return { points, streak, balance, currentStreak, lifetimePoints }
+    balance
+  );
+  return { points, streak, balance, currentStreak, lifetimePoints };
 }
 
 /**
@@ -166,26 +164,25 @@ export function getGamification() {
  * penalties can never claw back.
  */
 export function saveGamification(value) {
-  const prev = read(GAMIFICATION_KEY, null)
-  const prevLifetime =
-    prev && Number.isFinite(prev.lifetimePoints) ? prev.lifetimePoints : 0
-  const incoming = value && typeof value === 'object' ? value : {}
+  const prev = read(GAMIFICATION_KEY, null);
+  const prevLifetime = prev && Number.isFinite(prev.lifetimePoints) ? prev.lifetimePoints : 0;
+  const incoming = value && typeof value === 'object' ? value : {};
   const runningTotal = Number.isFinite(incoming.points)
     ? incoming.points
     : Number.isFinite(incoming.balance)
       ? incoming.balance
-      : 0
+      : 0;
   const lifetimePoints = Math.max(
     prevLifetime,
     Number.isFinite(incoming.lifetimePoints) ? incoming.lifetimePoints : 0,
-    runningTotal,
-  )
-  return write(GAMIFICATION_KEY, { ...incoming, lifetimePoints })
+    runningTotal
+  );
+  return write(GAMIFICATION_KEY, { ...incoming, lifetimePoints });
 }
 
 /** Convenience reader for the title/feature ladder — lifetime points only. */
 export function getLifetimePoints() {
-  return getGamification().lifetimePoints
+  return getGamification().lifetimePoints;
 }
 
 /* ------------------------------------------------------------ Settings -- */
@@ -198,50 +195,50 @@ export function getLifetimePoints() {
  *   settings -> { workMinutes:25, breakMinutes:5, ... }
  */
 
-const SETTINGS_KEY = 'settings'
+const SETTINGS_KEY = 'settings';
 
 /** Factory defaults for the core preferences the Settings page can edit. */
-export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5, theme: 'system' }
+export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5, theme: 'system' };
 
 /** Allowed base colour schemes for the always-available theme toggle. */
-export const THEME_VALUES = ['system', 'light', 'dark']
+export const THEME_VALUES = ['system', 'light', 'dark'];
 
 /** Safe editable ranges (whole minutes) for each duration. */
 export const DURATION_LIMITS = {
   work: { min: 1, max: 120 },
   break: { min: 1, max: 60 },
-}
+};
 
 /** Round to a whole number and clamp into [min, max]; fall back when invalid. */
 function clampMinutes(value, min, max, fallback) {
-  const n = Math.round(Number(value))
-  if (!Number.isFinite(n)) return fallback
-  return Math.min(max, Math.max(min, n))
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 /** Persisted settings, merged over defaults with the durations sanitized. */
 export function getSettings() {
-  const value = read(SETTINGS_KEY, null)
-  const base = value && typeof value === 'object' ? value : {}
+  const value = read(SETTINGS_KEY, null);
+  const base = value && typeof value === 'object' ? value : {};
   return {
     ...base,
     workMinutes: clampMinutes(
       base.workMinutes,
       DURATION_LIMITS.work.min,
       DURATION_LIMITS.work.max,
-      DEFAULT_SETTINGS.workMinutes,
+      DEFAULT_SETTINGS.workMinutes
     ),
     breakMinutes: clampMinutes(
       base.breakMinutes,
       DURATION_LIMITS.break.min,
       DURATION_LIMITS.break.max,
-      DEFAULT_SETTINGS.breakMinutes,
+      DEFAULT_SETTINGS.breakMinutes
     ),
     theme: THEME_VALUES.includes(base.theme) ? base.theme : DEFAULT_SETTINGS.theme,
-  }
+  };
 }
 
 /** Persist the full settings object. */
 export function saveSettings(value) {
-  return write(SETTINGS_KEY, value)
+  return write(SETTINGS_KEY, value);
 }

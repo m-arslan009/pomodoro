@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import useElementWidth from '../../../hooks/useElementWidth.js'
+import { useState } from 'react';
+import useElementWidth from '../../../hooks/useElementWidth.js';
 
 /*
  * AreaTrendChart — a single-series area + line chart drawn in real pixels
@@ -12,33 +12,33 @@ import useElementWidth from '../../../hooks/useElementWidth.js'
  * role="img" summary so the trend is available without a pointer.
  */
 
-const PAD = { top: 18, right: 16, bottom: 8, left: 16 }
+const PAD = { top: 18, right: 16, bottom: 8, left: 16 };
 
 function AreaTrendChart({ data, accent, unit = '', gradientId }) {
-  const [wrapRef, width] = useElementWidth()
-  const [active, setActive] = useState(null)
+  const [wrapRef, width] = useElementWidth();
+  const [active, setActive] = useState(null);
 
-  const height = width && width < 460 ? 188 : 216
-  const plotW = Math.max(0, width - PAD.left - PAD.right)
-  const plotH = height - PAD.top - PAD.bottom
-  const max = Math.max(1, ...data.map((d) => d.value))
+  const height = width && width < 460 ? 188 : 216;
+  const plotW = Math.max(0, width - PAD.left - PAD.right);
+  const plotH = height - PAD.top - PAD.bottom;
+  const max = Math.max(1, ...data.map((d) => d.value));
 
   const points = data.map((d, i) => {
-    const x = data.length > 1 ? PAD.left + (i * plotW) / (data.length - 1) : PAD.left + plotW / 2
-    const y = PAD.top + plotH - (d.value / max) * plotH
-    return { ...d, x, y }
-  })
+    const x = data.length > 1 ? PAD.left + (i * plotW) / (data.length - 1) : PAD.left + plotW / 2;
+    const y = PAD.top + plotH - (d.value / max) * plotH;
+    return { ...d, x, y };
+  });
 
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   const areaPath =
     points.length > 0
       ? `${linePath} L ${points[points.length - 1].x} ${PAD.top + plotH} L ${points[0].x} ${PAD.top + plotH} Z`
-      : ''
+      : '';
 
-  const gridYs = [0.25, 0.5, 0.75, 1].map((f) => PAD.top + plotH - f * plotH)
-  const activePoint = active != null ? points[active] : null
+  const gridYs = [0.25, 0.5, 0.75, 1].map((f) => PAD.top + plotH - f * plotH);
+  const activePoint = active != null ? points[active] : null;
 
-  const summary = data.map((d) => `${d.label} ${d.value}`).join(', ')
+  const summary = data.map((d) => `${d.label} ${d.value}`).join(', ');
 
   return (
     <div className="hp-chart" ref={wrapRef}>
@@ -105,9 +105,9 @@ function AreaTrendChart({ data, accent, unit = '', gradientId }) {
 
             {/* Transparent hover columns — wider hit target than the marks. */}
             {points.map((p, i) => {
-              const half = data.length > 1 ? plotW / (data.length - 1) / 2 : plotW / 2
-              const x = Math.max(0, p.x - half)
-              const w = Math.min(width, p.x + half) - x
+              const half = data.length > 1 ? plotW / (data.length - 1) / 2 : plotW / 2;
+              const x = Math.max(0, p.x - half);
+              const w = Math.min(width, p.x + half) - x;
               return (
                 <rect
                   key={`hit-${p.label}`}
@@ -120,7 +120,7 @@ function AreaTrendChart({ data, accent, unit = '', gradientId }) {
                   onMouseLeave={() => setActive(null)}
                   aria-hidden="true"
                 />
-              )
+              );
             })}
           </svg>
 
@@ -150,7 +150,7 @@ function AreaTrendChart({ data, accent, unit = '', gradientId }) {
         </>
       )}
     </div>
-  )
+  );
 }
 
-export default AreaTrendChart
+export default AreaTrendChart;

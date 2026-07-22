@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { getSettings, saveSettings } from '../../services/storage.js'
-import { BACKGROUND_PRESETS, applyBackground } from '../../services/appearance.js'
+import { useEffect, useState } from 'react';
+import { getSettings, saveSettings } from '../../services/storage.js';
+import { BACKGROUND_PRESETS, applyBackground } from '../../services/appearance.js';
 
 /*
  * BackgroundLabels — the Pace Setter-gated feature: choose a shell background
@@ -14,34 +14,34 @@ import { BACKGROUND_PRESETS, applyBackground } from '../../services/appearance.j
 const LABEL_FIELDS = [
   { key: 'work', label: 'Focus label', placeholder: 'Focus', max: 18 },
   { key: 'break', label: 'Break label', placeholder: 'Break', max: 18 },
-]
+];
 
 // A saved backgroundImage should name a known preset; default to the forest.
 function savedPreset(settings) {
-  const key = settings.backgroundImage
-  return BACKGROUND_PRESETS.some((preset) => preset.key === key) ? key : 'forest'
+  const key = settings.backgroundImage;
+  return BACKGROUND_PRESETS.some((preset) => preset.key === key) ? key : 'forest';
 }
 
 function BackgroundLabels({ onNotify }) {
-  const [saved, setSaved] = useState(() => getSettings())
-  const [background, setBackground] = useState(() => savedPreset(saved))
+  const [saved, setSaved] = useState(() => getSettings());
+  const [background, setBackground] = useState(() => savedPreset(saved));
   const [labels, setLabels] = useState(() => ({
     work: saved.customLabels?.work ?? '',
     break: saved.customLabels?.break ?? '',
-  }))
+  }));
 
   // Live preview: swap the shell background as the user picks a preset.
   useEffect(() => {
-    applyBackground(document.querySelector('.app-shell'), background)
-  }, [background])
+    applyBackground(document.querySelector('.app-shell'), background);
+  }, [background]);
 
   const isDirty =
     background !== savedPreset(saved) ||
     labels.work !== (saved.customLabels?.work ?? '') ||
-    labels.break !== (saved.customLabels?.break ?? '')
+    labels.break !== (saved.customLabels?.break ?? '');
 
   function setLabel(key, value) {
-    setLabels((prev) => ({ ...prev, [key]: value }))
+    setLabels((prev) => ({ ...prev, [key]: value }));
   }
 
   function handleSave() {
@@ -49,13 +49,13 @@ function BackgroundLabels({ onNotify }) {
       ...getSettings(),
       backgroundImage: background,
       customLabels: { work: labels.work.trim(), break: labels.break.trim() },
-    }
+    };
     if (!saveSettings(next)) {
-      onNotify?.('error', 'Could not save your appearance.')
-      return
+      onNotify?.('error', 'Could not save your appearance.');
+      return;
     }
-    setSaved(next)
-    onNotify?.('success', 'Background and labels saved.')
+    setSaved(next);
+    onNotify?.('success', 'Background and labels saved.');
   }
 
   return (
@@ -103,8 +103,7 @@ function BackgroundLabels({ onNotify }) {
         ))}
       </div>
       <p className="bg-labels__note">
-        Labels appear on the Timer’s phase indicator. Leave a field blank to keep
-        its default.
+        Labels appear on the Timer’s phase indicator. Leave a field blank to keep its default.
       </p>
 
       <div className="settings-actions">
@@ -118,7 +117,7 @@ function BackgroundLabels({ onNotify }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export default BackgroundLabels
+export default BackgroundLabels;

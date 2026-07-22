@@ -1,5 +1,5 @@
-import { Navigate } from 'react-router-dom'
-import { getSession } from '../services/auth.js'
+import { Navigate } from 'react-router-dom';
+import { getSession } from '../services/auth.js';
 
 /*
  * RequireGuest — guards the public pages (landing, log in, sign up). A user with
@@ -8,10 +8,10 @@ import { getSession } from '../services/auth.js'
  */
 function RequireGuest({ children }) {
   if (getSession()) {
-    return <Navigate to="/timer" replace />
+    return <Navigate to="/timer" replace />;
   }
 
-  return children
+  return children;
 }
 
-export default RequireGuest
+export default RequireGuest;

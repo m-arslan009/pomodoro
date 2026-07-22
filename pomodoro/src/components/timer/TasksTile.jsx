@@ -22,7 +22,7 @@ function TasksTile({
   onCompleteTask,
   children,
 }) {
-  const backlog = tasks.filter((task) => task.status === 'todo')
+  const backlog = tasks.filter((task) => task.status === 'todo');
 
   return (
     <section className="timer-tile tasks-tile" aria-labelledby="tasks-heading">
@@ -37,7 +37,7 @@ function TasksTile({
         {backlog.length > 0 ? (
           <ul className="tasks-tile__list">
             {backlog.map((task) => {
-              const isActive = task.id === activeTaskId
+              const isActive = task.id === activeTaskId;
               return (
                 <li
                   key={task.id}
@@ -77,7 +77,7 @@ function TasksTile({
                     </button>
                   </span>
                 </li>
-              )
+              );
             })}
           </ul>
         ) : handledToday ? (
@@ -93,7 +93,7 @@ function TasksTile({
 
       <div className="tasks-tile__form">{children}</div>
     </section>
-  )
+  );
 }
 
-export default TasksTile
+export default TasksTile;

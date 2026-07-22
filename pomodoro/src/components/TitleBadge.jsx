@@ -1,5 +1,5 @@
-import { currentTitle, progressToNext } from '../services/gamification.js'
-import '../styles/TitleBadge.css'
+import { currentTitle, progressToNext } from '../services/gamification.js';
+import '../styles/TitleBadge.css';
 
 /*
  * TitleBadge — the player's current rank and progress toward the next title.
@@ -12,9 +12,9 @@ import '../styles/TitleBadge.css'
  * bar reads as complete.
  */
 function TitleBadge({ lifetimePoints = 0 }) {
-  const title = currentTitle(lifetimePoints)
-  const { next, percent, remaining } = progressToNext(lifetimePoints)
-  const rank = title ? title.name : 'Unranked'
+  const title = currentTitle(lifetimePoints);
+  const { next, percent, remaining } = progressToNext(lifetimePoints);
+  const rank = title ? title.name : 'Unranked';
 
   return (
     <section className="title-badge" aria-label="Title progress">
@@ -40,7 +40,7 @@ function TitleBadge({ lifetimePoints = 0 }) {
           : 'Every title earned — all features unlocked.'}
       </p>
     </section>
-  )
+  );
 }
 
-export default TitleBadge
+export default TitleBadge;

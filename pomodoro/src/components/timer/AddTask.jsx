@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState } from 'react';
 
 /*
  * AddTask — a compact inline form for adding a task to today's backlog.
@@ -9,17 +9,17 @@ import { useState } from 'react'
  * submit button stays disabled until there is something to add.
  */
 
-const MAX_LENGTH = 120
+const MAX_LENGTH = 120;
 
 function AddTask({ onAdd }) {
-  const [title, setTitle] = useState('')
-  const trimmed = title.trim()
+  const [title, setTitle] = useState('');
+  const trimmed = title.trim();
 
   function handleSubmit(event) {
-    event.preventDefault()
-    if (!trimmed) return
-    onAdd(trimmed)
-    setTitle('')
+    event.preventDefault();
+    if (!trimmed) return;
+    onAdd(trimmed);
+    setTitle('');
   }
 
   return (
@@ -41,7 +41,7 @@ function AddTask({ onAdd }) {
         Add
       </button>
     </form>
-  )
+  );
 }
 
-export default AddTask
+export default AddTask;

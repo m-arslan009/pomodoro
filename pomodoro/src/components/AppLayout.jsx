@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import Nav from './Nav.jsx'
-import { endSession } from '../services/auth.js'
-import { getSettings } from '../services/storage.js'
-import {
-  applyBaseTheme,
-  applyCustomTheme,
-  applyBackground,
-} from '../services/appearance.js'
-import '../styles/AppLayout.css'
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import Nav from './Nav.jsx';
+import { endSession } from '../services/auth.js';
+import { getSettings } from '../services/storage.js';
+import { applyBaseTheme, applyCustomTheme, applyBackground } from '../services/appearance.js';
+import '../styles/AppLayout.css';
 
 /*
  * AppLayout — the shared shell for every authenticated (internal) page.
@@ -25,7 +21,7 @@ import '../styles/AppLayout.css'
  * markup is authored once and simply restyled per breakpoint.
  */
 
-const APP_NAME = 'Evergrove'
+const APP_NAME = 'Evergrove';
 
 function LeafIcon() {
   return (
@@ -46,59 +42,54 @@ function LeafIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function Brand({ onClick }) {
   return (
-    <Link
-      to="/timer"
-      className="app-brand"
-      aria-label={`${APP_NAME} dashboard`}
-      onClick={onClick}
-    >
+    <Link to="/timer" className="app-brand" aria-label={`${APP_NAME} dashboard`} onClick={onClick}>
       <LeafIcon />
       <span className="app-brand__name">{APP_NAME}</span>
     </Link>
-  )
+  );
 }
 
 function AppLayout({ children }) {
-  const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuButtonRef = useRef(null)
-  const shellRef = useRef(null)
+  const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+  const shellRef = useRef(null);
 
-  const closeMenu = () => setMenuOpen(false)
+  const closeMenu = () => setMenuOpen(false);
 
   // Apply the user's saved personalization on mount. Base theme is document-wide;
   // the forest palette + background are inline overrides on the shell (cleared
   // by the appearance helpers when the setting is default). Re-runs on every
   // page mount, which is when a Settings change navigates back into the app.
   useEffect(() => {
-    const settings = getSettings()
-    applyBaseTheme(settings.theme)
-    applyCustomTheme(shellRef.current, settings.customTheme)
-    applyBackground(shellRef.current, settings.backgroundImage)
-  }, [])
+    const settings = getSettings();
+    applyBaseTheme(settings.theme);
+    applyCustomTheme(shellRef.current, settings.customTheme);
+    applyBackground(shellRef.current, settings.backgroundImage);
+  }, []);
 
   // While the mobile overlay is open, Escape dismisses it and returns focus to
   // the toggle so keyboard users are never stranded.
   useEffect(() => {
-    if (!menuOpen) return undefined
+    if (!menuOpen) return undefined;
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
-        setMenuOpen(false)
-        menuButtonRef.current?.focus()
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [menuOpen])
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [menuOpen]);
 
   function handleLogout() {
-    endSession()
-    navigate('/', { replace: true })
+    endSession();
+    navigate('/', { replace: true });
   }
 
   return (
@@ -114,7 +105,18 @@ function AppLayout({ children }) {
           aria-controls="app-sidebar"
           onClick={() => setMenuOpen((open) => !open)}
         >
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          <svg
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
             {menuOpen ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
           </svg>
         </button>
@@ -122,9 +124,7 @@ function AppLayout({ children }) {
       </header>
 
       {/* Dismiss backdrop — only mounted while the mobile overlay is open. */}
-      {menuOpen && (
-        <div className="app-backdrop" aria-hidden="true" onClick={closeMenu} />
-      )}
+      {menuOpen && <div className="app-backdrop" aria-hidden="true" onClick={closeMenu} />}
 
       <aside id="app-sidebar" className="app-sidebar" data-open={menuOpen}>
         <div className="app-sidebar__top">
@@ -135,7 +135,18 @@ function AppLayout({ children }) {
 
         <div className="app-sidebar__bottom">
           <button type="button" className="app-logout" onClick={handleLogout}>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
             </svg>
             Log Out
@@ -145,7 +156,7 @@ function AppLayout({ children }) {
 
       <main className="app-main">{children}</main>
     </div>
-  )
+  );
 }
 
-export default AppLayout
+export default AppLayout;

@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
-import ComparisonBarChart from './charts/ComparisonBarChart.jsx'
-import GatedTile from './GatedTile.jsx'
-import { buildTimeline } from '../../services/history.js'
+import { useMemo } from 'react';
+import ComparisonBarChart from './charts/ComparisonBarChart.jsx';
+import GatedTile from './GatedTile.jsx';
+import { buildTimeline } from '../../services/history.js';
 
 /*
  * ComparisonTile — a daily grouped-bar view contrasting completed vs terminated
@@ -13,12 +13,12 @@ import { buildTimeline } from '../../services/history.js'
  * GatedTile renders it as an inert, dimmed preview behind an unlock hint.
  */
 
-const COMPLETED_COLOR = '#cfe6b4' // forest --fg-accent (validated)
-const TERMINATED_COLOR = '#e0736b' // --timer-danger (validated)
+const COMPLETED_COLOR = '#cfe6b4'; // forest --fg-accent (validated)
+const TERMINATED_COLOR = '#e0736b'; // --timer-danger (validated)
 
 function ComparisonTile({ sessions }) {
-  const data = useMemo(() => buildTimeline(sessions, 'daily'), [sessions])
-  const hasData = data.some((d) => d.total > 0)
+  const data = useMemo(() => buildTimeline(sessions, 'daily'), [sessions]);
+  const hasData = data.some((d) => d.total > 0);
 
   const legend = (
     <ul className="hp-legend">
@@ -31,7 +31,7 @@ function ComparisonTile({ sessions }) {
         Terminated
       </li>
     </ul>
-  )
+  );
 
   return (
     <GatedTile
@@ -50,12 +50,12 @@ function ComparisonTile({ sessions }) {
         />
       ) : (
         <p className="hp-empty">
-          No sessions recorded in the last 7 days. Your completed and terminated
-          blocks will compare here.
+          No sessions recorded in the last 7 days. Your completed and terminated blocks will compare
+          here.
         </p>
       )}
     </GatedTile>
-  )
+  );
 }
 
-export default ComparisonTile
+export default ComparisonTile;

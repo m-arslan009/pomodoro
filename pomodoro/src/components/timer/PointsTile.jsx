@@ -1,4 +1,4 @@
-import TitleBadge from '../TitleBadge.jsx'
+import TitleBadge from '../TitleBadge.jsx';
 
 /*
  * PointsTile — top-right tile: the gamified productivity hub.
@@ -21,15 +21,14 @@ function PointsTile({
   dailyGoal,
   bonusEvery,
 }) {
-  const goalReached = Math.min(completedCount, dailyGoal)
-  const progressPct = dailyGoal > 0 ? Math.round((goalReached / dailyGoal) * 100) : 0
+  const goalReached = Math.min(completedCount, dailyGoal);
+  const progressPct = dailyGoal > 0 ? Math.round((goalReached / dailyGoal) * 100) : 0;
   // How far into the current bonus cycle the streak is (0..bonusEvery).
-  const cycleFilled = streak === 0 ? 0 : ((streak - 1) % bonusEvery) + 1
-  const dots = Array.from({ length: bonusEvery }, (_, i) => i < cycleFilled)
+  const cycleFilled = streak === 0 ? 0 : ((streak - 1) % bonusEvery) + 1;
+  const dots = Array.from({ length: bonusEvery }, (_, i) => i < cycleFilled);
 
-  const deltaLabel =
-    lastDelta > 0 ? `+${lastDelta}` : lastDelta < 0 ? `${lastDelta}` : '—'
-  const deltaTone = lastDelta > 0 ? 'up' : lastDelta < 0 ? 'down' : 'flat'
+  const deltaLabel = lastDelta > 0 ? `+${lastDelta}` : lastDelta < 0 ? `${lastDelta}` : '—';
+  const deltaTone = lastDelta > 0 ? 'up' : lastDelta < 0 ? 'down' : 'flat';
 
   return (
     <section className="timer-tile points-tile" aria-labelledby="points-heading">
@@ -37,9 +36,7 @@ function PointsTile({
         <h2 id="points-heading" className="timer-tile__title">
           Momentum
         </h2>
-        <span className={`points-tile__delta points-tile__delta--${deltaTone}`}>
-          {deltaLabel}
-        </span>
+        <span className={`points-tile__delta points-tile__delta--${deltaTone}`}>{deltaLabel}</span>
       </header>
 
       <p className="points-tile__score">
@@ -89,15 +86,12 @@ function PointsTile({
         </span>
         <ul className="points-tile__dots" aria-hidden="true">
           {dots.map((filled, i) => (
-            <li
-              key={i}
-              className={`points-tile__dot${filled ? ' points-tile__dot--on' : ''}`}
-            />
+            <li key={i} className={`points-tile__dot${filled ? ' points-tile__dot--on' : ''}`} />
           ))}
         </ul>
       </div>
     </section>
-  )
+  );
 }
 
-export default PointsTile
+export default PointsTile;

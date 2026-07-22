@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router-dom';
 
 /*
  * Nav — the app's primary navigation links, rendered as a single vertical,
@@ -16,7 +16,7 @@ function TimerIcon() {
       <circle cx="12" cy="13" r="8" />
       <path d="M12 9v4l2.5 2M9 2h6" />
     </svg>
-  )
+  );
 }
 
 function HistoryIcon() {
@@ -25,7 +25,7 @@ function HistoryIcon() {
       <path d="M3 12a9 9 0 1 0 3-6.9L3 8" />
       <path d="M3 3v5h5M12 8v4l3 2" />
     </svg>
-  )
+  );
 }
 
 function SettingsIcon() {
@@ -34,7 +34,7 @@ function SettingsIcon() {
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
     </svg>
-  )
+  );
 }
 
 function ProfileIcon() {
@@ -43,7 +43,7 @@ function ProfileIcon() {
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
-  )
+  );
 }
 
 // Single source of truth for the primary destinations and their order.
@@ -52,7 +52,7 @@ const LINKS = [
   { to: '/history', label: 'History', Icon: HistoryIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
   { to: '/profile', label: 'Profile', Icon: ProfileIcon },
-]
+];
 
 function Nav({ onNavigate }) {
   return (
@@ -74,7 +74,7 @@ function Nav({ onNavigate }) {
         ))}
       </ul>
     </nav>
-  )
+  );
 }
 
-export default Nav
+export default Nav;

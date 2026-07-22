@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { getSettings, saveSettings } from '../../services/storage.js'
-import { THEME_VARS, applyCustomTheme } from '../../services/appearance.js'
+import { useEffect, useState } from 'react';
+import { getSettings, saveSettings } from '../../services/storage.js';
+import { THEME_VARS, applyCustomTheme } from '../../services/appearance.js';
 
 /*
  * ThemeEditor — the Anchor-gated feature: recolour the forest palette. Each
@@ -15,47 +15,47 @@ import { THEME_VARS, applyCustomTheme } from '../../services/appearance.js'
 
 // Build a complete { key: color } map from a saved (possibly partial) theme.
 function hydrate(customTheme) {
-  const colors = {}
+  const colors = {};
   for (const { key, fallback } of THEME_VARS) {
-    colors[key] = customTheme?.[key] || fallback
+    colors[key] = customTheme?.[key] || fallback;
   }
-  return colors
+  return colors;
 }
 
 function ThemeEditor({ onNotify }) {
-  const [saved, setSaved] = useState(() => getSettings().customTheme ?? {})
-  const [colors, setColors] = useState(() => hydrate(saved))
+  const [saved, setSaved] = useState(() => getSettings().customTheme ?? {});
+  const [colors, setColors] = useState(() => hydrate(saved));
 
   // Live preview: repaint the shell whenever a colour changes.
   useEffect(() => {
-    applyCustomTheme(document.querySelector('.app-shell'), colors)
-  }, [colors])
+    applyCustomTheme(document.querySelector('.app-shell'), colors);
+  }, [colors]);
 
-  const baseline = hydrate(saved)
-  const isDirty = THEME_VARS.some(({ key }) => colors[key] !== baseline[key])
+  const baseline = hydrate(saved);
+  const isDirty = THEME_VARS.some(({ key }) => colors[key] !== baseline[key]);
 
   function setColor(key, value) {
-    setColors((prev) => ({ ...prev, [key]: value }))
+    setColors((prev) => ({ ...prev, [key]: value }));
   }
 
   function handleApply() {
-    const next = { ...getSettings(), customTheme: colors }
+    const next = { ...getSettings(), customTheme: colors };
     if (!saveSettings(next)) {
-      onNotify?.('error', 'Could not save your theme.')
-      return
+      onNotify?.('error', 'Could not save your theme.');
+      return;
     }
-    setSaved(colors)
-    onNotify?.('success', 'Custom theme applied.')
+    setSaved(colors);
+    onNotify?.('success', 'Custom theme applied.');
   }
 
   function handleReset() {
-    const next = { ...getSettings() }
-    delete next.customTheme
-    saveSettings(next)
-    setColors(hydrate({}))
-    setSaved({})
-    applyCustomTheme(document.querySelector('.app-shell'), null)
-    onNotify?.('success', 'Theme reset to the forest default.')
+    const next = { ...getSettings() };
+    delete next.customTheme;
+    saveSettings(next);
+    setColors(hydrate({}));
+    setSaved({});
+    applyCustomTheme(document.querySelector('.app-shell'), null);
+    onNotify?.('success', 'Theme reset to the forest default.');
   }
 
   return (
@@ -81,11 +81,7 @@ function ThemeEditor({ onNotify }) {
       </div>
 
       <div className="settings-actions">
-        <button
-          type="button"
-          className="settings-btn settings-btn--ghost"
-          onClick={handleReset}
-        >
+        <button type="button" className="settings-btn settings-btn--ghost" onClick={handleReset}>
           Reset to default
         </button>
         <button
@@ -98,7 +94,7 @@ function ThemeEditor({ onNotify }) {
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export default ThemeEditor
+export default ThemeEditor;

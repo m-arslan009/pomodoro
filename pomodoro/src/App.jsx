@@ -1,13 +1,13 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import RequireAuth from './components/RequireAuth.jsx'
-import RequireGuest from './components/RequireGuest.jsx'
-import LandingPage from './pages/LandingPage.jsx'
-import LogInPage from './pages/LogInPage.jsx'
-import SignUpPage from './pages/SignUpPage.jsx'
-import TimerPage from './pages/TimerPage.jsx'
-import HistoryPage from './pages/HistoryPage.jsx'
-import SettingPage from './pages/SettingPage.jsx'
-import ProfilePage from './pages/ProfilePage.jsx'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import RequireAuth from './components/RequireAuth.jsx';
+import RequireGuest from './components/RequireGuest.jsx';
+import LandingPage from './pages/LandingPage.jsx';
+import LogInPage from './pages/LogInPage.jsx';
+import SignUpPage from './pages/SignUpPage.jsx';
+import TimerPage from './pages/TimerPage.jsx';
+import HistoryPage from './pages/HistoryPage.jsx';
+import SettingPage from './pages/SettingPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
 
 function App() {
   return (
@@ -74,7 +74,7 @@ function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;

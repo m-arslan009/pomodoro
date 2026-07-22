@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import '../styles/Notification.css'
+import { useEffect } from 'react';
+import '../styles/Notification.css';
 
 /*
  * Notification — reusable global toast for major event outcomes.
@@ -13,27 +13,29 @@ import '../styles/Notification.css'
 
 const ICONS = {
   success: 'M20 6 9 17l-5-5',
-  error: 'M12 8v5M12 16h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
-  warning: 'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
-}
+  error:
+    'M12 8v5M12 16h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
+  warning:
+    'M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
+};
 
 const LABELS = {
   success: 'Success',
   error: 'Error',
   warning: 'Warning',
-}
+};
 
 function Notification({ type = 'success', message, onClose, duration = 5000 }) {
   useEffect(() => {
-    if (!message || !duration || !onClose) return undefined
-    const timer = setTimeout(onClose, duration)
-    return () => clearTimeout(timer)
-  }, [message, duration, onClose])
+    if (!message || !duration || !onClose) return undefined;
+    const timer = setTimeout(onClose, duration);
+    return () => clearTimeout(timer);
+  }, [message, duration, onClose]);
 
-  if (!message) return null
+  if (!message) return null;
 
   // Errors interrupt (assertive); success/warning are polite status updates.
-  const isError = type === 'error'
+  const isError = type === 'error';
 
   return (
     <div className="toast-region" aria-live={isError ? 'assertive' : 'polite'}>
@@ -54,8 +56,7 @@ function Notification({ type = 'success', message, onClose, duration = 5000 }) {
           <path d={ICONS[type] ?? ICONS.success} />
         </svg>
         <p className="toast__message">
-          <span className="toast__label">{LABELS[type] ?? LABELS.success}:</span>{' '}
-          {message}
+          <span className="toast__label">{LABELS[type] ?? LABELS.success}:</span> {message}
         </p>
         {onClose && (
           <button
@@ -82,7 +83,7 @@ function Notification({ type = 'success', message, onClose, duration = 5000 }) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default Notification
+export default Notification;

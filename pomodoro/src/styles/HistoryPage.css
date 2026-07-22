@@ -297,12 +297,13 @@
   min-width: 0;
   padding: var(--sp-2) calc(var(--sp-2) + 2px);
   border-radius: 14px;
-  background:
-    linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
+  background: linear-gradient(160deg, rgba(243, 247, 236, 0.05), rgba(243, 247, 236, 0));
   background-color: var(--glass-hover);
   border: 1px solid var(--glass-border);
   box-shadow: inset 0 1px 0 rgba(243, 247, 236, 0.06);
-  transition: border-color 0.18s ease, background-color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .hp-kpi:hover {
@@ -386,7 +387,9 @@
   font-size: var(--fs-label);
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .hp-segment__btn:hover {

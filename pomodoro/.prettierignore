@@ -1,0 +1,14 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+build
+coverage
+
+# Lockfiles and generated artifacts
+package-lock.json
+
+# Logs
+*.log

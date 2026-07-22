@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
-import '../styles/LandingPage.css'
+import { Link } from 'react-router-dom';
+import '../styles/LandingPage.css';
 
-const APP_NAME = 'Evergrove'
+const APP_NAME = 'Evergrove';
 
 function LeafIcon() {
   return (
@@ -22,7 +22,7 @@ function LeafIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function AuthButtons({ variant }) {
@@ -35,7 +35,7 @@ function AuthButtons({ variant }) {
         Log In
       </Link>
     </div>
-  )
+  );
 }
 
 function LandingPage() {
@@ -54,20 +54,18 @@ function LandingPage() {
         <div className="landing-main__inner">
           <span className="landing-eyebrow">Focus · Grow · Achieve</span>
           <h1 className="landing-title">{APP_NAME}</h1>
-          <p className="landing-punchline">
-            Plant your focus. Watch your progress grow.
-          </p>
+          <p className="landing-punchline">Plant your focus. Watch your progress grow.</p>
           <p className="landing-desc">
-            {APP_NAME} turns the Pomodoro technique into a calm, rewarding ritual.
-            Work in focused sessions tied to your daily tasks, then earn points and
-            titles that keep your momentum growing day after day.
+            {APP_NAME} turns the Pomodoro technique into a calm, rewarding ritual. Work in focused
+            sessions tied to your daily tasks, then earn points and titles that keep your momentum
+            growing day after day.
           </p>
           {/* Main buttons: hidden on tablet/desktop, revealed & stacked on mobile via CSS */}
           <AuthButtons variant="main" />
         </div>
       </main>
     </div>
-  )
+  );
 }
 
-export default LandingPage
+export default LandingPage;

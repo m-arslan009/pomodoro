@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
-import AreaTrendChart from './charts/AreaTrendChart.jsx'
-import GatedTile from './GatedTile.jsx'
-import { buildTimeline } from '../../services/history.js'
+import { useMemo, useState } from 'react';
+import AreaTrendChart from './charts/AreaTrendChart.jsx';
+import GatedTile from './GatedTile.jsx';
+import { buildTimeline } from '../../services/history.js';
 
 /*
  * TrendTile — completed-focus-sessions over time, with a Daily / Weekly /
@@ -13,23 +13,23 @@ import { buildTimeline } from '../../services/history.js'
  * explored once the title is earned.
  */
 
-const COMPLETED_ACCENT = '#cfe6b4' // forest --fg-accent (validated)
+const COMPLETED_ACCENT = '#cfe6b4'; // forest --fg-accent (validated)
 
 const INTERVALS = [
   { key: 'daily', label: 'Daily' },
   { key: 'weekly', label: 'Weekly' },
   { key: 'monthly', label: 'Monthly' },
-]
+];
 
 function TrendTile({ sessions }) {
-  const [range, setRange] = useState('daily')
+  const [range, setRange] = useState('daily');
 
   const series = useMemo(() => {
-    const timeline = buildTimeline(sessions, range)
-    return timeline.map((b) => ({ label: b.label, value: b.completed }))
-  }, [sessions, range])
+    const timeline = buildTimeline(sessions, range);
+    return timeline.map((b) => ({ label: b.label, value: b.completed }));
+  }, [sessions, range]);
 
-  const hasData = series.some((d) => d.value > 0)
+  const hasData = series.some((d) => d.value > 0);
 
   const control = (
     <div className="hp-segment" role="group" aria-label="Trend interval">
@@ -45,7 +45,7 @@ function TrendTile({ sessions }) {
         </button>
       ))}
     </div>
-  )
+  );
 
   return (
     <GatedTile
@@ -65,12 +65,11 @@ function TrendTile({ sessions }) {
         />
       ) : (
         <p className="hp-empty">
-          No completed sessions in this range yet. Finish a focus session to start
-          your trend.
+          No completed sessions in this range yet. Finish a focus session to start your trend.
         </p>
       )}
     </GatedTile>
-  )
+  );
 }
 
-export default TrendTile
+export default TrendTile;
