@@ -1,0 +1,66 @@
+/*
+ * TitleBadge — a compact rank + progress panel. Reuses the shell's forest/glass
+ * tokens (--fg-*, --glass-*) so it sits consistently inside any glass tile.
+ * Self-contained sizing (clamp-based) so it does not depend on a host page's
+ * local type scale and can be dropped into other surfaces later.
+ */
+
+.title-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+}
+
+.title-badge__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title-badge__rank {
+  font-size: clamp(0.92rem, 0.84rem + 0.4vw, 1.06rem);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.title-badge__next {
+  font-size: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+
+.title-badge__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.title-badge__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--fg-wood), var(--fg-accent));
+  transition: width 0.4s ease;
+}
+
+.title-badge__meta {
+  margin: 0;
+  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-badge__bar-fill {
+    transition: none;
+  }
+}

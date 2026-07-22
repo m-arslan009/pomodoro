@@ -16,6 +16,13 @@ import {
   saveGamification,
   getSettings,
 } from '../services/storage.js'
+import {
+  POINTS,
+  TITLES,
+  titlesFor,
+  applyCompletion,
+  applyTermination,
+} from '../services/gamification.js'
 import '../styles/TimerPage.css'
 
 /*
@@ -33,17 +40,15 @@ import '../styles/TimerPage.css'
  *   - 7-day window: task and session records older than 7 days are pruned; the
  *     dashboard itself only ever shows *today's* tasks and log.
  *
- * The point/streak rules mirror idea.md and are flagged to migrate into
- * services/gamification.js later.
+ * GAMIFICATION: the points economy and title ladder live in
+ * services/gamification.js (single source of truth). This page holds the running
+ * state and delegates every scoring decision to that service's pure functions:
+ *   - applyCompletion — advances streak, awards points + the every-3rd bonus, and
+ *     reports any title thresholds crossed by this session.
+ *   - applyTermination — floors the spendable balance after the penalty and resets
+ *     the streak, while LIFETIME points (which drive titles) are left untouched so
+ *     an earned title never regresses.
  */
-
-// Mirrors idea.md's economy; migrate to services/gamification.js when persisted.
-const POINTS = {
-  complete: 100,
-  bonus: 50,
-  bonusEvery: 3, // +50 on every 3rd consecutive completion
-  terminatePenalty: 200,
-}
 
 const DAILY_GOAL = 4
 
@@ -97,14 +102,27 @@ function TimerPage() {
   // Hydrate from storage, applying retention rules once on mount.
   const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()))
   const [sessions, setSessions] = useState(() => pruneSessions(getSessions()))
-  const [points, setPoints] = useState(() => getGamification().points)
-  const [streak, setStreak] = useState(() => getGamification().streak)
+  // Gamification state mirrors the shape services/gamification.js consumes and
+  // returns: a spendable `balance` (penalty-affected) split from `lifetimePoints`
+  // (monotonic, drives titles), plus the running streak and unlocked titles.
+  const [gamification, setGamification] = useState(() => {
+    const g = getGamification()
+    return {
+      lifetimePoints: g.lifetimePoints,
+      balance: g.balance,
+      currentStreak: g.currentStreak,
+      unlockedTitles: titlesFor(g.lifetimePoints),
+    }
+  })
 
   const [activeTaskId, setActiveTaskId] = useState(null)
   const [lastDelta, setLastDelta] = useState(0)
   const [notification, setNotification] = useState(null)
 
-  // Persist every record set so refreshes never lose information.
+  // Persist every record set so refreshes never lose information. The saved
+  // gamification object keeps the legacy `points`/`streak` fields (read by the
+  // History page) alongside the balance/lifetime split; storage.js additionally
+  // guards lifetimePoints as monotonic.
   useEffect(() => {
     saveTasks(tasks)
   }, [tasks])
@@ -112,8 +130,15 @@ function TimerPage() {
     saveSessions(sessions)
   }, [sessions])
   useEffect(() => {
-    saveGamification({ points, streak })
-  }, [points, streak])
+    saveGamification({
+      points: gamification.balance,
+      streak: gamification.currentStreak,
+      balance: gamification.balance,
+      currentStreak: gamification.currentStreak,
+      lifetimePoints: gamification.lifetimePoints,
+      unlockedTitles: gamification.unlockedTitles,
+    })
+  }, [gamification])
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.id === activeTaskId) ?? null,
@@ -150,12 +175,9 @@ function TimerPage() {
       if (finishedPhase !== 'work') return
 
       const taskTitle = activeTask?.title ?? 'Focus session'
-      const nextStreak = streak + 1
-      const bonus = nextStreak % POINTS.bonusEvery === 0 ? POINTS.bonus : 0
-      const delta = POINTS.complete + bonus
+      const { state, delta, bonus, unlocked } = applyCompletion(gamification)
 
-      setStreak(nextStreak)
-      setPoints((prev) => prev + delta)
+      setGamification(state)
       setLastDelta(delta)
 
       if (activeTaskId) {
@@ -180,14 +202,26 @@ function TimerPage() {
         ...prev,
       ])
 
-      setNotification({
-        type: 'success',
-        message: bonus
-          ? `Session complete! +${POINTS.complete} points and a +${bonus} streak bonus.`
-          : `Session complete! +${POINTS.complete} points. Break time.`,
-      })
+      // A crossed title is the headline; otherwise report points (+ any bonus).
+      if (unlocked.length > 0) {
+        const names = unlocked
+          .map((key) => TITLES.find((title) => title.key === key)?.name)
+          .filter(Boolean)
+          .join(', ')
+        setNotification({
+          type: 'success',
+          message: `New title unlocked — ${names}! +${delta} points and a new feature to explore.`,
+        })
+      } else {
+        setNotification({
+          type: 'success',
+          message: bonus
+            ? `Session complete! +${POINTS.sessionComplete} points and a +${bonus} streak bonus.`
+            : `Session complete! +${POINTS.sessionComplete} points. Break time.`,
+        })
+      }
     },
-    [activeTask, activeTaskId, streak, workMinutes],
+    [activeTask, activeTaskId, gamification, workMinutes],
   )
 
   const timer = usePomodoroTimer({
@@ -213,10 +247,10 @@ function TimerPage() {
     if (timer.phase === 'work') {
       const taskTitle = activeTask?.title ?? 'Focus session'
       const elapsedMs = Math.max(0, timer.totalMs - timer.remainingMs)
+      const { state, delta } = applyTermination(gamification)
 
-      setPoints((prev) => Math.max(0, prev - POINTS.terminatePenalty))
-      setStreak(0)
-      setLastDelta(-POINTS.terminatePenalty)
+      setGamification(state)
+      setLastDelta(delta)
 
       if (activeTaskId) {
         setTasks((prev) =>
@@ -301,13 +335,14 @@ function TimerPage() {
           />
 
           <PointsTile
-            points={points}
-            streak={streak}
+            points={gamification.balance}
+            lifetimePoints={gamification.lifetimePoints}
+            streak={gamification.currentStreak}
             completedCount={completedCount}
             terminatedCount={terminatedCount}
             lastDelta={lastDelta}
             dailyGoal={DAILY_GOAL}
-            bonusEvery={POINTS.bonusEvery}
+            bonusEvery={POINTS.consecutiveThreshold}
           />
 
           <TasksTile

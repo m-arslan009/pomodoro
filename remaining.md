@@ -15,9 +15,12 @@
 > disturbing the timer's existing `{ points, streak }` writes. **All Settings-page
 > features are done:** base theme toggle (always available) + gated theme editor
 > (Anchor), background + custom labels (Pace Setter), and scheduling (Paragon),
-> with appearance applied app-wide from `AppLayout`/`main.jsx`. _Still open:_
-> `TitleBadge` + titles section + new-title toast + full engine migration into the
-> timer (Phase 2 UI), and gating the History charts behind Catalyst/Vanguard.
+> with appearance applied app-wide from `AppLayout`/`main.jsx`. History charts are
+> gated behind Catalyst/Vanguard. **Timer Phase 2 is now complete:** the engine is
+> wired to `services/gamification.js`, lifetime/balance are split, `TitleBadge`
+> (rank + progress-to-next) shows in `PointsTile`, and crossing a threshold fires a
+> new-title toast. _Still open:_ mounting `TitleBadge` app-wide in `AppLayout` and a
+> standalone "Titles" section (Profile/Stats).
 
 ---
 
@@ -50,24 +53,30 @@ built on top of **lifetime points → titles → gated features**.
 - Points/streak UI — `components/timer/PointsTile.jsx` (score, streak, milestone
   dots, daily-session goal bar).
 
+### ✅ Done (Timer page, 2026-07-22)
+- **Lifetime points vs spendable balance split** — `TimerPage` now tracks a
+  penalty-affected `balance` (the score) separate from monotonic `lifetimePoints`
+  (drives titles); both persist, with the legacy `points`/`streak` fields kept for
+  the History page.
+- **Titles config + unlock logic** — `services/gamification.js` (`TITLES`,
+  `titlesFor`, `applyCompletion`/`applyTermination`); `unlockedTitles` computed and
+  stored.
+- **Progress bar toward next title threshold** — real `components/TitleBadge.jsx`
+  (current rank + progress-to-next with remaining lifetime points) rendered in
+  `PointsTile`.
+- **New-title-unlocked feedback** — `applyCompletion` reports crossed thresholds;
+  crossing one fires a celebratory unlock toast naming the title.
+- **Engine extraction** — inline point/streak/penalty math replaced by the service's
+  pure functions in `handleComplete`/`handleTerminate`.
+
 ### ❌ Left behind
-- **Lifetime points vs spendable balance split** — only a single `points` total
-  exists; penalties reduce the same number titles should key off. Need
-  `lifetimePoints` (never lost) separate from `balance` (penalty-affected).
-- **Titles** — Anchor (1000), Pace Setter (2000), Catalyst (4000), Vanguard (8000),
-  Paragon (16000). No `TITLES` config, no unlock logic, `unlockedTitles` not stored.
-- **Current-title badge in AppLayout** — `TitleBadge.jsx` is a placeholder and is not
-  rendered in `AppLayout`.
-- **Progress bar toward next title threshold** — `PointsTile` has a *daily-session*
-  bar, not a *title-threshold* bar.
+- **Current-title badge in the AppLayout shell** — `TitleBadge` now exists and shows
+  on the dashboard (`PointsTile`), but is not yet mounted app-wide in `AppLayout`.
 - **"Titles" section** listing all five with locked/unlocked state (planned for
   Profile or Stats).
-- **New-title-unlocked feedback** — no threshold-crossing detection.
-- **Engine extraction** — move inline logic into `services/gamification.js` and wire
-  its pure functions in (as the plan specifies).
 
-**Verdict: ~50% done.** Mechanics solid; the entire titles layer (which Phase 3
-depends on) is missing.
+**Verdict: Timer gamification complete.** The remaining titles-layer work is
+surfacing (badge in the shell + a full Titles list) outside the Timer page.
 
 ---
 
@@ -114,13 +123,13 @@ of the five gated features and no gating infrastructure exist.
 
 | Page / module | Done | Left behind |
 |---|---|---|
-| **Timer** (`pages/TimerPage.jsx`) | Phase 1 complete; Phase 2 points/streak/penalty engine complete & persisted | Title badge; title-progress bar; extract engine to `services/gamification.js`; lifetime-vs-balance split |
+| **Timer** (`pages/TimerPage.jsx`) | Phase 1 + Phase 2 complete: engine wired to `services/gamification.js` (`applyCompletion`/`applyTermination`), lifetime-vs-balance split, `TitleBadge` (rank + progress-to-next) in `PointsTile`, new-title unlock toast | Mount `TitleBadge` app-wide in `AppLayout`; standalone "Titles" section |
 | **History** (`pages/HistoryPage.jsx`) | Stats surface: KPIs + 4 chart/log tiles from real persisted data; **charts gated behind Catalyst/Vanguard** via `GatedTile` + `useFeatureGate` | Decide on separate `StatsPage` route |
 | **Settings** (`pages/SettingPage.jsx`) | Phase 1 durations **+ base theme toggle, gated theme editor (Anchor), background + labels (Pace Setter), scheduling (Paragon)** — all done | — |
 | **Profile** (`pages/ProfilePage.jsx`) | Editable account details + password change (beyond Phase 1) | Titles section; title badge |
-| **`components/TitleBadge.jsx`** | — | Placeholder → build (current title + progress to next threshold), mount in `AppLayout` |
+| **`components/TitleBadge.jsx`** | Built: current title + progress-to-next-threshold bar (`styles/TitleBadge.css`), rendered in `PointsTile` on the dashboard | Mount app-wide in `AppLayout` |
 | **`components/FeatureGate.jsx`** | Built: visible-but-disabled (`inert`) preview + "Reach {Title} to unlock" hint | — |
-| **`services/gamification.js`** | Built: `POINTS` + `TITLES` config and pure functions (`titlesFor`, `currentTitle`, `nextTitle`, `progressToNext`, `isFeatureUnlocked`, `applyCompletion`, `applyTermination`) | Wire `applyCompletion`/`applyTermination` into the timer (currently still inline) |
+| **`services/gamification.js`** | Built: `POINTS` + `TITLES` config and pure functions (`titlesFor`, `currentTitle`, `nextTitle`, `progressToNext`, `isFeatureUnlocked`, `applyCompletion`, `applyTermination`); **now wired into the Timer** (`handleComplete`/`handleTerminate`) | — |
 | **`hooks/useFeatureGate.js`** | Built: resolves `unlocked` + required title from lifetime points | — |
 
 ---

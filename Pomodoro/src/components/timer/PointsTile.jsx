@@ -1,14 +1,19 @@
+import TitleBadge from '../TitleBadge.jsx'
+
 /*
  * PointsTile — top-right tile: the gamified productivity hub.
  *
- * Presentational: reflects the local (in-memory) gamification tally maintained by
- * TimerPage. Shows the point breakdown, a daily progress bar toward a session
- * goal, and a row of streak "milestone" dots that glow as the +50 bonus interval
- * (every `bonusEvery` completions) is reached.
+ * Presentational: reflects the gamification tally maintained by TimerPage. Shows
+ * the spendable point score (penalty-affected balance), the current title with a
+ * progress bar toward the next threshold (driven by lifetime points, which never
+ * regress), a daily progress bar toward a session goal, and a row of streak
+ * "milestone" dots that glow as the +50 bonus interval (every `bonusEvery`
+ * completions) is reached.
  */
 
 function PointsTile({
   points,
+  lifetimePoints,
   streak,
   completedCount,
   terminatedCount,
@@ -41,6 +46,8 @@ function PointsTile({
         <span className="points-tile__score-value">{points}</span>
         <span className="points-tile__score-unit">pts</span>
       </p>
+
+      <TitleBadge lifetimePoints={lifetimePoints} />
 
       <dl className="points-tile__stats">
         <div className="points-tile__stat">

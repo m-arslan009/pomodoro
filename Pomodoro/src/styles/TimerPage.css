@@ -364,6 +364,11 @@
   color: var(--fg-muted);
 }
 
+/* Rank/progress panel sits under the score; space it off the stats grid. */
+.points-tile .title-badge {
+  margin-bottom: var(--sp-3);
+}
+
 .points-tile__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
