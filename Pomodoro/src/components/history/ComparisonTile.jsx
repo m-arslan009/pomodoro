@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import ComparisonBarChart from './charts/ComparisonBarChart.jsx'
+import GatedTile from './GatedTile.jsx'
 import { buildTimeline } from '../../services/history.js'
 
 /*
@@ -7,6 +8,9 @@ import { buildTimeline } from '../../services/history.js'
  * focus sessions across the last seven days, so momentum and slip-ups sit side
  * by side. A legend carries the two status roles; the chart never leans on
  * colour alone.
+ *
+ * This detailed graphical report is a Vanguard-gated feature: while locked,
+ * GatedTile renders it as an inert, dimmed preview behind an unlock hint.
  */
 
 const COMPLETED_COLOR = '#cfe6b4' // forest --fg-accent (validated)
@@ -16,27 +20,28 @@ function ComparisonTile({ sessions }) {
   const data = useMemo(() => buildTimeline(sessions, 'daily'), [sessions])
   const hasData = data.some((d) => d.total > 0)
 
-  return (
-    <section className="hp-tile hp-comparison" aria-labelledby="hp-comparison-heading">
-      <header className="hp-tile__head hp-tile__head--stacked">
-        <div>
-          <h2 id="hp-comparison-heading" className="hp-tile__title">
-            Completed vs terminated
-          </h2>
-          <p className="hp-tile__subtitle">Daily sessions, last 7 days</p>
-        </div>
-        <ul className="hp-legend">
-          <li className="hp-legend__item">
-            <span className="hp-legend__swatch hp-legend__swatch--good" aria-hidden="true" />
-            Completed
-          </li>
-          <li className="hp-legend__item">
-            <span className="hp-legend__swatch hp-legend__swatch--bad" aria-hidden="true" />
-            Terminated
-          </li>
-        </ul>
-      </header>
+  const legend = (
+    <ul className="hp-legend">
+      <li className="hp-legend__item">
+        <span className="hp-legend__swatch hp-legend__swatch--good" aria-hidden="true" />
+        Completed
+      </li>
+      <li className="hp-legend__item">
+        <span className="hp-legend__swatch hp-legend__swatch--bad" aria-hidden="true" />
+        Terminated
+      </li>
+    </ul>
+  )
 
+  return (
+    <GatedTile
+      feature="graphicalReports"
+      className="hp-comparison"
+      headingId="hp-comparison-heading"
+      title="Completed vs terminated"
+      subtitle="Daily sessions, last 7 days"
+      meta={legend}
+    >
       {hasData ? (
         <ComparisonBarChart
           data={data}
@@ -49,7 +54,7 @@ function ComparisonTile({ sessions }) {
           blocks will compare here.
         </p>
       )}
-    </section>
+    </GatedTile>
   )
 }
 

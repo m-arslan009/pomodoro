@@ -83,3 +83,11 @@
 `Title`: Build title-gated Settings features (theme editor, background + labels, scheduling) and gating foundation
 
 `User prompt`: read remaining.md file and implement what we have left to implement in setting page so far. follow rules and conventions.
+
+## Gate History charts behind their unlockable titles
+
+`Title`: Implement the remaining History-page gating (time-utilization → Catalyst, graphical reports → Vanguard)
+
+`User prompt`: read remaining.md and check what we have left behind for historyPage and implement the missing functionality. also log the prompt in detail about what you have done in prompt.md as well. follow the rules and conventions discuss in their respected markdown files.
+
+Implementation summary: the History charts existed but shipped always-on. Added a reusable `components/history/GatedTile.jsx` that reuses the already-built `useFeatureGate` hook + `gamification` service to render each chart tile as a normal card when unlocked, or as a dimmed, `inert`, previewable card with a lock chip and "Reach {Title} to unlock" hint when still locked. Wired `TrendTile` behind Catalyst (`timeUtilization`) with its interval control hidden while locked, and `ComparisonTile` + `OutcomeTile` behind Vanguard (`graphicalReports`). The KPI summary and recent-sessions log stay ungated as the always-available baseline, with the log serving as the accessible data fallback while charts are locked. Added scoped `.hp-tile__viz`, `.hp-lock-chip`, and `.hp-lock-hint` styles (plus reduced-motion handling) to HistoryPage.css. Lint and build pass.

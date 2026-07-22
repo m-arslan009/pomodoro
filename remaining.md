@@ -83,11 +83,15 @@ depends on) is missing.
 - **Dedicated `pages/StatsPage.jsx`** — not created; `HistoryPage` serves as the
   stats surface. Functionally covered, but not the named file/route from the plan.
   _(Decision needed: keep History as the stats surface, or add a StatsPage route.)_
-- **Catalyst → Time-utilization visualization** — data + charts exist
-  (`focusMinutes`, `buildTimeline`) but are **always visible, not gated** behind the
-  Catalyst title.
-- **Vanguard → Detailed graphical reports** — rich charts exist on History but are
-  **always on, not gated** behind Vanguard.
+
+### ✅ Done (History gating)
+- **Catalyst → Time-utilization visualization** — the Focus-trend tile (`TrendTile`)
+  is now gated behind Catalyst via `GatedTile` + `useFeatureGate`; while locked the
+  interval control is hidden and the daily preview is inert.
+- **Vanguard → Detailed graphical reports** — the Completed-vs-terminated tile
+  (`ComparisonTile`) and Task-outcomes tile (`OutcomeTile`) are gated behind Vanguard
+  through the same wrapper. The KPI summary and recent-sessions log stay ungated as
+  the always-available baseline (the log doubles as the accessible data fallback).
 
 ### ❌ Left behind
 - **`<FeatureGate feature="…">` wrapper** (visible-but-disabled preview + "Reach
@@ -111,7 +115,7 @@ of the five gated features and no gating infrastructure exist.
 | Page / module | Done | Left behind |
 |---|---|---|
 | **Timer** (`pages/TimerPage.jsx`) | Phase 1 complete; Phase 2 points/streak/penalty engine complete & persisted | Title badge; title-progress bar; extract engine to `services/gamification.js`; lifetime-vs-balance split |
-| **History** (`pages/HistoryPage.jsx`) | Stats surface: KPIs + 4 chart/log tiles from real persisted data | Gate charts behind Catalyst/Vanguard; decide on separate `StatsPage` route |
+| **History** (`pages/HistoryPage.jsx`) | Stats surface: KPIs + 4 chart/log tiles from real persisted data; **charts gated behind Catalyst/Vanguard** via `GatedTile` + `useFeatureGate` | Decide on separate `StatsPage` route |
 | **Settings** (`pages/SettingPage.jsx`) | Phase 1 durations **+ base theme toggle, gated theme editor (Anchor), background + labels (Pace Setter), scheduling (Paragon)** — all done | — |
 | **Profile** (`pages/ProfilePage.jsx`) | Editable account details + password change (beyond Phase 1) | Titles section; title badge |
 | **`components/TitleBadge.jsx`** | — | Placeholder → build (current title + progress to next threshold), mount in `AppLayout` |

@@ -1,7 +1,12 @@
+import GatedTile from './GatedTile.jsx'
+
 /*
  * OutcomeTile — how the tracked tasks resolved, as horizontal share bars. Each
  * outcome's bar is scaled against the largest bucket so the mix is readable at a
  * glance; counts are shown directly so nothing depends on bar length alone.
+ *
+ * Part of the Vanguard-gated graphical reports: while locked, GatedTile renders
+ * the breakdown as an inert, dimmed preview behind an unlock hint.
  */
 
 function OutcomeTile({ outcomes }) {
@@ -9,14 +14,13 @@ function OutcomeTile({ outcomes }) {
   const max = Math.max(1, ...outcomes.map((o) => o.count))
 
   return (
-    <section className="hp-tile hp-outcome" aria-labelledby="hp-outcome-heading">
-      <header className="hp-tile__head">
-        <h2 id="hp-outcome-heading" className="hp-tile__title">
-          Task outcomes
-        </h2>
-        <span className="hp-tile__meta">{total} tracked</span>
-      </header>
-
+    <GatedTile
+      feature="graphicalReports"
+      className="hp-outcome"
+      headingId="hp-outcome-heading"
+      title="Task outcomes"
+      meta={<span className="hp-tile__meta">{total} tracked</span>}
+    >
       {total === 0 ? (
         <p className="hp-empty">
           No tasks tracked yet. Add tasks on the timer and their outcomes will
@@ -46,7 +50,7 @@ function OutcomeTile({ outcomes }) {
           })}
         </ul>
       )}
-    </section>
+    </GatedTile>
   )
 }
 
