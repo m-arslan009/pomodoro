@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Test coverage output
+coverage
+
 # Environment variables
 .env
 .env.local
@@ -21,8 +24,8 @@ dist-ssr
 .claude/
 
 # Project notes
-prompt.md
 remaining.md
+test_plan.md
 
 # Editor directories and files
 .vscode/*

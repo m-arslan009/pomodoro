@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  { ignores: ['dist', 'node_modules', 'coverage'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -37,6 +37,24 @@ export default [
     files: ['*.config.js', 'vite.config.js'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    // Vitest runs with `globals: true`, so test APIs are injected rather than
+    // imported. Declare them here so ESLint does not flag them as undefined.
+    files: ['**/*.{test,spec}.{js,jsx}', 'src/test/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        vi: 'readonly',
+      },
     },
   },
 ];
