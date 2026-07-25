@@ -20,11 +20,10 @@ coverage
 .env.local
 .env.*.local
 
-# Claude governance and local settings
-.claude/
+# Claude governance is tracked; only machine-local settings stay out.
+.claude/settings.local.json
 
 # Project notes
-remaining.md
 test_plan.md
 
 # Editor directories and files
