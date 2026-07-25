@@ -12,14 +12,14 @@ export default defineConfig({
     // Component tests need a DOM; jsdom supplies document/window in Node.
     environment: 'jsdom',
     // Registers the jest-dom matchers once for every test file.
-    setupFiles: ['./src/test/setup.js'],
+    setupFiles: ['./src/tests/setup.js'],
     // Restore spies/mocks between tests so state cannot leak across files.
     restoreMocks: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.{js,jsx}'],
-      exclude: ['src/main.jsx', 'src/test/**', 'src/**/*.test.{js,jsx}'],
+      exclude: ['src/main.jsx', 'src/tests/**', 'src/**/*.test.{js,jsx}'],
     },
   },
 });
