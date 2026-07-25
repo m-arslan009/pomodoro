@@ -130,38 +130,38 @@ export function saveSessions(items) {
 }
 
 /*
- * Gamification totals. The legacy shape was { points, streak } (a single
- * penalty-affected total). Titles, however, key off LIFETIME points which must
- * never regress (locked decision), so we additionally track a monotonic
- * `lifetimePoints` maintained here — it only ever climbs, even when a terminate
- * penalty drops the running `points`. getGamification therefore returns a
- * superset ({ points, streak, balance, lifetimePoints, currentStreak }) so the
- * existing timer/history consumers keep working while the title layer reads
- * lifetimePoints.
+ * Gamification totals. The canonical shape is { balance, currentStreak,
+ * lifetimePoints, unlockedTitles }: a spendable `balance` that penalties can
+ * reduce, split from a monotonic `lifetimePoints` that drives the title ladder
+ * and must never regress (locked decision).
+ *
+ * Records written before that split used { points, streak } — a single
+ * penalty-affected total. Both readers below fall back to those legacy fields so
+ * an existing player's progress migrates in place on first read.
  */
 
 /** Persisted gamification totals; safe defaults when absent/corrupt. */
 export function getGamification() {
   const value = read(GAMIFICATION_KEY, null);
   const v = value && typeof value === 'object' ? value : {};
-  const points = Number.isFinite(v.points) ? v.points : 0;
-  const streak = Number.isFinite(v.streak) ? v.streak : 0;
-  const balance = Number.isFinite(v.balance) ? v.balance : points;
-  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : streak;
+  // Legacy fallbacks: pre-split records carry the running total as `points`.
+  const legacyPoints = Number.isFinite(v.points) ? v.points : 0;
+  const legacyStreak = Number.isFinite(v.streak) ? v.streak : 0;
+  const balance = Number.isFinite(v.balance) ? v.balance : legacyPoints;
+  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : legacyStreak;
   // Lifetime never decreases; seed it from the running total for legacy records.
   const lifetimePoints = Math.max(
     Number.isFinite(v.lifetimePoints) ? v.lifetimePoints : 0,
-    points,
+    legacyPoints,
     balance
   );
-  return { points, streak, balance, currentStreak, lifetimePoints };
+  return { balance, currentStreak, lifetimePoints };
 }
 
 /**
  * Persist gamification totals, keeping `lifetimePoints` monotonically increasing
- * regardless of the shape the caller writes. So even the current timer, which
- * still saves { points, streak }, transparently accrues a lifetime total that
- * penalties can never claw back.
+ * regardless of the shape the caller writes — so a lifetime total accrues that
+ * penalties can never claw back, even from a legacy { points, streak } write.
  */
 export function saveGamification(value) {
   const prev = read(GAMIFICATION_KEY, null);

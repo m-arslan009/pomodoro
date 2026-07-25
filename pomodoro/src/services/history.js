@@ -55,8 +55,8 @@ export function summarize(sessions = [], tasks = [], gamification = {}) {
   const focusMinutes = Math.round(focusMs / 60000);
 
   return {
-    points: Number.isFinite(gamification.points) ? gamification.points : 0,
-    streak: Number.isFinite(gamification.streak) ? gamification.streak : 0,
+    points: Number.isFinite(gamification.balance) ? gamification.balance : 0,
+    streak: Number.isFinite(gamification.currentStreak) ? gamification.currentStreak : 0,
     completedSessions,
     terminatedSessions,
     completedTasks,

@@ -120,9 +120,8 @@ function TimerPage() {
   const [notification, setNotification] = useState(null);
 
   // Persist every record set so refreshes never lose information. The saved
-  // gamification object keeps the legacy `points`/`streak` fields (read by the
-  // History page) alongside the balance/lifetime split; storage.js additionally
-  // guards lifetimePoints as monotonic.
+  // gamification object is the canonical balance/lifetime split; storage.js
+  // additionally guards lifetimePoints as monotonic.
   useEffect(() => {
     saveTasks(tasks);
   }, [tasks]);
@@ -131,8 +130,6 @@ function TimerPage() {
   }, [sessions]);
   useEffect(() => {
     saveGamification({
-      points: gamification.balance,
-      streak: gamification.currentStreak,
       balance: gamification.balance,
       currentStreak: gamification.currentStreak,
       lifetimePoints: gamification.lifetimePoints,
