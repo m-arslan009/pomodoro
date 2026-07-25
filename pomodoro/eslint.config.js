@@ -42,7 +42,7 @@ export default [
   {
     // Vitest runs with `globals: true`, so test APIs are injected rather than
     // imported. Declare them here so ESLint does not flag them as undefined.
-    files: ['**/*.{test,spec}.{js,jsx}', 'src/test/**/*.{js,jsx}'],
+    files: ['**/*.{test,spec}.{js,jsx}', 'src/tests/**/*.{js,jsx}'],
     languageOptions: {
       globals: {
         describe: 'readonly',

@@ -19,8 +19,7 @@ import {
  *
  * Thresholds are read from the exported TITLES config instead of being restated
  * here, so re-balancing the economy re-points these tests rather than breaking
- * them. TitleBadge.test.jsx covers how the badge *renders* these values; this
- * file covers the values themselves.
+ * them.
  */
 
 describe('Suite C1 — Threshold & tier ladder', () => {

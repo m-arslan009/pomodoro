@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import TimerEngineTile from './TimerEngineTile.jsx';
+import TimerEngineTile from '../../components/timer/TimerEngineTile.jsx';
 
 /*
  * Suite A2 — the control enablement matrix.
