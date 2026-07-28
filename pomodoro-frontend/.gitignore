@@ -1,0 +1,25 @@
+# pomodoro-frontend — Node / Vite artifacts.
+# Repo-wide concerns (secrets, OS and editor junk) live in the root .gitignore.
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Vite local cache and local override files (includes *.env.local)
+.vite
+*.local
+
+# Test coverage output
+coverage
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*

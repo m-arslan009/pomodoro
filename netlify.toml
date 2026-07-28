@@ -1,6 +1,6 @@
-# App lives in the pomodoro/ subdirectory, so point Netlify there.
+# App lives in the pomodoro-frontend/ subdirectory, so point Netlify there.
 [build]
-  base = "pomodoro"
+  base = "pomodoro-frontend"
   command = "npm run build"
   publish = "dist"
 
