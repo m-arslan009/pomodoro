@@ -1,0 +1,25 @@
+# pomodoro-backend — stack-agnostic starter.
+# Repo-wide concerns (secrets, OS and editor junk) live in the root .gitignore.
+#
+# No runtime or framework has been chosen yet, so this file intentionally contains only
+# patterns that are safe regardless of stack. Add the stack-specific entries when the
+# stack is picked, for example:
+#   Node    -> node_modules, dist, build, .tsbuildinfo
+#   Python  -> __pycache__/, *.py[cod], .venv/, .pytest_cache/, .mypy_cache/
+#   Go      -> the compiled binary name, vendor/
+#   Java    -> target/, build/, *.class
+
+# Logs
+logs
+*.log
+
+# Test coverage output
+coverage
+
+# Local-only override files
+*.local
+
+# Local databases and dumps
+*.sqlite
+*.sqlite3
+*.db
