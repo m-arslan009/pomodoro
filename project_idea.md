@@ -11,7 +11,7 @@ The user wants a frontend-only React web app built around the Pomodoro technique
 - **Feature gating** that is *previewable* (locked features are visible but disabled with a "Reach {Title} to unlock" hint).
 - Editable profile + working/break durations + theme.
 
-The project is a fresh Vite 8 + React 19 (JavaScript/JSX) boilerplate at `D:\Internship\Pomodoro\` with empty `components/`, `pages/`, `styles/`, `services/` folders, plain CSS with a working light/dark theme (`src/index.css`), and oxlint. No routing, state, or storage yet — a clean slate.
+The project is a fresh Vite 8 + React 19 (JavaScript/JSX) boilerplate at `D:\Internship\pomodoro-frontend\` with empty `components/`, `pages/`, `styles/`, `services/` folders, plain CSS with a working light/dark theme (`src/index.css`), and oxlint. No routing, state, or storage yet — a clean slate.
 
 ### Decisions locked with the user
 | Topic | Decision |
@@ -132,7 +132,7 @@ Goal: the five unlockable features, each visible-but-disabled until earned, plus
 - Per project rules, `prompt.md` will get an entry for this significant product spec, and commits will follow `.claude/rules/github.md` (small scoped commits per functional unit), staging only after user confirmation.
 
 ## Verification (end-to-end, after all phases)
-1. `cd D:\Internship\Pomodoro && npm install && npm run dev`.
+1. `cd D:\Internship\pomodoro-frontend && npm install && npm run dev`.
 2. Create a task, run a (test-shortened) session to completion → History shows `completed`, points +100.
 3. Complete 3 in a row → +50 bonus; terminate one → −200 (floored), streak resets.
 4. Cross 1000 lifetime → "The Anchor" unlocks; theme editor becomes usable; below-threshold features show locked previews.

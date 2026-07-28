@@ -1,7 +1,17 @@
-# Locked Decisions — Architecture & Tech Stack
+---
+paths:
+  - "pomodoro-frontend/**"
+---
 
-Rigid architectural choices and unchangeable tech-stack constraints. These are settled;
-do not revisit them without an explicit instruction to change direction.
+# Frontend Locked Decisions — Architecture & Tech Stack
+
+Rigid architectural choices and unchangeable tech-stack constraints for
+`pomodoro-frontend/`. These are settled; do not revisit them without an explicit
+instruction to change direction.
+
+> These bind the frontend only. `pomodoro-backend/` has no stack chosen yet — none of the
+> decisions below carry over to it by default. See
+> [`../backend/backend-rules.md`](../backend/backend-rules.md).
 
 ## Tech stack
 - **Vite 8** + **React 19** (JavaScript / JSX — no TypeScript)

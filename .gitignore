@@ -1,36 +1,29 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Repository-wide ignores only.
+#
+# Rule of thumb: a pattern belongs here only if it applies to the whole tree or to
+# root-level files. Anything produced by a package's own toolchain belongs in that
+# package's .gitignore:
+#   pomodoro-frontend/.gitignore  — Node/Vite build and tooling output
+#   pomodoro-backend/.gitignore   — backend build and tooling output
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Test coverage output
-coverage
-
-# Environment variables
+# Secrets — deliberately repo-wide so a stray env file anywhere is never committable.
+# This is the one intentional overlap with package-level files; do not re-declare it there.
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# Claude governance is tracked; only machine-local settings stay out.
+# Claude Code machine-local configuration (governance in .claude/ is tracked)
 .claude/settings.local.json
+CLAUDE.local.md
 
-# Project notes
+# Root-level working notes
 test_plan.md
 
-# Editor directories and files
+# OS and editor artifacts (can appear in any directory)
+.DS_Store
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj

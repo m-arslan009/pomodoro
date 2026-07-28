@@ -1,11 +1,16 @@
-# Conventions — Coding Paradigms, Styling & Naming
+---
+paths:
+  - "pomodoro-frontend/**"
+---
 
-Granular implementation and design rules. `CLAUDE.md` links here so the root file stays
-lean; keep everything about *how code should be written* in this file.
+# Frontend Conventions — Coding Paradigms, Styling & Naming
 
-> **Baseline:** [`rules/general-coding.md`](rules/general-coding.md) is the frontend
-> guardrail set (reuse, components, a11y, state/error handling, performance) and applies
-> to every change. The rules below are project-specific choices layered on top of it.
+Granular implementation and design rules for `pomodoro-frontend/`. Keep everything about
+*how frontend code should be written* in this file.
+
+> **Baseline:** [`general-coding.md`](general-coding.md) is the frontend guardrail set
+> (reuse, components, a11y, state/error handling, performance) and applies to every
+> frontend change. The rules below are project-specific choices layered on top of it.
 
 ## Language & paradigm
 - **JavaScript only** (`.jsx`), never TypeScript.
@@ -17,7 +22,7 @@ lean; keep everything about *how code should be written* in this file.
 - **Plain CSS + CSS custom properties**, never Tailwind.
 - Preserve the existing light/dark theming in `src/index.css`; the gated theme editor
   writes to the same CSS variables.
-- Follow [`rules/responsive-design.md`](rules/responsive-design.md) — mobile-first,
+- Follow [`responsive-design.md`](responsive-design.md) — mobile-first,
   readable, and accessible across screen sizes.
 
 ## Data access
@@ -30,10 +35,10 @@ lean; keep everything about *how code should be written* in this file.
 - `npm run lint` and `npm run build` must pass before committing.
 
 ## Git & commits
-- Follow [`rules/github.md`](rules/github.md): small scoped conventional commits
+- Follow [`../shared/github.md`](../shared/github.md): small scoped conventional commits
   (`<scope>: <short description>`), verify the build, stage only after user confirmation,
   never commit `node_modules`/secrets.
 
 ## Prompt logging
-- Follow [`rules/prompt-recording.md`](rules/prompt-recording.md): log significant user
-  prompts to `prompt.md`.
+- Follow [`../shared/prompt-recording.md`](../shared/prompt-recording.md): log significant
+  user prompts to the repo-root `prompt.md`.

@@ -1,3 +1,8 @@
+---
+paths:
+  - "pomodoro-frontend/**"
+---
+
 ## Break Points
 - `small screen`: use 576px as reference point. when screen width is less then or equal to 576 implement small screen design.
 - `medium screen`: use 768px as reference point. when screen widht is >567 and <= 786 implement medium screen design.

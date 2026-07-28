@@ -23,6 +23,12 @@ All commit messages must follow a purposeful, semantic structure so the history 
 ### Format
 Use the conventional commit format: `<scope>: <short description>`
 
+In this monorepo, prefer a scope that names the area within a package (`timer:`, `auth:`,
+`api:`). Add the package prefix only when a commit could otherwise be ambiguous
+(`frontend/timer:`, `backend/api:`). Do not mix changes to `pomodoro-frontend/` and
+`pomodoro-backend/` in one commit — keep each package's history independently readable so
+the two can be split into separate repositories later.
+
 Keep the subject line short and focused on the actual change. Do not turn it into a paragraph, and do not add unrelated details such as tool names, editor names, or agent commentary.
 
 

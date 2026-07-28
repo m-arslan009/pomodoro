@@ -1,12 +1,25 @@
 # CLAUDE.md — Project Governance & Map
 
-> Entry point Claude Code reads first. Its job is to *govern* and *map* the project — not
-> document it exhaustively. Granular rules live in the linked sub-files (progressive
-> disclosure) so this file stays a short, stable table of contents.
+> Entry point Claude Code reads first. Its job is to *govern* and *map* the repository — not
+> document it exhaustively. Granular rules live in `rules/` (progressive disclosure) so this
+> file stays a short, stable table of contents.
 
-## Project overview
-A **frontend-only React web app** built around the Pomodoro technique that helps users
-focus on daily tasks and stay motivated through a points-and-titles gamification system.
+## Repository shape
+A **monorepo** with one directory per deployable and all governance at the root. The two
+packages are developed independently and must stay independently buildable, so they can be
+split into separate Git repositories later without untangling anything.
+
+| Package | What it is | Status |
+|---|---|---|
+| `pomodoro-frontend/` | Vite 8 + React 19 SPA (JavaScript/JSX) | Built and tested |
+| `pomodoro-backend/` | Backend service | Empty placeholder — no stack chosen |
+
+There is **no root `package.json` and no workspace tool**, deliberately: npm/pnpm workspaces
+would couple the two packages and work against the eventual repo split.
+
+## Product overview
+A Pomodoro-technique focus app that helps users work through daily tasks and stay motivated
+via a points-and-titles gamification system.
 
 - **Timer:** default 25 min focus / 5 min break, both adjustable; start, pause/resume,
   restart, terminate.
@@ -19,50 +32,78 @@ focus on daily tasks and stay motivated through a points-and-titles gamification
 Significant prompts are logged in [`../prompt.md`](../prompt.md).
 
 ## Commands
-Run from the `Pomodoro/` app directory.
+Run from the package directory, never from the repository root.
 
-| Task  | Command         |
-|-------|-----------------|
-| Setup | `npm install`   |
-| Run   | `npm run dev`   |
-| Build | `npm run build` |
-| Lint  | `npm run lint`  |
+### `pomodoro-frontend/`
+| Task  | Command                |
+|-------|------------------------|
+| Setup | `npm install`          |
+| Run   | `npm run dev`          |
+| Build | `npm run build`        |
+| Lint  | `npm run lint`         |
+| Test  | `npm test`             |
+| Cover | `npm run test:coverage` |
 
-> No test runner is configured yet; `npm run build` is the current pass/fail gate.
+> Gate before committing: `npm run lint && npm test && npm run build`.
+
+### `pomodoro-backend/`
+No commands yet — the package is empty.
 
 ## Directory architecture
 ```
-.claude/                <- governance: this file, convention.md, locked_decisions.md,
-│                          rules/, agents/
-Pomodoro/               <- the Vite + React app (run npm commands here)
+.claude/                 <- governance for the whole repo (single source of truth)
+├── CLAUDE.md            <- this file
+├── agents/              <- subagent definitions (shared, stack-agnostic)
+└── rules/               <- discovered recursively; see the scope table below
+    ├── shared/          <- always loaded, applies to both packages
+    ├── frontend/        <- loads only when touching pomodoro-frontend/**
+    └── backend/         <- loads only when touching pomodoro-backend/**
+pomodoro-frontend/       <- the Vite + React app
+├── .gitignore           <- Node/Vite build + tooling artifacts
 └── src/
-    ├── main.jsx        <- entry: BrowserRouter > App
-    ├── App.jsx         <- route definitions for every page
-    ├── components/     <- shared UI: AppLayout, Nav, FeatureGate, TaskPicker, TitleBadge
-    ├── pages/          <- one file per view: Landing, SignIn, SignUp, Timer, History,
-    │                      Stats, Profile
-    ├── context/        <- AppProvider (Context + useReducer) — planned
-    ├── hooks/          <- usePomodoroTimer, useFeatureGate — planned
-    ├── services/       <- storage.js (localStorage), gamification.js (points/titles)
-    ├── styles/         <- shared CSS
-    └── assets/         <- images and static assets
-prompt.md               <- log of significant user prompts (repo root)
+    ├── main.jsx         <- entry: BrowserRouter > App
+    ├── App.jsx          <- route definitions for every page
+    ├── components/      <- shared UI + timer/, history/, history/charts/, settings/ groups
+    ├── pages/           <- one file per view: Landing, LogIn, SignUp, Timer, History,
+    │                       Profile, Setting
+    ├── hooks/           <- usePomodoroTimer, useFeatureGate, useElementWidth
+    ├── services/        <- storage, auth, gamification, history, validation, appearance
+    ├── styles/          <- plain CSS, one file per page/component
+    ├── tests/           <- Vitest suites: auth/, backlog/, feature-lock/, timer/, setup.js
+    └── assets/          <- images and static assets
+pomodoro-backend/        <- backend service (empty)
+└── .gitignore           <- stack-agnostic starter
+.gitignore               <- repo-wide only: OS/editor junk, secrets, Claude-local settings
+netlify.toml             <- deploy config; base = "pomodoro-frontend"
+prompt.md                <- log of significant user prompts (repo-wide)
+project_idea.md          <- original product plan
+product_analysis.md      <- product critique and roadmap
 ```
 
-## Reference rules (progressive disclosure)
-Consult these before writing code or making structural decisions:
+## Rules and their scope (progressive disclosure)
+All rules live in this one `.claude/` directory. Frontend and backend rules carry a `paths:`
+frontmatter glob, so they load **only** when Claude works with files in that package;
+`shared/` rules have no glob and load every session.
 
-- **[`convention.md`](convention.md)** — coding paradigms, styling, naming, and
-  git/prompt/responsive rules. *Read before writing or changing code.*
-- **[`locked_decisions.md`](locked_decisions.md)** — settled architecture and tech-stack
-  constraints. *Read before proposing structural changes.*
-- **[`rules/`](rules/)** — task-specific workflow rules: **general-coding** (frontend
-  guardrails — always applies), **github** (commits/push), **prompt-recording**
-  (`prompt.md` logging), **responsive-design** (breakpoints). *Follow the one relevant to
-  the task at hand.*
+| File | Scope | Loads |
+|---|---|---|
+| [`rules/shared/change-discipline.md`](rules/shared/change-discipline.md) | Shared | Always |
+| [`rules/shared/github.md`](rules/shared/github.md) | Shared | Always |
+| [`rules/shared/prompt-recording.md`](rules/shared/prompt-recording.md) | Shared | Always |
+| [`rules/frontend/general-coding.md`](rules/frontend/general-coding.md) | Frontend | `pomodoro-frontend/**` |
+| [`rules/frontend/convention.md`](rules/frontend/convention.md) | Frontend | `pomodoro-frontend/**` |
+| [`rules/frontend/locked_decisions.md`](rules/frontend/locked_decisions.md) | Frontend | `pomodoro-frontend/**` |
+| [`rules/frontend/responsive-design.md`](rules/frontend/responsive-design.md) | Frontend | `pomodoro-frontend/**` |
+| [`rules/backend/backend-rules.md`](rules/backend/backend-rules.md) | Backend | `pomodoro-backend/**` |
+
+**Adding a rule:** put it in `shared/` only if it is true for both packages with no
+rewording. Otherwise put it in `frontend/` or `backend/` and give it the matching `paths:`
+glob. Never copy a rule into two files.
 
 ## Subagents
 Defined in [`agents/`](agents/); delegate to them with the Agent tool when the task matches.
+All three are stack-agnostic and serve both packages — `test-creator`'s UI-specific guidance
+is conditional and simply does not apply to backend work.
 
 The three test agents form one loop and **never talk to each other** — every handoff goes
 through the main agent, which owns the state and briefs each agent with what it needs:

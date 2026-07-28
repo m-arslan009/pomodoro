@@ -1,13 +1,13 @@
+---
+paths:
+  - "pomodoro-frontend/**"
+---
+
 # Frontend Development Rules & AI Coding Guardrails
 
-## Scope and Change Discipline
-*   **Inspect Existing Patterns:** Inspect the existing implementation before creating new files or introducing new patterns.
-*   **Minimal Changes:** Make the smallest maintainable change that satisfies the requested behavior.
-*   **No Unrelated Refactoring:** Do not refactor unrelated code.
-*   **File Integrity:** Do not rename, move, or delete existing files unless the task explicitly requires it.
-*   **Follow Conventions:** Follow existing project conventions unless they are clearly unsafe or broken.
-*   **Search Before Creating:** Search for an existing component, utility, service, hook, or pattern before creating a new one.
-*   **Preserve Behavior:** Preserve existing behavior unless the requested change explicitly replaces it.
+**Scope:** `pomodoro-frontend/` only. The stack-agnostic scope and change-discipline rules
+that used to open this file now live in
+[`../shared/change-discipline.md`](../shared/change-discipline.md) and apply everywhere.
 
 ## Components and Reuse
 *   **Meaningful Reuse:** Create reusable components for repeated meaningful UI patterns or behavior. Do not create a component solely to remove a few repeated lines.
@@ -68,6 +68,9 @@ A layout or component change is strictly considered complete **only** when:
 *   The requested UI behavior works.
 *   Loading, empty, error, and dynamic states are explicitly handled visually.
 *   Responsive layout and accessibility (A11y) requirements are fully satisfied.
-*   Relevant tests, linters, and frontend quality checks pass.
-*   No temporary layout testing borders, console logs, or debugging artifacts remain in the workspace.
-*   The final response explicitly reports: **changed files**, **verification results**, and any **unresolved layout or compatibility risks**.
+*   No temporary layout testing borders remain in the workspace.
+*   Unresolved **layout or browser-compatibility** risks are named explicitly.
+
+The generic completion bar — run the package's linters and tests, leave no debugging
+artifacts, and report changed files plus verification results — is in
+[`../shared/change-discipline.md`](../shared/change-discipline.md) and is not repeated here.
