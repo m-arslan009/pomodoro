@@ -1,118 +1,124 @@
 /*
- * auth.js — frontend-only authentication against a single hardcoded profile.
- * There is no backend or live API, so credentials are verified here and the
- * resulting session profile becomes the app-wide source of truth for "who is
- * logged in", reused consistently by every subsequent page.
+ * auth.js — authentication against the Evergrove API.
  *
- * The account starts from HARDCODED_USER + CREDENTIALS, but the Profile page can
- * edit the non-sensitive fields (name, username) and change the password. Those
- * edits are persisted as overrides that layer over the hardcoded defaults. In a
- * real app the password would live behind a backend; here — with no server — the
- * changed password is stored locally so the change survives a refresh/re-login.
+ * This module knows how to *talk* about authentication and nothing else: no React state, no
+ * storage, no routing. State lives in store/authSlice.js, which calls these functions.
+ *
+ * Authentication is one credential: a JWT returned in the body of login and register, which the
+ * caller keeps in memory and api.js sends as a bearer header. There is no refresh token and no
+ * cookie, so nothing survives a page reload and there is no way to renew a token — when it
+ * expires the user signs in again.
  */
 
-import { read, write, remove } from './storage.js';
-
-/*
- * The one and only account the app recognizes. Exported so other pages can
- * render the signed-in user without re-declaring the profile.
- */
-export const HARDCODED_USER = {
-  id: 'admin-0001',
-  firstName: 'Admin',
-  lastName: 'User',
-  email: 'admin@evergrove.app',
-  username: 'admin',
-};
-
-// Kept alongside (not on) the exported profile so the password never leaks
-// into session storage or UI state.
-const CREDENTIALS = {
-  username: 'admin',
-  password: 'admin123!@#',
-};
-
-const SESSION_KEY = 'session';
-const PROFILE_KEY = 'profile'; // persisted editable overrides (name, username)
-const PASSWORD_KEY = 'password'; // persisted password override (frontend-only)
-
-/** The only fields the Profile page is allowed to edit; email + id are fixed. */
-const EDITABLE_FIELDS = ['firstName', 'lastName', 'username'];
+import { ApiError, api } from './api.js';
 
 /**
- * The active account profile: HARDCODED_USER with any persisted Profile-page
- * edits layered on top. Email and id can never be overridden.
+ * @typedef {object} UserProfile
+ * @property {string} id
+ * @property {string} email
+ * @property {string} username
+ * @property {string} firstName
+ * @property {string} lastName
  */
-export function getProfile() {
-  const overrides = read(PROFILE_KEY, null);
-  const profile = { ...HARDCODED_USER };
-  if (overrides && typeof overrides === 'object') {
-    for (const field of EDITABLE_FIELDS) {
-      if (typeof overrides[field] === 'string' && overrides[field].trim()) {
-        profile[field] = overrides[field].trim();
-      }
-    }
+
+/**
+ * What every sign-in shaped endpoint returns.
+ *
+ * @typedef {object} AuthSession
+ * @property {UserProfile} user The signed-in account.
+ * @property {string} accessToken Short-lived JWT for the Authorization header. Memory only.
+ * @property {number} expiresIn Milliseconds until `accessToken` expires.
+ */
+
+/**
+ * Narrow a login/register body to the session fields, so a change to what the endpoint
+ * volunteers cannot quietly widen what the store keeps.
+ *
+ * @param {{user: UserProfile, accessToken: string, expiresIn: number}} payload
+ * @returns {AuthSession}
+ */
+function toSession(payload) {
+  return {
+    user: payload.user,
+    accessToken: payload.accessToken,
+    expiresIn: payload.expiresIn,
+  };
+}
+
+/**
+ * The signed-in account, or null when the access token is missing or expired.
+ *
+ * Not used at startup — there is no persisted credential to bootstrap from. Kept as the thin
+ * wrapper over the live /auth/me endpoint for any future "re-read my profile" need.
+ */
+export async function fetchCurrentUser() {
+  try {
+    const payload = await api.get('/auth/me');
+    return payload.user;
+  } catch (error) {
+    // Not being signed in is an expected answer, not a failure to report.
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
   }
-  return profile;
 }
 
 /**
- * Persist edits to the non-sensitive profile fields and keep the active session
- * (the app-wide "who is logged in") in sync so the change shows immediately.
- * Returns the merged profile.
+ * Accepts an email address or a username in `identifier` — the server resolves which.
+ * @returns {Promise<AuthSession>}
  */
-export function updateProfile(fields) {
-  const overrides = {};
-  for (const field of EDITABLE_FIELDS) {
-    if (fields[field] != null) overrides[field] = String(fields[field]).trim();
-  }
-  write(PROFILE_KEY, overrides);
-  const merged = getProfile();
-  if (getSession()) write(SESSION_KEY, merged);
-  return merged;
-}
-
-/** The password currently in effect: a saved override, else the default. */
-function currentPassword() {
-  const override = read(PASSWORD_KEY, null);
-  return typeof override === 'string' && override.length > 0 ? override : CREDENTIALS.password;
-}
-
-/** True when the supplied password matches the account's current password. */
-export function verifyPassword(password) {
-  return password === currentPassword();
-}
-
-/** Replace the account password. Returns true on success. */
-export function changePassword(nextPassword) {
-  return write(PASSWORD_KEY, nextPassword);
+export async function login({ identifier, password }) {
+  return toSession(await api.post('/auth/login', { identifier, password }));
 }
 
 /**
- * True only when both the username and the password match the current account.
- * Username is matched case-insensitively against the (possibly edited) profile;
- * the password must exactly match the current (possibly changed) password.
+ * Registering also signs the account in, which is what the sign-up form has always implied.
+ * @returns {Promise<AuthSession>}
  */
-export function verifyCredentials(username, password) {
-  return (
-    String(username).trim().toLowerCase() === getProfile().username.toLowerCase() &&
-    password === currentPassword()
+export async function register({ firstName, lastName, email, username, password, timezone }) {
+  return toSession(
+    await api.post('/auth/register', {
+      firstName,
+      lastName,
+      email,
+      username,
+      password,
+      timezone,
+    })
   );
 }
 
-/** Persist the logged-in (non-sensitive) profile as the active session. */
-export function startSession() {
-  const profile = getProfile();
-  write(SESSION_KEY, profile);
-  return profile;
+/**
+ * Tells the server this device is signing out. It revokes nothing — the token stays valid until
+ * it expires — so dropping it from memory is what actually ends the session here.
+ */
+export async function logout() {
+  await api.post('/auth/logout');
 }
 
-/** The currently logged-in profile, or null when signed out. */
-export function getSession() {
-  return read(SESSION_KEY, null);
+/** Updates the editable profile fields. Email is not among them — it is the recovery channel. */
+export async function updateProfile(fields) {
+  const payload = await api.patch('/me', fields);
+  return payload.user;
 }
 
-/** Clear the active session (sign out). */
-export function endSession() {
-  return remove(SESSION_KEY);
+/**
+ * Changes the password.
+ *
+ * The response also carries a fresh access token, which is deliberately discarded: with no
+ * server-side sessions the token already in memory stays valid for its full lifetime, so
+ * adopting the new one would change nothing observable. Note that this does *not* sign other
+ * devices out — nothing can, under a stateless token model.
+ */
+export async function changePassword({ currentPassword, newPassword }) {
+  const payload = await api.post('/auth/change-password', { currentPassword, newPassword });
+  return payload.user;
+}
+
+/** The browser's IANA zone, used to bucket the user's local days. Null when unavailable. */
+export function detectTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+  } catch {
+    return null;
+  }
 }

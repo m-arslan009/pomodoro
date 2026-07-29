@@ -1,14 +1,26 @@
-import { Navigate } from 'react-router-dom';
-import { getSession } from '../services/auth.js';
+import { Navigate, useLocation } from 'react-router-dom';
+import PageLoader from './PageLoader.jsx';
+import useAuth from '../hooks/useAuth.js';
 
 /*
- * RequireGuest — guards the public pages (landing, log in, sign up). A user with
- * an active session is not allowed back onto these until they log out, so they
- * are redirected into the app (the timer dashboard) with a `replace`.
+ * RequireGuest — guards the public pages (landing, log in, sign up). A signed-in user is sent
+ * into the app until they log out.
+ *
+ * Mirrors RequireAuth's loading branch for the same reason: it does not hold today, and
+ * rendering the login form only to yank it away would be worse than a brief, honest wait if it
+ * ever did.
  */
 function RequireGuest({ children }) {
-  if (getSession()) {
-    return <Navigate to="/timer" replace />;
+  const location = useLocation();
+  const { isLoading, isAuthenticated } = useAuth();
+
+  if (isLoading) return <PageLoader label="Checking your session…" />;
+
+  if (isAuthenticated) {
+    // Honour the page the user was originally sent here from, so signing in returns them to
+    // where they were rather than always to the dashboard.
+    const intended = location.state?.from?.pathname;
+    return <Navigate to={intended ?? '/timer'} replace />;
   }
 
   return children;

@@ -1,28 +1,48 @@
 /*
- * validation.js — pure, framework-agnostic form validation for the Sign Up
- * flow (and reusable by Sign In later). Each helper returns a localized,
- * human-readable error string, or an empty string when the value is valid.
- * Keeping this logic out of the component makes the rules testable in isolation.
+ * validation.js — pure, framework-agnostic form validation for the auth forms. Each helper
+ * returns a human-readable error string, or an empty string when the value is valid.
+ *
+ * These rules are a MIRROR of the server's, not the authority: src/domain/identifier.ts and
+ * src/domain/password-policy.ts in the backend decide what is actually accepted. They exist
+ * here so a user gets an answer without a round trip — which means a rule that is looser here
+ * than there produces a form that passes and then fails. Keep the numbers identical.
  */
 
 // Pragmatic email shape check: something@something.tld with no spaces.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const PASSWORD_MIN_LENGTH = 8;
+/*
+ * Length-first password policy. Composition rules (a letter, a digit, a symbol) pushed users
+ * toward predictable substitutions without adding real entropy, so length carries the strength
+ * instead. The maximum matches the server's cap on hashing work.
+ */
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 128;
 
-/** First/Last name — required, at least 2 characters, no digits. */
+const NAME_MIN_LENGTH = 2;
+const NAME_MAX_LENGTH = 50;
+const EMAIL_MAX_LENGTH = 320;
+
+/** The shortest identifier fragment worth refusing inside a password. */
+const MIN_FRAGMENT_LENGTH = 3;
+
+/** First/Last name — required, 2–50 characters, no digits. */
 export function validateName(value, label = 'Name') {
   const trimmed = value.trim();
   if (!trimmed) return `${label} is required.`;
-  if (trimmed.length < 2) return `${label} must be at least 2 characters.`;
+  if (trimmed.length < NAME_MIN_LENGTH)
+    return `${label} must be at least ${NAME_MIN_LENGTH} characters.`;
+  if (trimmed.length > NAME_MAX_LENGTH)
+    return `${label} must be ${NAME_MAX_LENGTH} characters or fewer.`;
   if (/\d/.test(trimmed)) return `${label} cannot contain numbers.`;
   return '';
 }
 
-/** Email — required and syntactically valid. */
+/** Email — required, within the server's column width, and syntactically valid. */
 export function validateEmail(value) {
   const trimmed = value.trim();
   if (!trimmed) return 'Email is required.';
+  if (trimmed.length > EMAIL_MAX_LENGTH) return 'Email is too long.';
   if (!EMAIL_RE.test(trimmed)) return 'Enter a valid email address.';
   return '';
 }
@@ -37,17 +57,29 @@ export function validateUsername(value) {
   return '';
 }
 
+function containsFragment(password, fragment) {
+  if (!fragment) return false;
+  const normalized = String(fragment).trim().toLowerCase();
+  if (normalized.length < MIN_FRAGMENT_LENGTH) return false;
+  return password.toLowerCase().includes(normalized);
+}
+
 /**
- * Password — at least 8 characters and a mix of letters, numbers, and special
- * characters. Returns the first unmet requirement as a descriptive message.
+ * Password — length first, plus a refusal to embed the user's own identifiers.
+ * `identifiers` is optional so the rule can also be applied where only one is known.
  */
-export function validatePassword(value) {
+export function validatePassword(value, identifiers = {}) {
   if (!value) return 'Password is required.';
   if (value.length < PASSWORD_MIN_LENGTH)
     return `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`;
-  if (!/[a-zA-Z]/.test(value)) return 'Password must include a letter.';
-  if (!/\d/.test(value)) return 'Password must include a number.';
-  if (!/[^a-zA-Z0-9]/.test(value)) return 'Password must include a special character.';
+  if (value.length > PASSWORD_MAX_LENGTH)
+    return `Password must be ${PASSWORD_MAX_LENGTH} characters or fewer.`;
+
+  const emailLocalPart = identifiers.email ? String(identifiers.email).split('@')[0] : '';
+  if (containsFragment(value, identifiers.username) || containsFragment(value, emailLocalPart)) {
+    return 'Password must not contain your username or email address.';
+  }
+
   return '';
 }
 
@@ -68,29 +100,12 @@ export function validateSignUpForm(values) {
     lastName: validateName(values.lastName, 'Last name'),
     email: validateEmail(values.email),
     username: validateUsername(values.username),
-    password: validatePassword(values.password),
+    password: validatePassword(values.password, {
+      username: values.username,
+      email: values.email,
+    }),
     confirmPassword: validateConfirmPassword(values.password, values.confirmPassword),
   };
   const isValid = Object.values(errors).every((message) => message === '');
   return { errors, isValid };
-}
-
-/**
- * Surface high-risk / security-relevant conditions that are not hard failures
- * but should warn the user (drives the yellow warning toast). Returns a list of
- * messages; an empty list means nothing noteworthy.
- */
-export function assessSecurityRisks(values, { emailTaken, usernameTaken } = {}) {
-  const warnings = [];
-
-  if (emailTaken) warnings.push('An account with this email already exists.');
-  if (usernameTaken) warnings.push('That username is already taken.');
-
-  const password = values.password ?? '';
-  const username = (values.username ?? '').trim();
-  if (password && username.length >= 3 && password.toLowerCase().includes(username.toLowerCase())) {
-    warnings.push('Your password should not contain your username.');
-  }
-
-  return warnings;
 }

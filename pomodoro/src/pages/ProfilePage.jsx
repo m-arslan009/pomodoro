@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout.jsx';
 import Notification from '../components/Notification.jsx';
-import { getProfile, updateProfile, verifyPassword, changePassword } from '../services/auth.js';
+import useAuth from '../hooks/useAuth.js';
+import { ApiError } from '../services/api.js';
+import { changePassword, updateProfile } from '../services/auth.js';
 import {
   validateName,
   validateUsername,
@@ -11,17 +13,19 @@ import {
 import '../styles/ProfilePage.css';
 
 /*
- * ProfilePage — view and edit the signed-in account, scoped inside the forest
- * .app-shell so it reuses the shared glass/forest tokens (--fg-*, --glass-*)
- * exactly like the Settings and History dashboards.
+ * ProfilePage — view and edit the signed-in account, scoped inside the forest .app-shell so it
+ * reuses the shared glass/forest tokens (--fg-*, --glass-*) exactly like the Settings and
+ * History dashboards.
  *
  * Two independent glass cards, each with its own dirty-tracking + validation:
- *   1. Profile details — first/last name and username are editable; email is
- *      fixed (frontend-only single account) and shown read-only.
+ *   1. Profile details — first/last name and username are editable; email is fixed (it is the
+ *      account's recovery channel, so changing it needs a verification round trip) and shown
+ *      read-only.
  *   2. Password        — verify the current password, then set a new one.
  *
- * Edits persist through auth.js (updateProfile / changePassword), which keeps
- * the active session in sync so the change is reflected app-wide immediately.
+ * Both cards persist through the API (services/auth.js). The signed-in user comes from the auth
+ * context, and a successful save pushes the updated profile back into it so every surface — the
+ * identity summary here included — reflects the change immediately.
  */
 
 // Build the avatar initials from whatever name parts are available.
@@ -43,6 +47,7 @@ function Field({
   error,
   autoComplete,
   readOnly = false,
+  disabled = false,
   hint,
   onChange,
   onBlur,
@@ -67,6 +72,7 @@ function Field({
           value={value}
           autoComplete={autoComplete}
           readOnly={readOnly}
+          disabled={disabled}
           aria-readonly={readOnly || undefined}
           onChange={onChange}
           onBlur={onBlur}
@@ -96,18 +102,21 @@ const EMPTY_PASSWORD_FORM = {
 };
 
 function ProfilePage() {
-  // Persisted account is the baseline; the details form tracks unsaved edits and
-  // the baseline only advances after a successful save.
-  const [profile, setProfile] = useState(() => getProfile());
+  // The signed-in account is context state, not local state: ProfilePage renders inside
+  // RequireAuth, so it is always present, and a save must update it app-wide rather than here.
+  const { user, setUser } = useAuth();
+
   const [details, setDetails] = useState(() => ({
-    firstName: profile.firstName,
-    lastName: profile.lastName,
-    username: profile.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
   }));
   const [detailErrors, setDetailErrors] = useState({});
+  const [savingDetails, setSavingDetails] = useState(false);
 
   const [pwd, setPwd] = useState(EMPTY_PASSWORD_FORM);
   const [pwdErrors, setPwdErrors] = useState({});
+  const [savingPassword, setSavingPassword] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -115,9 +124,9 @@ function ProfilePage() {
   const [notification, setNotification] = useState(null);
 
   const detailsDirty =
-    details.firstName !== profile.firstName ||
-    details.lastName !== profile.lastName ||
-    details.username !== profile.username;
+    details.firstName !== user.firstName ||
+    details.lastName !== user.lastName ||
+    details.username !== user.username;
 
   /* --------------------------------------------------------- Profile details */
   function setDetailField(key, value) {
@@ -139,9 +148,9 @@ function ProfilePage() {
     setDetailErrors((prev) => ({ ...prev, [name]: message || undefined }));
   }
 
-  function handleDetailsSubmit(event) {
+  async function handleDetailsSubmit(event) {
     event.preventDefault();
-    if (!detailsDirty) return;
+    if (!detailsDirty || savingDetails) return;
 
     const found = validateDetails(details);
     const active = Object.fromEntries(Object.entries(found).filter(([, message]) => message));
@@ -154,21 +163,46 @@ function ProfilePage() {
       return;
     }
 
-    const merged = updateProfile(details);
-    setProfile(merged);
-    setDetails({
-      firstName: merged.firstName,
-      lastName: merged.lastName,
-      username: merged.username,
-    });
-    setNotification({ type: 'success', message: 'Your profile has been updated.' });
+    // PATCH semantics: send only what actually changed.
+    const changed = {};
+    if (details.firstName !== user.firstName) changed.firstName = details.firstName;
+    if (details.lastName !== user.lastName) changed.lastName = details.lastName;
+    if (details.username !== user.username) changed.username = details.username;
+
+    setSavingDetails(true);
+    try {
+      const updated = await updateProfile(changed);
+      setUser(updated);
+      setDetails({
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        username: updated.username,
+      });
+      setNotification({ type: 'success', message: 'Your profile has been updated.' });
+    } catch (error) {
+      // A taken username comes back as a 409 with a field error — show it on the input.
+      if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+        setDetailErrors(error.fieldErrors);
+        setNotification({ type: 'error', message: Object.values(error.fieldErrors)[0] });
+      } else {
+        setNotification({
+          type: 'error',
+          message:
+            error instanceof ApiError
+              ? error.message
+              : 'Could not save your profile. Please try again.',
+        });
+      }
+    } finally {
+      setSavingDetails(false);
+    }
   }
 
   function handleDetailsReset() {
     setDetails({
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      username: profile.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
     });
     setDetailErrors({});
   }
@@ -179,17 +213,19 @@ function ProfilePage() {
     setPwdErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
 
-  function handlePwdSubmit(event) {
+  async function handlePwdSubmit(event) {
     event.preventDefault();
+    if (savingPassword) return;
 
     const errors = {};
-    if (!pwd.currentPassword) {
-      errors.currentPassword = 'Enter your current password.';
-    } else if (!verifyPassword(pwd.currentPassword)) {
-      errors.currentPassword = 'That is not your current password.';
-    }
+    // Whether the current password is correct is the server's answer to give, not ours — there
+    // is no local copy of it to check against any more.
+    if (!pwd.currentPassword) errors.currentPassword = 'Enter your current password.';
 
-    const newError = validatePassword(pwd.newPassword);
+    const newError = validatePassword(pwd.newPassword, {
+      username: user.username,
+      email: user.email,
+    });
     if (newError) errors.newPassword = newError;
     else if (pwd.newPassword === pwd.currentPassword)
       errors.newPassword = 'Choose a password different from your current one.';
@@ -206,22 +242,37 @@ function ProfilePage() {
       return;
     }
 
-    if (!changePassword(pwd.newPassword)) {
-      setNotification({
-        type: 'error',
-        message: 'Could not update your password. Please try again.',
+    setSavingPassword(true);
+    try {
+      await changePassword({
+        currentPassword: pwd.currentPassword,
+        newPassword: pwd.newPassword,
       });
-      return;
-    }
 
-    setPwd(EMPTY_PASSWORD_FORM);
-    setShowCurrent(false);
-    setShowNew(false);
-    setShowConfirm(false);
-    setNotification({
-      type: 'success',
-      message: 'Your password has been changed.',
-    });
+      setPwd(EMPTY_PASSWORD_FORM);
+      setShowCurrent(false);
+      setShowNew(false);
+      setShowConfirm(false);
+      setNotification({
+        type: 'success',
+        message: 'Your password has been changed.',
+      });
+    } catch (error) {
+      if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+        setPwdErrors(error.fieldErrors);
+        setNotification({ type: 'error', message: Object.values(error.fieldErrors)[0] });
+      } else {
+        setNotification({
+          type: 'error',
+          message:
+            error instanceof ApiError
+              ? error.message
+              : 'Could not update your password. Please try again.',
+        });
+      }
+    } finally {
+      setSavingPassword(false);
+    }
   }
 
   return (
@@ -243,14 +294,14 @@ function ProfilePage() {
         {/* Identity summary */}
         <section className="profile-identity" aria-label="Account summary">
           <div className="profile-avatar" aria-hidden="true">
-            {initialsOf(profile)}
+            {initialsOf(user)}
           </div>
           <div className="profile-identity__text">
             <p className="profile-identity__name">
-              {profile.firstName} {profile.lastName}
+              {user.firstName} {user.lastName}
             </p>
-            <p className="profile-identity__meta">@{profile.username}</p>
-            <p className="profile-identity__meta">{profile.email}</p>
+            <p className="profile-identity__meta">@{user.username}</p>
+            <p className="profile-identity__meta">{user.email}</p>
           </div>
         </section>
 
@@ -271,6 +322,7 @@ function ProfilePage() {
                 value={details.firstName}
                 error={detailErrors.firstName}
                 autoComplete="given-name"
+                disabled={savingDetails}
                 onChange={(e) => setDetailField('firstName', e.target.value)}
                 onBlur={handleDetailBlur}
               />
@@ -280,6 +332,7 @@ function ProfilePage() {
                 value={details.lastName}
                 error={detailErrors.lastName}
                 autoComplete="family-name"
+                disabled={savingDetails}
                 onChange={(e) => setDetailField('lastName', e.target.value)}
                 onBlur={handleDetailBlur}
               />
@@ -291,6 +344,7 @@ function ProfilePage() {
               value={details.username}
               error={detailErrors.username}
               autoComplete="username"
+              disabled={savingDetails}
               onChange={(e) => setDetailField('username', e.target.value)}
               onBlur={handleDetailBlur}
             />
@@ -299,7 +353,7 @@ function ProfilePage() {
               id="email"
               label="Email"
               type="email"
-              value={profile.email}
+              value={user.email}
               readOnly
               hint="Your email address can't be changed."
               onChange={() => {}}
@@ -311,16 +365,16 @@ function ProfilePage() {
               type="button"
               className="profile-btn profile-btn--ghost"
               onClick={handleDetailsReset}
-              disabled={!detailsDirty}
+              disabled={!detailsDirty || savingDetails}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="profile-btn profile-btn--primary"
-              disabled={!detailsDirty}
+              disabled={!detailsDirty || savingDetails}
             >
-              Save changes
+              {savingDetails ? 'Saving…' : 'Save changes'}
             </button>
           </div>
         </form>
@@ -330,7 +384,8 @@ function ProfilePage() {
           <div className="profile-card__head">
             <h2 className="profile-card__title">Change password</h2>
             <p className="profile-card__hint">
-              Use at least 8 characters with a mix of letters, numbers, and a special character.
+              Use at least 10 characters. Length matters more than symbols — a short phrase you
+              can remember beats a scrambled word.
             </p>
           </div>
 
@@ -342,6 +397,7 @@ function ProfilePage() {
               value={pwd.currentPassword}
               error={pwdErrors.currentPassword}
               autoComplete="current-password"
+              disabled={savingPassword}
               onChange={(e) => setPwdField('currentPassword', e.target.value)}
             >
               <button
@@ -363,6 +419,7 @@ function ProfilePage() {
                 value={pwd.newPassword}
                 error={pwdErrors.newPassword}
                 autoComplete="new-password"
+                disabled={savingPassword}
                 onChange={(e) => setPwdField('newPassword', e.target.value)}
               >
                 <button
@@ -383,6 +440,7 @@ function ProfilePage() {
                 value={pwd.confirmPassword}
                 error={pwdErrors.confirmPassword}
                 autoComplete="new-password"
+                disabled={savingPassword}
                 onChange={(e) => setPwdField('confirmPassword', e.target.value)}
               >
                 <button
@@ -399,8 +457,12 @@ function ProfilePage() {
           </div>
 
           <div className="profile-actions">
-            <button type="submit" className="profile-btn profile-btn--primary">
-              Update password
+            <button
+              type="submit"
+              className="profile-btn profile-btn--primary"
+              disabled={savingPassword}
+            >
+              {savingPassword ? 'Updating…' : 'Update password'}
             </button>
           </div>
         </form>

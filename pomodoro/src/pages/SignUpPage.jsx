@@ -8,9 +8,10 @@ import {
   validatePassword,
   validateConfirmPassword,
   validateSignUpForm,
-  assessSecurityRisks,
 } from '../services/validation.js';
-import { saveUser, findUserByEmail, findUserByUsername } from '../services/storage.js';
+import useAuth from '../hooks/useAuth.js';
+import { ApiError } from '../services/api.js';
+import { detectTimeZone } from '../services/auth.js';
 import '../styles/SignUpPage.css';
 
 const APP_NAME = 'Evergrove';
@@ -36,7 +37,11 @@ function validateField(name, values) {
     case 'username':
       return validateUsername(values.username);
     case 'password':
-      return validatePassword(values.password);
+      // The identifiers travel with the value: the rule refuses a password that embeds them.
+      return validatePassword(values.password, {
+        username: values.username,
+        email: values.email,
+      });
     case 'confirmPassword':
       return validateConfirmPassword(values.password, values.confirmPassword);
     default:
@@ -110,6 +115,7 @@ function Field({
 
 function SignUpPage() {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [values, setValues] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -146,11 +152,12 @@ function SignUpPage() {
     setErrors((prev) => ({ ...prev, [name]: validateField(name, values) }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (disabled) return;
 
-    // 1) Hard validation — block and point the user at the failing fields.
+    // 1) Client-side validation — block and point the user at the failing fields. These rules
+    //    mirror the server's; the server re-checks every one of them regardless.
     const { errors: allErrors, isValid } = validateSignUpForm(values);
     setErrors(allErrors);
     setTouched({
@@ -170,48 +177,45 @@ function SignUpPage() {
       return;
     }
 
-    // 2) Security / high-risk checks — surfaced as a warning, not a crash.
-    const emailTaken = Boolean(findUserByEmail(values.email));
-    const usernameTaken = Boolean(findUserByUsername(values.username));
-    const warnings = assessSecurityRisks(values, { emailTaken, usernameTaken });
-
-    if (emailTaken || usernameTaken) {
-      setErrors((prev) => ({
-        ...prev,
-        email: emailTaken ? 'An account with this email already exists.' : prev.email,
-        username: usernameTaken ? 'That username is already taken.' : prev.username,
-      }));
-    }
-
-    if (warnings.length > 0) {
-      setNotification({ type: 'warning', message: warnings[0] });
-      // A taken email/username can't proceed; a soft warning (weak password) can't
-      // reach here because it never blocks — so any warning here stops submission.
-      return;
-    }
-
-    // 3) Success — persist non-sensitive profile, then route to Login.
+    /*
+     * 2) Register. Uniqueness is settled by the server's unique indexes, not by a lookup here:
+     *    a client-side "is this taken?" check would be both racy and an account-enumeration
+     *    endpoint. A collision comes back as a 409 carrying field errors instead.
+     */
     setStatus('loading');
     setNotification(null);
 
-    // Simulate the async gap a real API call would introduce.
-    setTimeout(() => {
-      const saved = saveUser(values);
-      if (!saved) {
-        setStatus('idle');
-        setNotification({
-          type: 'error',
-          message: 'We could not save your account. Please try again.',
-        });
+    try {
+      await signUp({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        username: values.username,
+        password: values.password,
+        // Bucketing the user's local days needs their zone; the server falls back to UTC.
+        timezone: detectTimeZone() ?? undefined,
+      });
+
+      setStatus('success');
+      // Registering signs the account in, so land on the dashboard rather than the login form.
+      navigate('/timer', { replace: true });
+    } catch (error) {
+      setStatus('idle');
+
+      if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...error.fieldErrors }));
+        setNotification({ type: 'warning', message: Object.values(error.fieldErrors)[0] });
         return;
       }
-      setStatus('success');
+
       setNotification({
-        type: 'success',
-        message: 'Account created! Redirecting you to log in…',
+        type: 'error',
+        message:
+          error instanceof ApiError
+            ? error.message
+            : 'We could not create your account. Please try again.',
       });
-      setTimeout(() => navigate('/login'), 1400);
-    }, 600);
+    }
   }
 
   return (

@@ -4,6 +4,23 @@
   command = "npm run build"
   publish = "dist"
 
+# API proxy — REQUIRED before the first production deploy.
+#
+# The session cookie is httpOnly + SameSite=Lax, which means the browser only sends it on
+# same-origin requests (backend ADR-008). This rewrite is what makes the API same-origin: the
+# SPA calls /api/v1/..., Netlify forwards it to the API host, and the cookie rides along.
+# Without it, authentication cannot work in production — and loosening the cookie to
+# SameSite=None instead would require adding CSRF tokens.
+#
+# Uncomment and set the deployed API host. It must come BEFORE the SPA fallback below,
+# otherwise /api/* is swallowed by index.html.
+#
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://<api-host>/api/:splat"
+#   status = 200
+#   force = true
+
 # SPA fallback: serve index.html for client-side routes (React Router).
 [[redirects]]
   from = "/*"

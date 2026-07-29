@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TimerPage from '../../pages/TimerPage.jsx';
+import { AuthTestProvider } from '../helpers/authTestContext.jsx';
 import {
   getTasks,
   saveGamification,
@@ -49,10 +50,14 @@ function task(id, title, status, extra = {}) {
   return { id, title, status, createdAt: isoAt(-HOUR_MS), ...extra };
 }
 
+// AppLayout reads the signed-in account from auth context; this suite is about the backlog, so
+// the context is supplied directly rather than through the real session bootstrap.
 function renderTimerPage() {
   return render(
     <MemoryRouter>
-      <TimerPage />
+      <AuthTestProvider>
+        <TimerPage />
+      </AuthTestProvider>
     </MemoryRouter>
   );
 }

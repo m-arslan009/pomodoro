@@ -1,132 +1,172 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  HARDCODED_USER,
-  endSession,
-  getSession,
-  startSession,
-  verifyCredentials,
-} from '../../services/auth.js';
+import { ApiError } from '../../services/api.js';
+import { changePassword, fetchCurrentUser, login, logout } from '../../services/auth.js';
 
 /*
  * Suite D1/D2 — the login service in services/auth.js.
  *
- * SCOPE NOTE. This app is frontend-only: there is no backend, no Axios/fetch
- * client, no cookies and no sessionStorage anywhere in src/. "Logging in" means
- * verifying a credential pair against a hardcoded account (verifyCredentials)
- * and persisting the non-sensitive profile to localStorage as the session
- * (startSession) — the two calls LogInPage makes on submit. The storage layer
- * stands in for the network, so the one handled-failure case below is a
- * localStorage write that throws rather than an HTTP error.
+ * SCOPE NOTE. Authentication is a real backend call answering with a single JWT. What this suite
+ * asserts is the contract with the API: the right request goes out, the response is unwrapped,
+ * failures arrive as ApiError, and nothing about the session ever reaches localStorage.
  *
- * localStorage is replaced with an in-memory double so no real browser storage
- * is touched and no test can leak state into the next.
+ * fetch is replaced with a double, so no network is touched.
  */
 
-// The namespaced key storage.js writes the session under. Restated here on
-// purpose: the persisted shape is public behaviour, so a namespace change must
-// fail loudly rather than be silently followed.
-const SESSION_KEY = 'pomodoro.v1.session';
+const USER = {
+  id: '018f-user',
+  email: 'ada@evergrove.app',
+  username: 'Ada_L',
+  firstName: 'Ada',
+  lastName: 'Lovelace',
+  timezone: 'Europe/London',
+  emailVerified: false,
+  createdAt: '2026-07-28T09:00:00.000Z',
+};
 
-// Mirrors the private CREDENTIALS constant in auth.js, which is deliberately
-// not exported so the password cannot leak into UI state.
-const VALID_USERNAME = 'admin';
-const VALID_PASSWORD = 'admin123!@#';
+/** Stands in for the short-lived JWT the login response now returns. */
+const ACCESS_TOKEN = 'header.payload.signature';
 
-let store;
-let localStorageMock;
-let originalDescriptor;
+/** A minimal Response stand-in — only the members services/api.js actually reads. */
+function respond(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: () => 'application/json' },
+    json: () => Promise.resolve(body),
+  };
+}
+
+let fetchMock;
+let setItemSpy;
 
 beforeEach(() => {
-  store = new Map();
-  localStorageMock = {
-    getItem: vi.fn((name) => (store.has(name) ? store.get(name) : null)),
-    setItem: vi.fn((name, value) => store.set(name, String(value))),
-    removeItem: vi.fn((name) => store.delete(name)),
-  };
-  originalDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
-  Object.defineProperty(window, 'localStorage', {
-    value: localStorageMock,
-    configurable: true,
-    writable: true,
-  });
+  fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
+  setItemSpy = vi.spyOn(window.localStorage, 'setItem');
 });
 
 afterEach(() => {
-  // Hand the real storage back so this file cannot affect any other suite.
-  Object.defineProperty(window, 'localStorage', originalDescriptor);
+  vi.unstubAllGlobals();
 });
 
 describe('Suite D1 — Credential verification', () => {
-  it('D1.1 — accepts the valid credential pair', () => {
-    expect(verifyCredentials(VALID_USERNAME, VALID_PASSWORD)).toBe(true);
+  it('D1.1 — posts the identifier and password to the login endpoint and returns the session', async () => {
+    // The response carries the access token alongside the profile. It is the whole credential:
+    // there is no second half in a cookie, and no way to renew it.
+    fetchMock.mockResolvedValue(
+      respond(200, { user: USER, accessToken: ACCESS_TOKEN, expiresIn: 900000 })
+    );
+
+    const session = await login({ identifier: 'ada@evergrove.app', password: 'a long passphrase' });
+
+    expect(session).toEqual({ user: USER, accessToken: ACCESS_TOKEN, expiresIn: 900000 });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/auth/login');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({
+      identifier: 'ada@evergrove.app',
+      password: 'a long passphrase',
+    });
   });
 
-  it('D1.2 — matches the username case-insensitively and trimmed, the password exactly', () => {
-    // Casing and stray whitespace in the username never lock a user out...
-    expect(verifyCredentials('  ADMIN  ', VALID_PASSWORD)).toBe(true);
-    // ...but the password is compared byte-for-byte.
-    expect(verifyCredentials(VALID_USERNAME, VALID_PASSWORD.toUpperCase())).toBe(false);
+  it('D1.2 — sends no ambient credentials, because the token is the only one', async () => {
+    fetchMock.mockResolvedValue(respond(200, { user: USER }));
+
+    await login({ identifier: 'Ada_L', password: 'a long passphrase' });
+
+    // The API sets no cookies and reads none. Asking the browser to attach them would widen the
+    // request's authority for nothing, and re-open the CSRF question the bearer header closes.
+    expect(fetchMock.mock.calls[0][1].credentials).toBeUndefined();
   });
 
-  it('D1.3 — rejects a wrong username, a wrong password, and a wrong pair', () => {
-    expect(verifyCredentials('not-admin', VALID_PASSWORD)).toBe(false);
-    expect(verifyCredentials(VALID_USERNAME, 'wrong-password')).toBe(false);
-    expect(verifyCredentials('not-admin', 'wrong-password')).toBe(false);
+  it('D1.3 — surfaces a rejected credential pair as a 401 with no field-level detail', async () => {
+    fetchMock.mockResolvedValue(
+      respond(401, {
+        type: 'about:blank',
+        title: 'Invalid credentials',
+        status: 401,
+        detail: 'Incorrect email/username or password.',
+      })
+    );
+
+    const error = await login({ identifier: 'ada', password: 'wrong' }).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(401);
+    // A field error would tell an attacker which half was wrong — the server never sends one.
+    expect(error.fieldErrors).toEqual({});
+    expect(error.message).toBe('Incorrect email/username or password.');
   });
 
-  it('D1.4 — rejects blank and missing credentials without throwing or writing', () => {
-    // Verification is a pure read that always answers with a boolean, so the
-    // login form can render its error toast instead of crashing on submit.
-    expect(verifyCredentials('', '')).toBe(false);
-    expect(verifyCredentials('   ', '   ')).toBe(false);
-    expect(verifyCredentials(VALID_USERNAME, '')).toBe(false);
-    expect(verifyCredentials(undefined, undefined)).toBe(false);
+  it('D1.4 — reports an unreachable server as a network error rather than throwing raw', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-    expect(localStorageMock.setItem).not.toHaveBeenCalled();
+    const error = await login({ identifier: 'ada', password: 'x' }).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.isNetworkError).toBe(true);
+    expect(error.message).toMatch(/could not reach the server/i);
+  });
+
+  it('D1.5 — never writes credentials or a session to localStorage', async () => {
+    fetchMock.mockResolvedValue(respond(200, { user: USER }));
+
+    await login({ identifier: 'ada@evergrove.app', password: 'a long passphrase' });
+
+    // The token is a bearer credential with no server-side record, so anything that can read it
+    // can act as the user until it expires. Memory only is the entire mitigation.
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 });
 
-describe('Suite D2 — Session persistence', () => {
-  it('D2.1 — starting a session persists the profile and makes it readable back', () => {
-    const session = startSession();
+describe('Suite D2 — Profile read and teardown', () => {
+  it('D2.1 — resolves the current user from the presented access token', async () => {
+    fetchMock.mockResolvedValue(respond(200, { user: USER }));
 
-    // The signed-in profile is both returned to the caller and written once, to
-    // the namespaced session key, as the serialized profile.
-    expect(session).toEqual(HARDCODED_USER);
-    expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      SESSION_KEY,
-      JSON.stringify(HARDCODED_USER)
+    await expect(fetchCurrentUser()).resolves.toEqual(USER);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/auth/me');
+  });
+
+  it('D2.2 — treats "not signed in" as an answer, not a failure', async () => {
+    fetchMock.mockResolvedValue(
+      respond(401, { title: 'Not authenticated', status: 401, detail: 'Sign in to continue.' })
     );
-    expect(getSession()).toEqual(HARDCODED_USER);
+
+    // Callers must be able to distinguish anonymous from broken without parsing a problem body.
+    await expect(fetchCurrentUser()).resolves.toBeNull();
   });
 
-  it('D2.2 — never persists the password alongside the session', () => {
-    startSession();
+  it('D2.3 — propagates a genuine server failure rather than reporting it as anonymous', async () => {
+    fetchMock.mockResolvedValue(respond(500, { title: 'Internal server error', status: 500 }));
 
-    const stored = JSON.parse(store.get(SESSION_KEY));
-    expect(stored).not.toHaveProperty('password');
-    expect(Object.values(stored)).not.toContain(VALID_PASSWORD);
+    await expect(fetchCurrentUser()).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('D2.3 — signing out clears the session and leaves the account able to log in again', () => {
-    startSession();
+  it('D2.4 — signing out posts to the API and tolerates an empty 204 response', async () => {
+    fetchMock.mockResolvedValue(respond(204, null));
 
-    expect(endSession()).toBe(true);
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith(SESSION_KEY);
-    expect(getSession()).toBeNull();
-    expect(verifyCredentials(VALID_USERNAME, VALID_PASSWORD)).toBe(true);
+    await expect(logout()).resolves.toBeUndefined();
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/auth/logout');
+    expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
 
-  it('D2.4 — a failed session write is swallowed, leaving no session behind', () => {
-    localStorageMock.setItem.mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
+  it('D2.5 — maps a rejected current password onto its field', async () => {
+    fetchMock.mockResolvedValue(
+      respond(422, {
+        title: 'Validation failed',
+        status: 422,
+        errors: [{ field: 'currentPassword', message: 'That is not your current password.' }],
+      })
+    );
+
+    const error = await changePassword({
+      currentPassword: 'nope',
+      newPassword: 'a long new passphrase',
+    }).catch((caught) => caught);
+
+    expect(error.status).toBe(422);
+    expect(error.fieldErrors).toEqual({
+      currentPassword: 'That is not your current password.',
     });
-
-    // Storage full or disabled (private mode): the failure is contained at the
-    // storage boundary rather than escaping into the submit handler — but the
-    // login does not durably take hold.
-    expect(() => startSession()).not.toThrow();
-    expect(getSession()).toBeNull();
   });
-}); 
+});

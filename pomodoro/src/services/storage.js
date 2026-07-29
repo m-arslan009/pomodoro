@@ -45,50 +45,34 @@ export function remove(name) {
   }
 }
 
-/* --------------------------------------------------------------- Users -- */
+/* -------------------------------------------------------- Cache owner -- */
 /*
- * Frontend-only "accounts": a list of registered profiles. Only non-sensitive
- * profile fields are stored here — never the password.
+ * Accounts now live on the server, so this module no longer stores users or credentials — the
+ * `users`, `session`, `profile` and `password` keys are gone.
+ *
+ * What remains is a consequence of that change: the dashboard keys below are a per-user cache,
+ * but they are not namespaced by user. Two accounts used in the same browser would otherwise
+ * show each other's tasks and points. Recording which account the cache belongs to, and
+ * clearing it when a different one signs in, closes that leak.
  */
 
-const USERS_KEY = 'users';
-
-/** All registered user profiles (always an array). */
-export function getUsers() {
-  const users = read(USERS_KEY, []);
-  return Array.isArray(users) ? users : [];
-}
-
-/** Case-insensitive lookup by email. */
-export function findUserByEmail(email) {
-  const target = String(email).trim().toLowerCase();
-  return getUsers().find((u) => u.email?.toLowerCase() === target) ?? null;
-}
-
-/** Case-insensitive lookup by username. */
-export function findUserByUsername(username) {
-  const target = String(username).trim().toLowerCase();
-  return getUsers().find((u) => u.username?.toLowerCase() === target) ?? null;
-}
+const CACHE_OWNER_KEY = 'cacheOwner';
+const OWNED_KEYS = ['tasks', 'sessions', 'gamification'];
 
 /**
- * Append a non-sensitive profile to the users list and persist it.
- * Returns the saved profile (with a generated id + timestamp).
+ * Claim the local cache for a user id, discarding it when it belonged to someone else.
+ * Called after every successful sign-in and on session bootstrap.
  */
-export function saveUser({ firstName, lastName, email, username }) {
-  const profile = {
-    id:
-      typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    firstName: firstName.trim(),
-    lastName: lastName.trim(),
-    email: email.trim(),
-    username: username.trim(),
-    createdAt: new Date().toISOString(),
-  };
-  const users = getUsers();
-  users.push(profile);
-  write(USERS_KEY, users);
-  return profile;
+export function adoptCacheOwner(userId) {
+  if (!userId) return false;
+
+  const previous = read(CACHE_OWNER_KEY, null);
+  if (previous === userId) return false;
+
+  // A different account (or a cache from the pre-backend build, which has no owner recorded).
+  for (const name of OWNED_KEYS) remove(name);
+  write(CACHE_OWNER_KEY, userId);
+  return true;
 }
 
 /* ----------------------------------------------------------- Dashboard -- */

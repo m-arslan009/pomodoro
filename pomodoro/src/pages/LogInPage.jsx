@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Notification from '../components/Notification.jsx';
-import { verifyCredentials, startSession } from '../services/auth.js';
+import useAuth from '../hooks/useAuth.js';
+import { ApiError } from '../services/api.js';
 import '../styles/LogInPage.css';
 
 const APP_NAME = 'Evergrove';
@@ -28,19 +29,38 @@ function LeafIcon() {
   );
 }
 
+/*
+ * Turn a failed sign-in into one sentence for the toast.
+ *
+ * Note what is deliberately absent: any branch that distinguishes "no such account" from "wrong
+ * password". The server answers both identically, and the UI must not invent a difference.
+ */
+function describeFailure(error) {
+  if (!(error instanceof ApiError)) return 'Something went wrong. Please try again.';
+  if (error.isNetworkError) return error.message;
+  if (error.status === 429) return 'Too many attempts. Wait a minute and try again.';
+  if (error.status === 422) {
+    return Object.values(error.fieldErrors)[0] ?? 'Enter your email or username and password.';
+  }
+  return error.message;
+}
+
 function LogInPage() {
   const navigate = useNavigate();
-  const [values, setValues] = useState({ username: '', password: '' });
+  const location = useLocation();
+  const { signIn } = useAuth();
+
+  const [values, setValues] = useState({ identifier: '', password: '' });
   const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'success'
   const [notification, setNotification] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const isLoading = status === 'loading';
   const isSuccess = status === 'success';
-  // Both fields must be filled before a login can be attempted. We deliberately
-  // do not validate field shape or show inline errors — an invalid credential
-  // pair is surfaced only through the global toast on submit.
-  const canSubmit = values.username.trim() !== '' && values.password !== '';
+  // Both fields must be filled before a login can be attempted. We deliberately do not validate
+  // the identifier's shape or show inline errors — an invalid credential pair is surfaced only
+  // through the global toast on submit.
+  const canSubmit = values.identifier.trim() !== '' && values.password !== '';
   const disabled = isLoading || isSuccess || !canSubmit;
 
   function handleChange(event) {
@@ -48,35 +68,23 @@ function LogInPage() {
     setValues((prev) => ({ ...prev, [name]: value }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     if (disabled) return;
 
     setStatus('loading');
     setNotification(null);
 
-    // Simulate the async gap a real API call would introduce, so loading and
-    // success states behave exactly as they do on the Sign Up page.
-    setTimeout(() => {
-      if (!verifyCredentials(values.username, values.password)) {
-        // No field highlighting — a single global toast reports the failure.
-        setStatus('idle');
-        setNotification({
-          type: 'error',
-          message: 'The username or password is incorrect.',
-        });
-        return;
-      }
-
-      // Success — record the session, then route to the dashboard.
-      startSession();
+    try {
+      await signIn({ identifier: values.identifier, password: values.password });
       setStatus('success');
-      setNotification({
-        type: 'success',
-        message: 'Welcome back! Redirecting you to your dashboard…',
-      });
-      setTimeout(() => navigate('/timer'), 1400);
-    }, 600);
+      // The token is in the store; go where the user was headed.
+      navigate(location.state?.from?.pathname ?? '/timer', { replace: true });
+    } catch (error) {
+      setStatus('idle');
+      // No field highlighting — a single global toast reports the failure.
+      setNotification({ type: 'error', message: describeFailure(error) });
+    }
   }
 
   return (
@@ -101,17 +109,19 @@ function LogInPage() {
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <div className="login-field">
-              <label className="login-label" htmlFor="username">
-                Username
+              <label className="login-label" htmlFor="identifier">
+                Email or username
               </label>
               <div className="login-control">
                 <input
-                  id="username"
-                  name="username"
+                  id="identifier"
+                  name="identifier"
                   type="text"
                   className="login-input"
-                  value={values.username}
+                  value={values.identifier}
                   autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck="false"
                   onChange={handleChange}
                   disabled={isLoading || isSuccess}
                 />

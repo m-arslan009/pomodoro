@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TimerPage from './TimerPage.jsx';
+import { AuthTestProvider } from '../tests/helpers/authTestContext.jsx';
 import {
   getGamification,
   getSessions,
@@ -54,10 +55,14 @@ function todoTask(id, title) {
   return { id, title, status: 'todo', createdAt: isoAt(0) };
 }
 
+// AppLayout reads the signed-in account from auth context; this suite is about the timer, so
+// the context is supplied directly rather than through the real session bootstrap.
 function renderTimerPage() {
   return render(
     <MemoryRouter>
-      <TimerPage />
+      <AuthTestProvider>
+        <TimerPage />
+      </AuthTestProvider>
     </MemoryRouter>
   );
 }

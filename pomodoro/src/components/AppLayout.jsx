@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Nav from './Nav.jsx';
-import { endSession } from '../services/auth.js';
+import useAuth from '../hooks/useAuth.js';
 import { getSettings } from '../services/storage.js';
 import { applyBaseTheme, applyCustomTheme, applyBackground } from '../services/appearance.js';
 import '../styles/AppLayout.css';
@@ -56,7 +56,9 @@ function Brand({ onClick }) {
 
 function AppLayout({ children }) {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const menuButtonRef = useRef(null);
   const shellRef = useRef(null);
 
@@ -87,8 +89,21 @@ function AppLayout({ children }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [menuOpen]);
 
-  function handleLogout() {
-    endSession();
+  // Signing out is a network call, but the token is dropped locally either way — the slice
+  // clears on both outcomes. So a failed request must still navigate: leaving someone on a
+  // protected page after they asked to sign out is the worse outcome, and an uncaught rejection
+  // here would also surface as an unhandled promise error.
+  // The button locks while the request is in flight so a double click cannot fire two of them.
+  async function handleLogout() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      // Reported by the slice; nothing useful to add here.
+    } finally {
+      setSigningOut(false);
+    }
     navigate('/', { replace: true });
   }
 
@@ -134,7 +149,12 @@ function AppLayout({ children }) {
         <Nav onNavigate={closeMenu} />
 
         <div className="app-sidebar__bottom">
-          <button type="button" className="app-logout" onClick={handleLogout}>
+          <button
+            type="button"
+            className="app-logout"
+            onClick={handleLogout}
+            disabled={signingOut}
+          >
             <svg
               viewBox="0 0 24 24"
               width="20"
@@ -149,7 +169,7 @@ function AppLayout({ children }) {
             >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
             </svg>
-            Log Out
+            {signingOut ? 'Logging out…' : 'Log Out'}
           </button>
         </div>
       </aside>

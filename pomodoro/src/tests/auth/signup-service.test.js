@@ -1,58 +1,48 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { assessSecurityRisks, validateSignUpForm } from '../../services/validation.js';
-import { findUserByEmail, findUserByUsername, getUsers, saveUser } from '../../services/storage.js';
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  validateSignUpForm,
+} from '../../services/validation.js';
+import { ApiError } from '../../services/api.js';
+import { register } from '../../services/auth.js';
 
 /*
  * Suite E1/E2 — the sign-up (registration) service.
  *
- * SCOPE NOTE. This app is frontend-only: there is no backend and no HTTP client,
- * so "registering" is the pair of service calls SignUpPage makes on submit —
- * validateSignUpForm + assessSecurityRisks decide whether the account may be
- * created (services/validation.js), and saveUser/findUserBy* create and look it
- * up in the persisted users list (services/storage.js). The storage layer stands
- * in for the network, so the one handled-failure case below is a localStorage
- * write that throws rather than an HTTP error.
- *
- * localStorage is replaced with an in-memory double so no real browser storage
- * is touched and no test can leak state into the next.
+ * SCOPE NOTE. Registration is now a backend call. Two things are worth asserting separately:
+ * the client-side rules that spare the user a round trip (validateSignUpForm), and the contract
+ * with the API — including that uniqueness is decided by the server, since a client-side
+ * "is this taken?" lookup would be both racy and an account-enumeration oracle.
  */
-
-// The namespaced key storage.js writes the users list under. Restated here on
-// purpose: the persisted shape is public behaviour, so a namespace change must
-// fail loudly rather than be silently followed.
-const USERS_KEY = 'pomodoro.v1.users';
 
 const VALID_FORM = {
   firstName: 'Ada',
   lastName: 'Lovelace',
   email: 'ada@evergrove.app',
   username: 'ada_l',
-  password: 'Focus25!',
-  confirmPassword: 'Focus25!',
+  password: 'correct horse battery',
+  confirmPassword: 'correct horse battery',
 };
 
-let store;
-let localStorageMock;
-let originalDescriptor;
+function respond(status, body) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: () => 'application/json' },
+    json: () => Promise.resolve(body),
+  };
+}
+
+let fetchMock;
 
 beforeEach(() => {
-  store = new Map();
-  localStorageMock = {
-    getItem: vi.fn((name) => (store.has(name) ? store.get(name) : null)),
-    setItem: vi.fn((name, value) => store.set(name, String(value))),
-    removeItem: vi.fn((name) => store.delete(name)),
-  };
-  originalDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
-  Object.defineProperty(window, 'localStorage', {
-    value: localStorageMock,
-    configurable: true,
-    writable: true,
-  });
+  fetchMock = vi.fn();
+  vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
-  // Hand the real storage back so this file cannot affect any other suite.
-  Object.defineProperty(window, 'localStorage', originalDescriptor);
+  vi.unstubAllGlobals();
 });
 
 describe('Suite E1 — Sign-up form validation', () => {
@@ -60,14 +50,24 @@ describe('Suite E1 — Sign-up form validation', () => {
     const { errors, isValid } = validateSignUpForm(VALID_FORM);
 
     expect(isValid).toBe(true);
-    // No false positives: every field reports an empty message, not just the
-    // aggregate flag.
     expect(Object.values(errors).every((message) => message === '')).toBe(true);
   });
 
-  // One row per field rule the form enforces. Kept as a table rather than six
-  // near-identical tests: the behaviour under test is the same each time —
-  // the offending field carries its message and the form refuses to submit.
+  it('E1.2 — accepts a long passphrase with no digits or symbols', () => {
+    // The length-first policy: this is stronger than "Focus25!", which the old composition
+    // rules accepted and this one rejects for being too short.
+    const { isValid } = validateSignUpForm({
+      ...VALID_FORM,
+      password: 'seven green apples',
+      confirmPassword: 'seven green apples',
+    });
+
+    expect(isValid).toBe(true);
+  });
+
+  // One row per field rule the form enforces. Kept as a table rather than six near-identical
+  // tests: the behaviour under test is the same each time — the offending field carries its
+  // message and the form refuses to submit.
   it.each([
     ['a missing required field', { firstName: '   ' }, 'firstName', 'First name is required.'],
     [
@@ -77,6 +77,23 @@ describe('Suite E1 — Sign-up form validation', () => {
       'Last name cannot contain numbers.',
     ],
     ['a malformed email', { email: 'ada@evergrove' }, 'email', 'Enter a valid email address.'],
+    /*
+     * The four rows below mirror server limits the client used to omit. A client rule looser
+     * than the server's produces a form that passes and then fails at the API with a 422 the
+     * user never had a chance to avoid, so each one is pinned to the server's exact wording.
+     */
+    [
+      'a name above the maximum length',
+      { firstName: 'A'.repeat(51) },
+      'firstName',
+      'First name must be 50 characters or fewer.',
+    ],
+    [
+      'an email above the maximum length',
+      { email: `${'a'.repeat(310)}@evergrove.app` },
+      'email',
+      'Email is too long.',
+    ],
     [
       'a too-short username',
       { username: 'ad' },
@@ -84,98 +101,114 @@ describe('Suite E1 — Sign-up form validation', () => {
       'Username must be at least 3 characters.',
     ],
     [
-      'a password without a special character',
-      { password: 'Focus2555', confirmPassword: 'Focus2555' },
+      'a too-long username',
+      { username: 'a'.repeat(21) },
+      'username',
+      'Username must be 20 characters or fewer.',
+    ],
+    [
+      'a username with unsupported characters',
+      { username: 'ada-l' },
+      'username',
+      'Use only letters, numbers, and underscores.',
+    ],
+    [
+      'a password below the minimum length',
+      { password: 'a'.repeat(PASSWORD_MIN_LENGTH - 1) },
       'password',
-      'Password must include a special character.',
+      `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+    ],
+    [
+      'a password above the maximum length',
+      { password: 'a'.repeat(PASSWORD_MAX_LENGTH + 1) },
+      'password',
+      `Password must be ${PASSWORD_MAX_LENGTH} characters or fewer.`,
+    ],
+    [
+      'a password containing the username',
+      { password: 'my ada_l password' },
+      'password',
+      'Password must not contain your username or email address.',
     ],
     [
       'a confirmation that does not match',
-      { confirmPassword: 'Focus25?' },
+      { confirmPassword: 'something else entirely' },
       'confirmPassword',
       'Passwords do not match.',
     ],
-  ])('E1.2 — rejects %s and names the offending field', (_case, overrides, field, message) => {
+  ])('E1.3 — rejects %s and names the offending field', (_case, overrides, field, message) => {
     const { errors, isValid } = validateSignUpForm({ ...VALID_FORM, ...overrides });
 
     expect(isValid).toBe(false);
     expect(errors[field]).toBe(message);
   });
-
-  it('E1.3 — warns about a duplicate email or username and a password carrying the username', () => {
-    // Duplicates are reported to the service by the caller (which looked them up
-    // via findUserBy*), so this is where "account already exists" is worded.
-    expect(assessSecurityRisks(VALID_FORM, { emailTaken: true, usernameTaken: true })).toEqual([
-      'An account with this email already exists.',
-      'That username is already taken.',
-    ]);
-
-    expect(assessSecurityRisks({ ...VALID_FORM, password: 'ada_l2025!' }, {})).toEqual([
-      'Your password should not contain your username.',
-    ]);
-
-    // A clean, unique registration raises nothing — otherwise every sign-up
-    // would be blocked by a warning.
-    expect(assessSecurityRisks(VALID_FORM, { emailTaken: false, usernameTaken: false })).toEqual(
-      []
-    );
-  });
 });
 
-describe('Suite E2 — Registration persistence', () => {
-  it('E2.1 — registering persists a trimmed, non-sensitive profile that reads back', () => {
-    const saved = saveUser({ ...VALID_FORM, firstName: '  Ada  ', email: '  ada@evergrove.app  ' });
+describe('Suite E2 — Registration against the API', () => {
+  it('E2.1 — posts the profile and password, and never the confirmation field', async () => {
+    fetchMock.mockResolvedValue(respond(201, { user: { id: 'u1', username: 'ada_l' } }));
 
-    expect(saved).toMatchObject({
+    await register({ ...VALID_FORM, timezone: 'Europe/London' });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/v1/auth/register');
+    expect(init.method).toBe('POST');
+
+    const sent = JSON.parse(init.body);
+    expect(sent).toEqual({
       firstName: 'Ada',
       lastName: 'Lovelace',
       email: 'ada@evergrove.app',
       username: 'ada_l',
+      password: 'correct horse battery',
+      timezone: 'Europe/London',
     });
-    expect(saved.id).toEqual(expect.any(String));
-    expect(saved.createdAt).toEqual(expect.any(String));
-
-    // Written once, to the namespaced users key, and readable back as the list.
-    expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(USERS_KEY, JSON.stringify([saved]));
-    expect(getUsers()).toEqual([saved]);
-
-    // Credentials never reach storage: the users list holds profiles only.
-    const stored = JSON.parse(store.get(USERS_KEY))[0];
-    expect(stored).not.toHaveProperty('password');
-    expect(stored).not.toHaveProperty('confirmPassword');
-    expect(Object.values(stored)).not.toContain(VALID_FORM.password);
+    expect(sent).not.toHaveProperty('confirmPassword');
   });
 
-  it('E2.2 — a second registration is appended, leaving the first account intact', () => {
-    const first = saveUser(VALID_FORM);
-    const second = saveUser({ ...VALID_FORM, email: 'grace@evergrove.app', username: 'grace_h' });
+  it('E2.2 — returns the created account, which is signed in by the same response', async () => {
+    const created = { id: 'u1', username: 'Ada_L', email: 'ada@evergrove.app' };
+    // "Signed in by the same response" is now literal: registering mints the access token too.
+    fetchMock.mockResolvedValue(
+      respond(201, { user: created, accessToken: 'header.payload.signature', expiresIn: 900000 })
+    );
 
-    expect(getUsers()).toEqual([first, second]);
-  });
-
-  it('E2.3 — finds a registered account by email or username, ignoring case and whitespace', () => {
-    // This lookup is what makes the duplicate check in E1.3 fire, so it must not
-    // be defeated by the casing or padding a user happens to type.
-    const saved = saveUser(VALID_FORM);
-
-    expect(findUserByEmail('  ADA@Evergrove.app ')).toEqual(saved);
-    expect(findUserByUsername('  ADA_L  ')).toEqual(saved);
-
-    expect(findUserByEmail('grace@evergrove.app')).toBeNull();
-    expect(findUserByUsername('grace_h')).toBeNull();
-  });
-
-  it('E2.4 — a failed write leaves no half-registered account behind', () => {
-    localStorageMock.setItem.mockImplementation(() => {
-      throw new DOMException('QuotaExceededError');
+    await expect(register(VALID_FORM)).resolves.toEqual({
+      user: created,
+      accessToken: 'header.payload.signature',
+      expiresIn: 900000,
     });
+  });
 
-    // Storage full or disabled (private mode): the failure is contained at the
-    // storage boundary rather than escaping into the submit handler — and the
-    // account does not durably exist, so the user can retry cleanly.
-    expect(() => saveUser(VALID_FORM)).not.toThrow();
-    expect(getUsers()).toEqual([]);
-    expect(findUserByEmail(VALID_FORM.email)).toBeNull();
+  it('E2.3 — maps a taken email or username onto the offending fields', async () => {
+    fetchMock.mockResolvedValue(
+      respond(409, {
+        title: 'Account already exists',
+        status: 409,
+        errors: [
+          { field: 'email', message: 'An account with this email already exists.' },
+          { field: 'username', message: 'That username is already taken.' },
+        ],
+      })
+    );
+
+    const error = await register(VALID_FORM).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(409);
+    // Uniqueness is the database's answer, delivered as field errors the form can render —
+    // there is no client-side lookup, and no endpoint that would confirm an address exists.
+    expect(error.fieldErrors).toEqual({
+      email: 'An account with this email already exists.',
+      username: 'That username is already taken.',
+    });
+  });
+
+  it('E2.4 — a failed registration leaves nothing behind locally', async () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem');
+    fetchMock.mockResolvedValue(respond(422, { title: 'Validation failed', status: 422 }));
+
+    await expect(register(VALID_FORM)).rejects.toBeInstanceOf(ApiError);
+    expect(setItemSpy).not.toHaveBeenCalled();
   });
 });

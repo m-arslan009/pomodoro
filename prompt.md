@@ -176,3 +176,83 @@
 `Title`: Test the frontend sign-up (registration) service with a concise, high-value suite
 
 `User prompt`: Analyse the frontend Sign Up (Registration) Service and write only the essential Vitest unit tests. Focus on testing the service's public behaviour rather than every possible edge case or implementation detail. Avoid redundant or repetitive test cases that verify the same logic in different ways. Do not invent scenarios that are not supported by the current implementation. If validation is straightforward, combine similar invalid input cases into a single parameterized test instead of creating separate tests for each field. Aim for 5-8 high-value test cases that cover the core registration workflow: successful registration, duplicate user or email (if supported), invalid or missing required input, correct persistence of the registered user or profile (if implemented), and one representative failure scenario (such as storage or API failure) only if the service explicitly handles it. Verify that the service returns the expected result, stores data correctly (if applicable), and propagates or handles errors as designed. Do not test browser APIs, JavaScript built-ins, or third-party libraries beyond verifying that they are invoked correctly. Keep the test suite concise, maintainable, and easy to understand. Prefer one well-structured test over several nearly identical ones. Follow the project's existing test structure and naming conventions, and do not modify production code unless required for testability. After writing the tests, review the suite and remove any test that does not provide unique value or increases maintenance without improving confidence. The final test suite should be minimal while still providing strong confidence in the correctness of the sign-up service.
+
+## Move authentication state to Redux Toolkit and integrate JWT
+
+`Title`: Replace Context + useReducer with a Redux Toolkit auth slice
+
+`User prompt`: On the frontend, integrate the backend using the correct API endpoints, remove all
+mock authentication, and implement production-ready authentication state using **Redux Toolkit
+(RTK)** (preferred over Context because the application will grow with user data, gamification,
+achievements, settings, and future authenticated features). Create a clean auth slice with async
+thunks for login, logout, authentication status, loading and error states, persist authentication
+securely, automatically attach tokens to API requests, handle token expiry and unauthorised
+responses, protect private routes, redirect users appropriately, display backend validation errors
+using the existing UI, and ensure the application remains type-safe, modular, and maintainable.
+Preserve the existing UI, styling, tests, and architecture wherever possible, update only what is
+necessary, verify the complete login flow from submission to authenticated navigation, fix any
+integration issues discovered during implementation, document all changes, and ensure both frontend
+and backend remain synchronised with no hardcoded values or duplicate logic.
+
+**Scope this prompt settled.** RTK replaces the locked "Context + `useReducer`, no external store"
+decision, but for the **auth slice only** — timer, gamification, settings and history state stay
+local and migrate as they grow. There was no mock authentication left to remove; the services
+already called the real API. `hooks/useAuth.js` keeps its exact previous return shape, so no
+consuming component changed. The access token lives in Redux memory only — never `localStorage`,
+which the existing D1.5 test continues to enforce.
+
+---
+
+`Title`: Align the frontend with the stateless-JWT backend
+
+`User prompt`: The backend authentication is already complete and should be treated as the source
+of truth. Analyse the frontend against the existing backend API to identify missing integrations,
+incomplete authentication features, broken flows, obsolete code, and dead ends. Implement only the
+functionality required for a complete end-to-end authentication flow, keeping the solution as
+simple and maintainable as possible. Avoid unnecessary abstractions, helper functions, custom
+hooks, utility layers, premature optimisations, or features that are not required today. Prioritise
+a working login flow, correct API integration, Redux Toolkit authentication state, protected
+routes, token persistence, logout, validation, loading and error handling, unauthorised session
+handling, and navigation. If the backend already supports registration or change-password and only
+minimal frontend work is needed to make them functional, implement them; otherwise document what
+remains for a later phase. Do not create, modify, or run test cases. Remove obsolete authentication
+code and unnecessary complexity, but avoid unrelated refactoring.
+
+**Decisions this prompt settled.** Two conflicts were surfaced and answered:
+
+1. **"Token persistence" vs the locked memory-only rule.** With no refresh cookie, surviving a
+   reload would require web storage, which `locked_decisions.md` forbids outright. The user chose
+   to **keep the token memory-only**, accepting that a reload, a new tab, or a browser restart
+   returns the user to `/login` even with hours left on the token.
+2. **"Remove obsolete code" vs "do not modify tests."** Roughly eight frozen cases asserted the
+   deleted `/auth/refresh` bootstrap and `credentials: 'include'`. The user chose to **remove the
+   refresh machinery and update those tests**, overriding the no-tests instruction for the cases
+   that encoded the dead contract.
+
+**Scope.** Deleted `refresh()`, `logoutEverywhere()`, `bootstrapAuth`, `setAuthRefreshHandler` and
+the single-flight 401 replay. Initial `status` is now `anonymous`; a 401 on a token-bearing request
+clears the session and the route guards redirect. Registration and change-password were already
+functional and needed no work beyond removing a false "other devices have been signed out" claim.
+
+---
+
+`Title`: Verify and complete core frontend authentication
+
+`User prompt`: Focus only on the core frontend authentication functionality. Analyse the current
+implementation, verify each feature works correctly, and complete any missing or incomplete pieces
+before writing comprehensive tests. Verify and complete: Registration, Login, Logout, Client-side
+form validation, API integration, Success and error handling, Loading states during API requests.
+Fix only genuine bugs or missing functionality directly related to these features. Remove obsolete
+authentication code and dead ends, but avoid unrelated refactoring. Do not implement advanced
+features such as refresh tokens, silent re-authentication, remember-me, forgot/reset password,
+email verification, social login, role-based permissions, profile management, or other
+non-essential functionality unless already partially implemented and requiring only minimal work to
+complete. After implementation, manually verify every authentication flow end-to-end against the
+backend.
+
+**Outcome.** Three genuine defects fixed: the client validation mirror was missing the server's
+name (50) and email (320) maximum lengths, so those inputs passed the form and failed at the API;
+`AppLayout.handleLogout` skipped its navigation and raised an unhandled rejection when the logout
+request failed; and the Vite proxy comment still described the removed cookie model. Component
+coverage was added for the login form and the sign-out button, neither of which had any. Every
+flow was verified end to end through the Vite proxy against the running backend.
