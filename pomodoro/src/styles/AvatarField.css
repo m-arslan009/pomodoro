@@ -1,0 +1,79 @@
+/*
+ * AvatarField — the profile photo and its controls. Sits inside .profile-identity and reuses that
+ * block's .profile-avatar circle and the page's .profile-btn styles.
+ */
+
+.avatar-field {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-2);
+  min-width: 0;
+}
+
+.profile-avatar__image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-field__controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap-2);
+}
+
+/*
+ * Visually hidden but still focusable: display:none or visibility:hidden would take the input out
+ * of the tab order, and the label alone cannot receive focus, so the control would be unreachable
+ * by keyboard.
+ */
+.avatar-field__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.avatar-field__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* The label is what is seen, so the input's focus and disabled states have to show up on it. */
+.avatar-field__input:focus-visible + .avatar-field__label {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.avatar-field__input:disabled + .avatar-field__label {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.avatar-field__controls .profile-btn {
+  padding: 8px 14px;
+  font-size: var(--fs-label);
+}
+
+.avatar-field__error {
+  margin: 0;
+  max-width: 22ch;
+  text-align: center;
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  color: var(--pp-bad);
+  overflow-wrap: anywhere;
+}

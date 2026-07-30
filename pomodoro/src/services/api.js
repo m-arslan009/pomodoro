@@ -92,14 +92,20 @@ export function setOnAuthFailure(onFailure) {
 /** Fires the request itself. Rejects only when the network never answered. */
 async function send(path, method, body, token) {
   const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  /*
+   * A FormData body is passed through untouched and without a Content-Type: only the browser
+   * knows the multipart boundary it generated, and setting the header by hand leaves that
+   * boundary out, which makes the request unparseable on the server.
+   */
+  const isForm = body instanceof FormData;
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
   try {
     return await fetch(`${API_BASE}${path}`, {
       method,
       headers: Object.keys(headers).length > 0 ? headers : undefined,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined || isForm ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(
@@ -112,9 +118,9 @@ async function send(path, method, body, token) {
 
 /**
  * @param {string} path
- * @param {{method?: string, body?: unknown}} [options]
+ * @param {{method?: string, body?: unknown, blob?: boolean}} [options]
  */
-async function request(path, { method = 'GET', body } = {}) {
+async function request(path, { method = 'GET', body, blob = false } = {}) {
   const token = readAccessToken();
   const response = await send(path, method, body, token);
 
@@ -131,13 +137,16 @@ async function request(path, { method = 'GET', body } = {}) {
 
   if (response.status === 204) return null;
 
-  const payload = await readBody(response);
-  if (!response.ok) throw toApiError(response.status, payload);
-  return payload;
+  // A failure is a problem document whatever the request asked for, so errors are always read as
+  // JSON — only a successful response honours `blob`.
+  if (!response.ok) throw toApiError(response.status, await readBody(response));
+  return blob ? response.blob() : readBody(response);
 }
 
 export const api = {
   get: (path) => request(path),
   post: (path, body) => request(path, { method: 'POST', body }),
   patch: (path, body) => request(path, { method: 'PATCH', body }),
+  put: (path, body) => request(path, { method: 'PUT', body }),
+  getBlob: (path) => request(path, { blob: true }),
 };

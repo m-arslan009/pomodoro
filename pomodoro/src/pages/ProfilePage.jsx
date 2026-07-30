@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout.jsx';
+import AvatarField from '../components/AvatarField.jsx';
 import Notification from '../components/Notification.jsx';
+import PageLoader from '../components/PageLoader.jsx';
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
-import { changePassword, updateProfile } from '../services/auth.js';
+import { changePassword, detectTimeZone } from '../services/auth.js';
+import { fetchProfile, updateProfile } from '../services/profile.js';
 import {
   validateName,
   validateUsername,
@@ -18,14 +21,13 @@ import '../styles/ProfilePage.css';
  * History dashboards.
  *
  * Two independent glass cards, each with its own dirty-tracking + validation:
- *   1. Profile details — first/last name and username are editable; email is fixed (it is the
- *      account's recovery channel, so changing it needs a verification round trip) and shown
- *      read-only.
+ *   1. Account details — first/last name, username and time zone are editable; email is shown
+ *      read-only because no change flow exists for it yet, not because it is immutable.
  *   2. Password        — verify the current password, then set a new one.
  *
- * Both cards persist through the API (services/auth.js). The signed-in user comes from the auth
- * context, and a successful save pushes the updated profile back into it so every surface — the
- * identity summary here included — reflects the change immediately.
+ * Both cards persist through the API (services/profile.js, services/auth.js). The signed-in user
+ * is Redux state, and a successful save pushes the server's response back into it so every
+ * surface — the identity summary here included — reflects the change immediately.
  */
 
 // Build the avatar initials from whatever name parts are available.
@@ -34,6 +36,17 @@ function initialsOf({ firstName, lastName, username }) {
   const last = lastName?.trim()?.[0] ?? '';
   const combined = `${first}${last}`.trim();
   return (combined || username?.trim()?.[0] || '?').toUpperCase();
+}
+
+// The editable slice of a profile. Tolerates a null user so the hooks below can run before the
+// signed-in account is known.
+function detailsOf(user) {
+  return {
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
+    username: user?.username ?? '',
+    timezone: user?.timezone ?? '',
+  };
 }
 
 // Shared labelled text field: forest-styled input, inline error, optional
@@ -102,17 +115,21 @@ const EMPTY_PASSWORD_FORM = {
 };
 
 function ProfilePage() {
-  // The signed-in account is context state, not local state: ProfilePage renders inside
-  // RequireAuth, so it is always present, and a save must update it app-wide rather than here.
+  // The signed-in account is Redux state, not local state: a save must update it app-wide rather
+  // than only here.
   const { user, setUser } = useAuth();
 
-  const [details, setDetails] = useState(() => ({
-    firstName: user.firstName,
-    lastName: user.lastName,
-    username: user.username,
-  }));
+  /*
+   * Only the *edits* are state; the displayed values are derived from the signed-in account each
+   * render. That is what keeps the form honest when the profile changes underneath it: an
+   * untouched field shows the new value immediately, while a field someone has typed into keeps
+   * what they typed until they save or cancel. Copying the profile into state would strand the
+   * form on whatever it was seeded with.
+   */
+  const [edits, setEdits] = useState({});
   const [detailErrors, setDetailErrors] = useState({});
   const [savingDetails, setSavingDetails] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   const [pwd, setPwd] = useState(EMPTY_PASSWORD_FORM);
   const [pwdErrors, setPwdErrors] = useState({});
@@ -123,14 +140,44 @@ function ProfilePage() {
 
   const [notification, setNotification] = useState(null);
 
-  const detailsDirty =
-    details.firstName !== user.firstName ||
-    details.lastName !== user.lastName ||
-    details.username !== user.username;
+  // The browser's zone, read once per mount: a mid-session change to the OS setting surfaces on
+  // the next load rather than shifting under someone who is part-way through editing.
+  const detectedZone = useMemo(() => detectTimeZone(), []);
+
+  const saved = detailsOf(user);
+  const details = { ...saved, ...edits };
+  const detailsDirty = Object.keys(saved).some((key) => details[key] !== saved[key]);
+
+  /*
+   * Re-read the profile on arrival, because the account can have changed since the token was
+   * issued. Deliberately silent: the page already has data, so there is no spinner and a failure
+   * leaves what is on screen alone.
+   *
+   * `setUser` is the only dependency on purpose — depending on `user` would make every successful
+   * response schedule the next request.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    fetchProfile()
+      .then((fresh) => {
+        if (!cancelled) setUser(fresh);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [setUser]);
+
+  /*
+   * RequireAuth resolves before this page renders, so a null user means the session ended under
+   * it — the revalidation above returning 401 is the usual way. Render the loader rather than
+   * dereferencing it; the route guard redirects on the next tick.
+   */
+  if (!user) return <PageLoader label="Loading your profile…" />;
 
   /* --------------------------------------------------------- Profile details */
   function setDetailField(key, value) {
-    setDetails((prev) => ({ ...prev, [key]: value }));
+    setEdits((prev) => ({ ...prev, [key]: value }));
     setDetailErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   }
 
@@ -150,7 +197,9 @@ function ProfilePage() {
 
   async function handleDetailsSubmit(event) {
     event.preventDefault();
-    if (!detailsDirty || savingDetails) return;
+    // Both writes return the whole profile, so letting them overlap would let the slower response
+    // overwrite the faster one's result.
+    if (!detailsDirty || savingDetails || savingAvatar) return;
 
     const found = validateDetails(details);
     const active = Object.fromEntries(Object.entries(found).filter(([, message]) => message));
@@ -165,19 +214,17 @@ function ProfilePage() {
 
     // PATCH semantics: send only what actually changed.
     const changed = {};
-    if (details.firstName !== user.firstName) changed.firstName = details.firstName;
-    if (details.lastName !== user.lastName) changed.lastName = details.lastName;
-    if (details.username !== user.username) changed.username = details.username;
+    for (const key of Object.keys(saved)) {
+      if (details[key] !== saved[key]) changed[key] = details[key];
+    }
 
     setSavingDetails(true);
     try {
+      // The server trims and normalises, so its response — not what was typed — is what the app
+      // adopts; dropping the edits then leaves the form showing exactly what was stored.
       const updated = await updateProfile(changed);
       setUser(updated);
-      setDetails({
-        firstName: updated.firstName,
-        lastName: updated.lastName,
-        username: updated.username,
-      });
+      setEdits({});
       setNotification({ type: 'success', message: 'Your profile has been updated.' });
     } catch (error) {
       // A taken username comes back as a 409 with a field error — show it on the input.
@@ -199,11 +246,7 @@ function ProfilePage() {
   }
 
   function handleDetailsReset() {
-    setDetails({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      username: user.username,
-    });
+    setEdits({});
     setDetailErrors({});
   }
 
@@ -287,15 +330,19 @@ function ProfilePage() {
         <header className="profile-page__head">
           <h1 className="profile-page__title">Profile</h1>
           <p className="profile-page__subtitle">
-            Manage your account details and password. Your email is fixed and can&apos;t be changed.
+            Manage your account details, time zone, and password.
           </p>
         </header>
 
         {/* Identity summary */}
         <section className="profile-identity" aria-label="Account summary">
-          <div className="profile-avatar" aria-hidden="true">
-            {initialsOf(user)}
-          </div>
+          <AvatarField
+            user={user}
+            initials={initialsOf(user)}
+            onUpdated={setUser}
+            onBusyChange={setSavingAvatar}
+            disabled={savingDetails}
+          />
           <div className="profile-identity__text">
             <p className="profile-identity__name">
               {user.firstName} {user.lastName}
@@ -310,7 +357,7 @@ function ProfilePage() {
           <div className="profile-card__head">
             <h2 className="profile-card__title">Account details</h2>
             <p className="profile-card__hint">
-              Update your name and username. Changes apply across the app right away.
+              Update your name, username, and time zone. Changes apply across the app right away.
             </p>
           </div>
 
@@ -355,9 +402,30 @@ function ProfilePage() {
               type="email"
               value={user.email}
               readOnly
-              hint="Your email address can't be changed."
+              hint="Contact support to change your email address."
               onChange={() => {}}
             />
+
+            <div className="profile-field">
+              <p className="profile-field__label">Time zone</p>
+              <div className="profile-timezone">
+                <span className="profile-timezone__value">{details.timezone || 'Not set'}</span>
+                {detectedZone && detectedZone !== details.timezone && (
+                  <button
+                    type="button"
+                    className="profile-btn profile-btn--ghost profile-timezone__action"
+                    onClick={() => setDetailField('timezone', detectedZone)}
+                    disabled={savingDetails}
+                  >
+                    Use {detectedZone}
+                  </button>
+                )}
+              </div>
+              <p className="profile-field__hint">
+                Your sessions are grouped into days using this zone, so your streaks follow your
+                local midnight rather than the server&apos;s.
+              </p>
+            </div>
           </div>
 
           <div className="profile-actions">
@@ -365,14 +433,14 @@ function ProfilePage() {
               type="button"
               className="profile-btn profile-btn--ghost"
               onClick={handleDetailsReset}
-              disabled={!detailsDirty || savingDetails}
+              disabled={!detailsDirty || savingDetails || savingAvatar}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="profile-btn profile-btn--primary"
-              disabled={!detailsDirty || savingDetails}
+              disabled={!detailsDirty || savingDetails || savingAvatar}
             >
               {savingDetails ? 'Saving…' : 'Save changes'}
             </button>

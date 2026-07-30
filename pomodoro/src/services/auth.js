@@ -19,6 +19,12 @@ import { ApiError, api } from './api.js';
  * @property {string} username
  * @property {string} firstName
  * @property {string} lastName
+ * @property {string} timezone IANA zone. Not a display preference — it is how the server buckets
+ *   the account's days, so a wrong value mis-groups every session it will ever record.
+ * @property {boolean} emailVerified Always false today: nothing verifies addresses yet.
+ * @property {string|null} avatarUpdatedAt ISO 8601, or null when the account has no photo. The
+ *   bytes are never inlined here — this is what decides whether to fetch them.
+ * @property {string} createdAt ISO 8601.
  */
 
 /**
@@ -46,10 +52,10 @@ function toSession(payload) {
 }
 
 /**
- * The signed-in account, or null when the access token is missing or expired.
+ * Probes whether the access token is still good: the account when it is, null when it is not.
  *
- * Not used at startup — there is no persisted credential to bootstrap from. Kept as the thin
- * wrapper over the live /auth/me endpoint for any future "re-read my profile" need.
+ * Not used at startup — there is no persisted credential to bootstrap from. Reading the profile
+ * is `/me` (services/profile.js); this endpoint answers "is this token alive?".
  */
 export async function fetchCurrentUser() {
   try {
@@ -93,12 +99,6 @@ export async function register({ firstName, lastName, email, username, password,
  */
 export async function logout() {
   await api.post('/auth/logout');
-}
-
-/** Updates the editable profile fields. Email is not among them — it is the recovery channel. */
-export async function updateProfile(fields) {
-  const payload = await api.patch('/me', fields);
-  return payload.user;
 }
 
 /**

@@ -60,6 +60,7 @@
 /* --------------------------------------------------------- Identity summary */
 .profile-identity {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gap-3);
   padding: var(--card-pad);
@@ -332,6 +333,31 @@
 .profile-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------- Time zone */
+/*
+ * Read-only value plus an opt-in action, rather than an editable input: the zone is an IANA
+ * identifier the browser reports, and free text here would just invite values the server rejects.
+ */
+.profile-timezone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-2);
+}
+
+.profile-timezone__value {
+  font-size: var(--fs-body);
+  color: var(--fg-text);
+  overflow-wrap: anywhere;
+}
+
+/* Lighter than a form's primary action — it stages a change, it does not save one. */
+.profile-timezone__action {
+  flex: 0 1 auto;
+  padding: 8px 14px;
+  font-size: var(--fs-label);
 }
 
 /* --------------------------------------------------------- Reduced motion */
