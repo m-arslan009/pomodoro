@@ -256,3 +256,65 @@ name (50) and email (320) maximum lengths, so those inputs passed the form and f
 request failed; and the Vite proxy comment still described the removed cookie model. Component
 coverage was added for the login form and the sign-out button, neither of which had any. Every
 flow was verified end to end through the Vite proxy against the running backend.
+
+## Profile contract and phased implementation strategy
+
+`Title`: Establish CONTRACT.md as the shared profile contract and define a phased, frontend-first workflow
+
+`User prompt`: The profile analysis and implementation roadmap have already been completed and approved. Do not repeat the analysis or create another implementation plan. Instead, use the existing plan as the basis for execution.
+
+Before implementing any profile changes, update CONTRACT.md to become the shared contract for the profile feature across both the frontend and backend repositories. Record all agreed profile decisions, including the data model, supported profile fields (including timezone), validation rules, API request/response contracts, authentication and ownership rules, error handling, frontend/backend responsibilities, state synchronisation expectations, implementation constraints, deferred features, and any relevant ADR references. This document should define the expected behaviour so both repositories remain consistent throughout development.
+
+Also add an Implementation Strategy section describing how profile work will be executed: implement one phase at a time; complete the frontend portion first, then update the backend only as required to satisfy the agreed contract; after each phase, verify the complete flow before moving to the next; do not implement future phases until the current phase is complete and approved; any change to a feature, function, API, model, validation rule, or behaviour must be reflected in CONTRACT.md before implementation so both repositories stay aligned.
+
+Do not implement any code in this step. Only update CONTRACT.md so it serves as the authoritative reference for all subsequent profile development.
+
+## Phase 1 — frontend profile correctness
+
+`Title`: Correct the frontend profile feature against CONTRACT.md, excluding avatar work
+
+`User prompt`: Frontend Profile Correctness only. Follow the agreed CONTRACT.md and existing implementation plan. Do not modify the backend in this phase. Review the profile-related frontend files and compare them against the agreed contract. Implement only the required corrections to make the current profile feature correct, reliable, and consistent: ensure the profile form always reflects the latest authenticated user data; synchronise profile state after successful updates; refresh authenticated user data when required after profile changes; handle null, loading, or unauthenticated user states safely; ensure frontend validation and error handling match the expected backend responses; add timezone support in the profile UI if it is already defined and required by the contract; remove dead or obsolete profile-related code directly involved in these flows; correct inaccurate profile-related UI text.
+
+Avatar/image scope: do not implement any avatar or image upload functionality in this phase. Maintain the current behaviour — if a user image already exists, continue displaying it; if no user image exists, continue showing user initials generated from the first and last name. Do not add image upload, image update, image storage, new components, API changes, or any avatar-related infrastructure.
+
+Do not create or modify test cases in this phase. Do not introduce unrelated features, new API endpoints, UI redesigns, performance optimisations, or architectural changes. Avoid unnecessary abstractions, helper functions, comments, or unrelated refactoring.
+
+## Phase 3 (frontend) — profile image upload/update
+
+`Title`: Implement profile image upload and update on the frontend
+
+`User prompt`: Implement the Profile Image Upload/Update Feature based on the previously completed frontend analysis and agreed profile architecture. Implement only the profile image update functionality.
+
+Required functionality: users should be able to view their current profile image if available; select and upload a new profile image; replace/update their existing profile image; see the updated image immediately after a successful update; and continue using the existing initials fallback when no profile image exists.
+
+Frontend requirements: add profile image update UI according to the existing design system; add image selection handling; show preview before saving if consistent with the current UX; handle upload/update loading states; disable conflicting actions while the update is processing; display meaningful success and error feedback; update local/authenticated user state after successful image update; ensure the profile page reflects the latest image without requiring a full page refresh.
+
+API integration: extend the frontend API/service layer only where required — add the required image update request, use the correct request format for image transfer, and handle backend success and error responses consistently with existing authentication/profile APIs.
+
+Constraints: do not redesign the profile page; do not modify unrelated authentication functionality; do not introduce unnecessary state management complexity; do not add external storage solutions or infrastructure; do not create test cases in this phase; do not add unrelated profile features.
+
+## Phase 5 (frontend) — core profile test cases
+
+`Title`: Implement frontend core profile test cases
+
+`User prompt`: Implement Frontend Core Profile Test Cases according to the behaviour defined in CONTRACT.md. Focus only on testing the core profile functionality that has already been implemented. Do not create tests for planned, deferred, or future features.
+
+Before adding new tests, review the existing profile-related test suite and identify any missing, outdated, duplicate, or incorrect tests. Update existing tests where necessary and add only the missing tests required to achieve reliable coverage of the implemented core functionality.
+
+Cover: profile page renders correctly for an authenticated user; existing user information is loaded and displayed; profile image is displayed when available; user initials are displayed when no profile image exists; editing supported profile fields; timezone display and update (if implemented); client-side form validation; successful profile update flow; backend validation and API error handling; loading states while profile updates are in progress; submit button disabled during requests; authenticated user state is synchronised after a successful profile update; updated profile information is reflected in the UI; null, loading, and unauthenticated user states; profile data persistence after page refresh where applicable.
+
+Do not create tests for: avatar upload/update if not yet implemented; planned or deferred profile features; backend functionality; end-to-end tests; non-core edge cases outside the current implementation.
+
+Reuse existing test utilities and patterns wherever possible. Keep the test suite simple, maintainable, and aligned with the current implementation. Avoid duplicate tests, unnecessary abstractions, and excessive comments. Do not modify production code unless a genuine bug preventing the implemented functionality from working correctly is discovered.
+
+## Phase 6 (frontend) — profile cleanup
+
+`Title`: Remove temporary and frontend-only profile implementations now the backend is complete
+
+`User prompt`: Clean up the frontend code related to the Profile feature by removing any temporary, mocked, placeholder, or frontend-only implementations that were introduced before the backend profile functionality was available. The backend implementation is now complete and should be treated as the source for all profile data and operations.
+
+Focus only on files directly related to the profile feature. Identify and remove: mock profile data; fake API calls or simulated responses; temporary state or fallback logic used only during frontend development; hardcoded profile values; unused helper functions, services, constants, or components created solely for mocked behaviour; dead code, duplicate logic, and obsolete TODOs related to the profile feature.
+
+Replace any remaining mocked behaviour with the existing backend API integration where necessary, while preserving the current user experience and application flow. Do not modify unrelated features, authentication logic, routing, UI design, or state management beyond what is required for the profile feature.
+
+Keep the implementation simple, maintainable, and consistent with CONTRACT.md. Avoid unnecessary refactoring, abstractions, helper functions, or comments.
