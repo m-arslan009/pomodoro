@@ -1,13 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer, { sessionCleared } from './authSlice.js';
+import settingsReducer from './settingsSlice.js';
 import { setAuthTokenAccessor, setOnAuthFailure } from '../services/api.js';
 
 /*
- * The application store. Only authentication lives here for now — timer, gamification, settings
- * and history keep their existing local state and localStorage cache.
+ * The application store. Authentication and settings live here — timer, gamification and history
+ * keep their existing local state and localStorage cache.
+ *
+ * Settings joined the store because it stopped being local: the backend owns it now
+ * (CONTRACT.md §9). The others have not moved, and a wholesale migration is still declined.
  */
 export const store = configureStore({
-  reducer: { auth: authReducer },
+  reducer: { auth: authReducer, settings: settingsReducer },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

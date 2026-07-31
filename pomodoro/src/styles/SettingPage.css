@@ -527,8 +527,7 @@
   color: var(--fg-brand);
 }
 
-.label-field__input,
-.schedule__time {
+.label-field__input {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -550,11 +549,23 @@
   opacity: 0.7;
 }
 
-.label-field__input:focus,
-.schedule__time:focus {
+.label-field__input:focus {
   outline: none;
   border-color: var(--fg-wood);
   box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.label-field__input[aria-invalid='true'] {
+  border-color: var(--sp-bad-border);
+  background: var(--sp-bad-bg);
+}
+
+.label-field__error {
+  margin: var(--gap-1) 0 0;
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  color: var(--sp-bad);
+  overflow-wrap: anywhere;
 }
 
 .bg-labels__note {
@@ -564,109 +575,37 @@
   line-height: 1.4;
 }
 
-/* --------------------------------------------------------------- Scheduling */
-.schedule {
-  display: grid;
-  gap: var(--gap-3);
-}
-
-.schedule__toggle {
+/* ----------------------------------------------------------- Page states */
+/*
+ * The banner shown while preferences are being read, and when the read failed. It sits above the
+ * cards rather than replacing them: the form is usable on defaults either way, so hiding it
+ * would remove working controls to report a background failure.
+ */
+.settings-notice {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  font-size: var(--fs-body);
-  color: var(--fg-brand);
-  cursor: pointer;
-}
-
-.schedule__checkbox {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  accent-color: var(--fg-accent);
-  cursor: pointer;
-}
-
-.schedule__checkbox:focus-visible {
-  outline: 2px solid var(--fg-wood);
-  outline-offset: 2px;
-}
-
-.schedule__row {
-  display: flex;
-  flex-wrap: wrap;
+  justify-content: space-between;
   gap: var(--gap-2);
-}
-
-.schedule__field {
-  display: grid;
-  gap: 6px;
-  min-width: min(200px, 100%);
-}
-
-.schedule__field-label {
-  font-size: var(--fs-label);
-  font-weight: 600;
-  color: var(--fg-brand);
-}
-
-.schedule__days {
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
-.schedule__days-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--gap-1);
-  margin-top: 8px;
-}
-
-.schedule__day {
-  min-width: 46px;
-  min-height: 40px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--glass-hover);
+  padding: var(--gap-2) var(--gap-3);
   border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--glass-bg);
   color: var(--fg-muted);
-  font: inherit;
   font-size: var(--fs-label);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    color 0.18s ease,
-    border-color 0.18s ease;
+  line-height: 1.45;
 }
 
-.schedule__day:hover:not(.schedule__day--active) {
-  color: var(--fg-brand);
-  border-color: var(--fg-wood);
+.settings-notice--error {
+  border-color: var(--sp-bad-border);
+  background: var(--sp-bad-bg);
+  color: var(--sp-bad);
 }
 
-.schedule__day--active {
-  color: #10230f;
-  background: var(--fg-accent);
-  border-color: var(--fg-accent);
-}
-
-.schedule__day:focus-visible {
-  outline: 2px solid var(--fg-wood);
-  outline-offset: 2px;
-}
-
-.schedule__next {
+.settings-notice__text {
   margin: 0;
-  font-size: var(--fs-label);
-  color: var(--fg-muted);
-  line-height: 1.5;
-}
-
-.schedule__next strong {
-  color: var(--fg-brand);
-  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* --------------------------------------------------------- Reduced motion */
@@ -676,9 +615,7 @@
   .settings-btn,
   .theme-segment__btn,
   .bg-preset,
-  .label-field__input,
-  .schedule__time,
-  .schedule__day {
+  .label-field__input {
     transition: none;
   }
 }

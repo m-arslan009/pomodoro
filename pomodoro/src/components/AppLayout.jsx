@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Nav from './Nav.jsx';
 import useAuth from '../hooks/useAuth.js';
-import { getSettings } from '../services/storage.js';
+import useSettings from '../hooks/useSettings.js';
 import { applyBaseTheme, applyCustomTheme, applyBackground } from '../services/appearance.js';
 import '../styles/AppLayout.css';
 
@@ -57,6 +57,7 @@ function Brand({ onClick }) {
 function AppLayout({ children }) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { settings } = useSettings();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const menuButtonRef = useRef(null);
@@ -64,16 +65,20 @@ function AppLayout({ children }) {
 
   const closeMenu = () => setMenuOpen(false);
 
-  // Apply the user's saved personalization on mount. Base theme is document-wide;
-  // the forest palette + background are inline overrides on the shell (cleared
-  // by the appearance helpers when the setting is default). Re-runs on every
-  // page mount, which is when a Settings change navigates back into the app.
+  /*
+   * Apply the account's personalization. Base theme is document-wide; the forest palette and
+   * background are inline overrides on the shell (cleared by the appearance helpers when the
+   * setting is default).
+   *
+   * Keyed on the settings themselves rather than running once on mount: they arrive from the
+   * server after login, so a mount-time snapshot would paint the defaults and never correct
+   * itself. This also repaints immediately when a Settings save lands, without a navigation.
+   */
   useEffect(() => {
-    const settings = getSettings();
     applyBaseTheme(settings.theme);
     applyCustomTheme(shellRef.current, settings.customTheme);
-    applyBackground(shellRef.current, settings.backgroundImage);
-  }, []);
+    applyBackground(shellRef.current, settings.background);
+  }, [settings.theme, settings.customTheme, settings.background]);
 
   // While the mobile overlay is open, Escape dismisses it and returns focus to
   // the toggle so keyboard users are never stranded.

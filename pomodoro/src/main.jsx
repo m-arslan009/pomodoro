@@ -5,12 +5,18 @@ import { Provider } from 'react-redux';
 import './index.css';
 import App from './App.jsx';
 import { store } from './store/index.js';
-import { getSettings } from './services/storage.js';
+import { DEFAULT_SETTINGS } from './services/settings.js';
 import { applyBaseTheme } from './services/appearance.js';
 
-// Apply the saved base colour scheme before first paint so it also covers the
-// public pages (landing / auth) that sit outside AppLayout.
-applyBaseTheme(getSettings().theme);
+/*
+ * Paint the default colour scheme before anything else renders.
+ *
+ * It can only be the default here: preferences belong to an account and a cold start is
+ * anonymous, so there is nothing to read yet. AppLayout applies the account's own scheme once
+ * login has fetched it, and the public pages (landing / auth) are outside AppLayout and only
+ * ever see this one.
+ */
+applyBaseTheme(DEFAULT_SETTINGS.theme);
 
 /*
  * No session bootstrap. The access token is held in memory only, so a page load starts anonymous

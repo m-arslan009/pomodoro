@@ -1,27 +1,29 @@
-import { useState } from 'react';
-import { getSettings, saveSettings } from '../../services/storage.js';
 import { applyBaseTheme, THEME_OPTIONS } from '../../services/appearance.js';
+import { describeSaveFailure } from './saveFailure.js';
 
 /*
- * BaseTheme — the always-available base colour-scheme toggle (System / Light /
- * Dark). It persists `settings.theme` and applies it at the document level
- * immediately, so the choice takes effect without a reload and survives one
- * (re-applied from storage at startup in main.jsx). Unlike the gated theme
- * editor, this needs no title and is never locked.
+ * BaseTheme — the base colour-scheme toggle (System / Dark).
+ *
+ * Controlled: the value comes from the server-owned settings state and the save goes back
+ * through `onSave`, so this component holds no copy of its own. 'Light' is deferred until a
+ * light .app-shell palette exists — see CONTRACT.md §9.3.
+ *
+ * The scheme is applied optimistically, before the request resolves, because it is instant and
+ * visible: waiting for a round trip to repaint would make the control feel broken. A failure
+ * puts the previous value back.
  */
 
-function BaseTheme({ onNotify }) {
-  const [theme, setTheme] = useState(() => getSettings().theme);
+function BaseTheme({ theme, onSave, saving, onNotify }) {
+  async function choose(next) {
+    if (next === theme || saving) return;
 
-  function choose(next) {
-    if (next === theme) return;
-    const settings = { ...getSettings(), theme: next };
-    if (!saveSettings(settings)) {
-      onNotify?.('error', 'Could not save your theme preference.');
-      return;
-    }
     applyBaseTheme(next);
-    setTheme(next);
+    try {
+      await onSave({ theme: next });
+    } catch (error) {
+      applyBaseTheme(theme);
+      onNotify?.('error', describeSaveFailure(error, 'theme preference'));
+    }
   }
 
   return (
@@ -44,6 +46,7 @@ function BaseTheme({ onNotify }) {
               theme === option.key ? ' theme-segment__btn--active' : ''
             }`}
             aria-pressed={theme === option.key}
+            disabled={saving}
             onClick={() => choose(option.key)}
           >
             {option.label}

@@ -7,6 +7,8 @@ import AppLayout from '../../components/AppLayout.jsx';
 import { ApiError } from '../../services/api.js';
 import * as authService from '../../services/auth.js';
 import authReducer from '../../store/authSlice.js';
+import settingsReducer from '../../store/settingsSlice.js';
+import { DEFAULT_SETTINGS } from '../../services/settings.js';
 
 /*
  * Suite H5 — signing out, from the button the user actually presses.
@@ -48,7 +50,9 @@ function deferred() {
 /** A signed-in app shell at /timer, with the public landing page as the sign-out destination. */
 function renderSignedIn() {
   const store = configureStore({
-    reducer: { auth: authReducer },
+    // AppLayout reads the account's preferences to paint the shell, so the settings reducer is
+    // part of a signed-in store now (CONTRACT.md §9) — not an extra this suite chose to add.
+    reducer: { auth: authReducer, settings: settingsReducer },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: { ignoredActionPaths: ['meta.arg', 'meta.baseQueryMeta', 'error'] },
@@ -61,6 +65,7 @@ function renderSignedIn() {
         loginStatus: 'idle',
         error: null,
       },
+      settings: { data: DEFAULT_SETTINGS, status: 'ready', error: null, saving: false },
     },
   });
 

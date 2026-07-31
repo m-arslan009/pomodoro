@@ -1,12 +1,15 @@
 /*
- * validation.js — pure, framework-agnostic form validation for the auth forms. Each helper
- * returns a human-readable error string, or an empty string when the value is valid.
+ * validation.js — pure, framework-agnostic form validation. Each helper returns a
+ * human-readable error string, or an empty string when the value is valid.
  *
- * These rules are a MIRROR of the server's, not the authority: src/domain/identifier.ts and
- * src/domain/password-policy.ts in the backend decide what is actually accepted. They exist
- * here so a user gets an answer without a round trip — which means a rule that is looser here
- * than there produces a form that passes and then fails. Keep the numbers identical.
+ * These rules are a MIRROR of the server's, not the authority: src/domain/identifier.ts,
+ * src/domain/password-policy.ts and src/domain/settings.ts in the backend decide what is
+ * actually accepted. They exist here so a user gets an answer without a round trip — which
+ * means a rule that is looser here than there produces a form that passes and then fails.
+ * Keep the numbers identical.
  */
+
+import { HEX_COLOR_RE, LABEL_MAX_LENGTH } from './settings.js';
 
 // Pragmatic email shape check: something@something.tld with no spaces.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -87,6 +90,51 @@ export function validatePassword(value, identifiers = {}) {
 export function validateConfirmPassword(password, confirm) {
   if (!confirm) return 'Please confirm your password.';
   if (password !== confirm) return 'Passwords do not match.';
+  return '';
+}
+
+/* ---------------------------------------------------------------- Settings -- */
+/*
+ * Mirrors backend/src/domain/settings.ts. The limits themselves live in services/settings.js
+ * alongside the rest of the mirror, so there is one client-side copy of each number.
+ */
+
+/**
+ * A timer duration — a whole number of minutes inside the field's range.
+ *
+ * Takes the limits rather than importing them so the caller names which field it is validating;
+ * the two durations have different maxima and one shared message shape.
+ *
+ * @param {string|number} value Raw input; the field keeps it as a string while being typed.
+ * @param {{min: number, max: number}} limits
+ * @param {string} label
+ */
+export function validateDuration(value, limits, label = 'Duration') {
+  const raw = String(value).trim();
+  if (!raw) return `${label} is required.`;
+  const minutes = Number(raw);
+  if (!Number.isInteger(minutes)) return `${label} must be a whole number of minutes.`;
+  if (minutes < limits.min || minutes > limits.max) {
+    return `${label} must be between ${limits.min} and ${limits.max} minutes.`;
+  }
+  return '';
+}
+
+/**
+ * A timer phase label. Empty is valid and means "use the built-in label", so this rejects only
+ * length — measured after trimming, exactly as the server does, so surrounding whitespace the
+ * user cannot see never costs them characters they can.
+ */
+export function validateLabel(value) {
+  if (value.trim().length > LABEL_MAX_LENGTH) {
+    return `Labels must be ${LABEL_MAX_LENGTH} characters or fewer.`;
+  }
+  return '';
+}
+
+/** A palette colour — six-digit hex, the only form <input type="color"> produces. */
+export function validateHexColor(value) {
+  if (!HEX_COLOR_RE.test(String(value))) return 'Use a six-digit hex colour.';
   return '';
 }
 

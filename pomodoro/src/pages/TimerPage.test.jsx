@@ -8,7 +8,6 @@ import {
   getTasks,
   saveGamification,
   saveSessions,
-  saveSettings,
   saveTasks,
 } from '../services/storage.js';
 
@@ -21,9 +20,12 @@ import {
  * records the full configured duration, a termination records the time actually
  * spent, and a break resolution records nothing at all.
  *
- * Fixtures are seeded through services/storage.js because TimerPage hydrates from
- * it in `useState` initializers, and the persisted records are read back for the
+ * Task, session and economy fixtures are seeded through services/storage.js because TimerPage
+ * hydrates from it in `useState` initializers, and the persisted records are read back for the
  * exact millisecond assertions the DOM only shows rounded ("N min").
+ *
+ * Durations are seeded through the store instead: preferences moved to the server
+ * (CONTRACT.md §4.7), so AuthTestProvider preloads them the way login would.
  */
 
 const WORK_MINUTES = 2;
@@ -45,7 +47,6 @@ function isoAt(offsetMs) {
 }
 
 function seed({ tasks = [], sessions = [] } = {}) {
-  saveSettings({ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES, theme: 'system' });
   saveTasks(tasks);
   saveSessions(sessions);
   saveGamification({ points: 0, streak: 0, balance: 0, currentStreak: 0, lifetimePoints: 0 });
@@ -55,12 +56,12 @@ function todoTask(id, title) {
   return { id, title, status: 'todo', createdAt: isoAt(0) };
 }
 
-// AppLayout reads the signed-in account from auth context; this suite is about the timer, so
-// the context is supplied directly rather than through the real session bootstrap.
+// AppLayout reads the signed-in account and the account's preferences from the store; this suite
+// is about the timer, so both are supplied directly rather than through a real sign-in.
 function renderTimerPage() {
   return render(
     <MemoryRouter>
-      <AuthTestProvider>
+      <AuthTestProvider settings={{ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES }}>
         <TimerPage />
       </AuthTestProvider>
     </MemoryRouter>

@@ -42,10 +42,12 @@ export const BACKGROUND_PRESETS = [
   },
 ];
 
-/** Base colour-scheme options for the always-available theme toggle. */
+/**
+ * Base colour-scheme options for the theme toggle. 'light' is deferred until a
+ * light .app-shell palette exists — see CONTRACT.md §9.3.
+ */
 export const THEME_OPTIONS = [
   { key: 'system', label: 'System' },
-  { key: 'light', label: 'Light' },
   { key: 'dark', label: 'Dark' },
 ];
 
@@ -55,7 +57,7 @@ export const THEME_OPTIONS = [
  */
 export function applyBaseTheme(theme) {
   const root = document.documentElement;
-  if (theme === 'light' || theme === 'dark') {
+  if (theme === 'dark') {
     root.style.colorScheme = theme;
     root.dataset.theme = theme;
   } else {

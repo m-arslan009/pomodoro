@@ -7,6 +7,7 @@ import TasksTile from '../components/timer/TasksTile.jsx';
 import HistoryTile from '../components/timer/HistoryTile.jsx';
 import AddTask from '../components/timer/AddTask.jsx';
 import usePomodoroTimer from '../hooks/usePomodoroTimer.js';
+import useSettings from '../hooks/useSettings.js';
 import {
   getTasks,
   saveTasks,
@@ -14,7 +15,6 @@ import {
   saveSessions,
   getGamification,
   saveGamification,
-  getSettings,
 } from '../services/storage.js';
 import {
   POINTS,
@@ -94,10 +94,18 @@ function pruneSessions(sessions, now = Date.now()) {
 }
 
 function TimerPage() {
-  // Focus/break lengths come from the user's saved Settings, read once on mount;
-  // navigating back from Settings remounts this page so a change takes effect on
-  // the next session without disrupting one already running.
-  const [{ workMinutes, breakMinutes, customLabels }] = useState(() => getSettings());
+  /*
+   * Focus/break lengths and phase labels come from the account's Settings.
+   *
+   * Snapshotted on mount, deliberately: a duration change mid-session must not retarget the
+   * block the user is already running, which is what the Settings card promises. Navigating back
+   * from Settings remounts this page, so a change takes effect on the next visit.
+   *
+   * `settings` is always a complete object — the store seeds it with the defaults — so there is
+   * no loading state to wait on here and the timer is usable the instant the page renders.
+   */
+  const { settings } = useSettings();
+  const [{ workMinutes, breakMinutes, labels: customLabels }] = useState(() => settings);
 
   // Hydrate from storage, applying retention rules once on mount.
   const [tasks, setTasks] = useState(() => reconcileTasks(getTasks()));

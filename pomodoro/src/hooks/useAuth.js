@@ -8,6 +8,7 @@ import {
   signUp as signUpThunk,
   userUpdated,
 } from '../store/authSlice.js';
+import { loadSettings } from '../store/settingsSlice.js';
 
 /**
  * The only way components read authentication state. Components never import the auth service
@@ -34,20 +35,35 @@ export default function useAuth() {
   const user = useSelector(selectAuthUser);
   const status = useSelector(selectAuthStatus);
 
+  /*
+   * Preferences are fetched once per session, here, because signing in is the only moment an
+   * authenticated session begins — the token is memory-only, so there is no other entry point.
+   *
+   * Deliberately not awaited and deliberately not unwrapped: the app renders on defaults while
+   * this is in flight (CONTRACT.md §8.2), so making the login form wait would add a spinner for
+   * data nothing is blocked on. A failure lands in the slice as `status: 'error'`, which only
+   * SettingPage renders — it must never turn a successful sign-in into a failed one.
+   */
+  const fetchPreferences = useCallback(() => {
+    dispatch(loadSettings());
+  }, [dispatch]);
+
   const signIn = useCallback(
     async (credentials) => {
       const session = await dispatch(login(credentials)).unwrap();
+      fetchPreferences();
       return session.user;
     },
-    [dispatch]
+    [dispatch, fetchPreferences]
   );
 
   const signUp = useCallback(
     async (values) => {
       const session = await dispatch(signUpThunk(values)).unwrap();
+      fetchPreferences();
       return session.user;
     },
-    [dispatch]
+    [dispatch, fetchPreferences]
   );
 
   const signOut = useCallback(async () => {

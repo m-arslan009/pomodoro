@@ -171,58 +171,12 @@ export function getLifetimePoints() {
 
 /* ------------------------------------------------------------ Settings -- */
 /*
- * User preferences. Phase 1 only exposes the two Pomodoro durations; theme,
- * custom labels, etc. (see idea.md's schema) are layered on in later phases,
- * so getSettings preserves any unknown persisted fields and only sanitizes the
- * ones it owns.
+ * Removed — preferences moved to the server (CONTRACT.md §1.4, §4.7, §4.8). They now live in
+ * store/settingsSlice.js and reach the API through services/settings.js.
  *
- *   settings -> { workMinutes:25, breakMinutes:5, ... }
+ * The old `pomodoro.v1.settings` key is deliberately not migrated and not cleared. It was never
+ * scoped to a user — adoptCacheOwner() below clears only tasks, sessions and gamification — so
+ * two accounts sharing a browser shared each other's durations, palette and labels. There is no
+ * way to attribute a pre-existing local blob to an account, so it is abandoned rather than
+ * adopted; a stale key does no harm because nothing reads it any more.
  */
-
-const SETTINGS_KEY = 'settings';
-
-/** Factory defaults for the core preferences the Settings page can edit. */
-export const DEFAULT_SETTINGS = { workMinutes: 25, breakMinutes: 5, theme: 'system' };
-
-/** Allowed base colour schemes for the always-available theme toggle. */
-export const THEME_VALUES = ['system', 'light', 'dark'];
-
-/** Safe editable ranges (whole minutes) for each duration. */
-export const DURATION_LIMITS = {
-  work: { min: 1, max: 120 },
-  break: { min: 1, max: 60 },
-};
-
-/** Round to a whole number and clamp into [min, max]; fall back when invalid. */
-function clampMinutes(value, min, max, fallback) {
-  const n = Math.round(Number(value));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, n));
-}
-
-/** Persisted settings, merged over defaults with the durations sanitized. */
-export function getSettings() {
-  const value = read(SETTINGS_KEY, null);
-  const base = value && typeof value === 'object' ? value : {};
-  return {
-    ...base,
-    workMinutes: clampMinutes(
-      base.workMinutes,
-      DURATION_LIMITS.work.min,
-      DURATION_LIMITS.work.max,
-      DEFAULT_SETTINGS.workMinutes
-    ),
-    breakMinutes: clampMinutes(
-      base.breakMinutes,
-      DURATION_LIMITS.break.min,
-      DURATION_LIMITS.break.max,
-      DEFAULT_SETTINGS.breakMinutes
-    ),
-    theme: THEME_VALUES.includes(base.theme) ? base.theme : DEFAULT_SETTINGS.theme,
-  };
-}
-
-/** Persist the full settings object. */
-export function saveSettings(value) {
-  return write(SETTINGS_KEY, value);
-}

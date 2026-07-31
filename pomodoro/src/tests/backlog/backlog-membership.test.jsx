@@ -2,13 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import TimerPage from '../../pages/TimerPage.jsx';
 import { AuthTestProvider } from '../helpers/authTestContext.jsx';
-import {
-  getTasks,
-  saveGamification,
-  saveSessions,
-  saveSettings,
-  saveTasks,
-} from '../../services/storage.js';
+import { getTasks, saveGamification, saveSessions, saveTasks } from '../../services/storage.js';
 
 /*
  * Suite B1 — backlog membership & timer binding.
@@ -19,9 +13,12 @@ import {
  * re-pointed, and that a newly added task is born with the fields the expiry
  * engine depends on.
  *
- * Fixtures are seeded through services/storage.js because TimerPage hydrates from
- * it in `useState` initializers; records are read back from it for the field-level
+ * Task, session and economy fixtures are seeded through services/storage.js because TimerPage
+ * hydrates from it in `useState` initializers; records are read back from it for the field-level
  * assertions (id/status/createdAt) the DOM never shows.
+ *
+ * Durations are seeded through the store instead: preferences moved to the server
+ * (CONTRACT.md §4.7), so AuthTestProvider preloads them the way login would.
  */
 
 const WORK_MINUTES = 2;
@@ -38,7 +35,6 @@ function isoAt(offsetMs) {
 }
 
 function seed(tasks = []) {
-  saveSettings({ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES, theme: 'system' });
   saveTasks(tasks);
   saveSessions([]);
   saveGamification({ points: 0, streak: 0, balance: 0, currentStreak: 0, lifetimePoints: 0 });
@@ -50,12 +46,12 @@ function task(id, title, status, extra = {}) {
   return { id, title, status, createdAt: isoAt(-HOUR_MS), ...extra };
 }
 
-// AppLayout reads the signed-in account from auth context; this suite is about the backlog, so
-// the context is supplied directly rather than through the real session bootstrap.
+// AppLayout reads the signed-in account and the account's preferences from the store; this suite
+// is about the backlog, so both are supplied directly rather than through a real sign-in.
 function renderTimerPage() {
   return render(
     <MemoryRouter>
-      <AuthTestProvider>
+      <AuthTestProvider settings={{ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES }}>
         <TimerPage />
       </AuthTestProvider>
     </MemoryRouter>
