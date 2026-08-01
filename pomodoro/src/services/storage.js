@@ -1,7 +1,25 @@
 /*
  * storage.js — the single gateway to localStorage for the whole app.
- * Per convention.md: nothing else touches `window.localStorage` directly, and
- * every key is namespaced + versioned so future migrations are isolated.
+ * Per convention.md: nothing else touches `window.localStorage` directly, and every key is
+ * namespaced + versioned so future migrations are isolated.
+ *
+ * WHAT IS LEFT HERE IS ONLY WHAT THE SERVER CANNOT OWN.
+ *
+ * Tasks, sessions and gamification totals used to live here as three flat arrays. They are gone:
+ * the API is the source of truth for all three, the store holds the working copy, and a reload
+ * signs the user out anyway, so a local cache of server data could only ever be a second version
+ * of the truth waiting to disagree with the first.
+ *
+ * Two things remain, and both are genuinely client-side:
+ *
+ *   activeSession — the in-flight draft. The server has no concept of a running block (it rejected
+ *                   start/stop endpoints deliberately), so if this is not written down locally a
+ *                   reload loses 25 minutes of the user's work.
+ *   outbox        — finished records that have not reached the server yet. They exist precisely
+ *                   because the server could not be told about them.
+ *
+ * Neither is a credential. NO TOKEN MAY LIVE IN localStorage OR sessionStorage — that rule is
+ * unchanged and non-negotiable (CONTRACT.md §5, §17.2).
  */
 
 const NAMESPACE = 'pomodoro.v1';
@@ -12,8 +30,8 @@ function key(name) {
 }
 
 /**
- * Read and JSON-parse a value. Returns `fallback` when the key is missing or
- * the stored value is corrupt, so callers never have to try/catch.
+ * Read and JSON-parse a value. Returns `fallback` when the key is missing or the stored value is
+ * corrupt, so callers never have to try/catch.
  */
 export function read(name, fallback = null) {
   try {
@@ -47,21 +65,26 @@ export function remove(name) {
 
 /* -------------------------------------------------------- Cache owner -- */
 /*
- * Accounts now live on the server, so this module no longer stores users or credentials — the
- * `users`, `session`, `profile` and `password` keys are gone.
- *
- * What remains is a consequence of that change: the dashboard keys below are a per-user cache,
- * but they are not namespaced by user. Two accounts used in the same browser would otherwise
- * show each other's tasks and points. Recording which account the cache belongs to, and
- * clearing it when a different one signs in, closes that leak.
+ * The two remaining keys belong to one account but are not namespaced by user. Recording which
+ * account they belong to, and clearing them when a different one signs in, is what stops one
+ * person's queued session being flushed under another person's token.
  */
 
 const CACHE_OWNER_KEY = 'cacheOwner';
-const OWNED_KEYS = ['tasks', 'sessions', 'gamification'];
+const OWNED_KEYS = ['activeSession', 'outbox'];
+
+/**
+ * Keys written by the pre-API build. Nothing reads them any more, but they hold real user data
+ * from before the server existed, so they are cleared on the next account switch rather than left
+ * to sit in the browser indefinitely.
+ */
+const LEGACY_KEYS = ['tasks', 'sessions', 'gamification'];
 
 /**
  * Claim the local cache for a user id, discarding it when it belonged to someone else.
- * Called after every successful sign-in and on session bootstrap.
+ *
+ * Called after every successful sign-in — which is the only moment it can be called, because there
+ * is no session bootstrap: the token is memory-only, so a page load starts anonymous.
  */
 export function adoptCacheOwner(userId) {
   if (!userId) return false;
@@ -69,114 +92,84 @@ export function adoptCacheOwner(userId) {
   const previous = read(CACHE_OWNER_KEY, null);
   if (previous === userId) return false;
 
-  // A different account (or a cache from the pre-backend build, which has no owner recorded).
-  for (const name of OWNED_KEYS) remove(name);
+  for (const name of [...OWNED_KEYS, ...LEGACY_KEYS]) remove(name);
   write(CACHE_OWNER_KEY, userId);
   return true;
 }
 
-/* ----------------------------------------------------------- Dashboard -- */
+/* ------------------------------------------------------- Active session -- */
 /*
- * Persisted dashboard records so nothing is lost on refresh. Three flat arrays /
- * objects, each a thin pass-through — expiry and 7-day pruning are domain rules
- * applied by the caller (see TimerPage) before saving, keeping this layer thin.
- *
- *   tasks    -> [ { id, title, status:'todo'|'completed'|'terminated'|'expired',
- *                   createdAt, endedAt? } ]      (kept ~7 days for stats)
- *   sessions -> [ { id, taskTitle, durationMs, endedAt, status } ]  (kept ~7 days)
- *   gamification -> { points, streak }           (lifetime running totals)
+ * The single in-flight draft (CONTRACT.md §19.1). Written on start and rewritten on pause, resume
+ * and restart, so a reload can recover the block instead of voiding it.
  */
 
-const TASKS_KEY = 'tasks';
-const SESSIONS_KEY = 'sessions';
-const GAMIFICATION_KEY = 'gamification';
+const ACTIVE_SESSION_KEY = 'activeSession';
 
-/** Persisted task records (always an array). */
-export function getTasks() {
-  const items = read(TASKS_KEY, []);
-  return Array.isArray(items) ? items : [];
+/** The in-flight session draft, or null when no block is running. */
+export function getActiveSession() {
+  const draft = read(ACTIVE_SESSION_KEY, null);
+  return draft && typeof draft === 'object' && draft.clientSessionId ? draft : null;
 }
 
-/** Persist the full task record list. */
-export function saveTasks(items) {
-  return write(TASKS_KEY, items);
+/** Persist the in-flight draft. */
+export function saveActiveSession(draft) {
+  return write(ACTIVE_SESSION_KEY, draft);
 }
 
-/** Persisted session/history records (always an array). */
-export function getSessions() {
-  const items = read(SESSIONS_KEY, []);
-  return Array.isArray(items) ? items : [];
-}
-
-/** Persist the full session record list. */
-export function saveSessions(items) {
-  return write(SESSIONS_KEY, items);
-}
-
-/*
- * Gamification totals. The canonical shape is { balance, currentStreak,
- * lifetimePoints, unlockedTitles }: a spendable `balance` that penalties can
- * reduce, split from a monotonic `lifetimePoints` that drives the title ladder
- * and must never regress (locked decision).
- *
- * Records written before that split used { points, streak } — a single
- * penalty-affected total. Both readers below fall back to those legacy fields so
- * an existing player's progress migrates in place on first read.
- */
-
-/** Persisted gamification totals; safe defaults when absent/corrupt. */
-export function getGamification() {
-  const value = read(GAMIFICATION_KEY, null);
-  const v = value && typeof value === 'object' ? value : {};
-  // Legacy fallbacks: pre-split records carry the running total as `points`.
-  const legacyPoints = Number.isFinite(v.points) ? v.points : 0;
-  const legacyStreak = Number.isFinite(v.streak) ? v.streak : 0;
-  const balance = Number.isFinite(v.balance) ? v.balance : legacyPoints;
-  const currentStreak = Number.isFinite(v.currentStreak) ? v.currentStreak : legacyStreak;
-  // Lifetime never decreases; seed it from the running total for legacy records.
-  const lifetimePoints = Math.max(
-    Number.isFinite(v.lifetimePoints) ? v.lifetimePoints : 0,
-    legacyPoints,
-    balance
-  );
-  return { balance, currentStreak, lifetimePoints };
+/** Drop the in-flight draft once the block is finalized or discarded. */
+export function clearActiveSession() {
+  return remove(ACTIVE_SESSION_KEY);
 }
 
 /**
- * Persist gamification totals, keeping `lifetimePoints` monotonically increasing
- * regardless of the shape the caller writes — so a lifetime total accrues that
- * penalties can never claw back, even from a legacy { points, streak } write.
- */
-export function saveGamification(value) {
-  const prev = read(GAMIFICATION_KEY, null);
-  const prevLifetime = prev && Number.isFinite(prev.lifetimePoints) ? prev.lifetimePoints : 0;
-  const incoming = value && typeof value === 'object' ? value : {};
-  const runningTotal = Number.isFinite(incoming.points)
-    ? incoming.points
-    : Number.isFinite(incoming.balance)
-      ? incoming.balance
-      : 0;
-  const lifetimePoints = Math.max(
-    prevLifetime,
-    Number.isFinite(incoming.lifetimePoints) ? incoming.lifetimePoints : 0,
-    runningTotal
-  );
-  return write(GAMIFICATION_KEY, { ...incoming, lifetimePoints });
-}
-
-/** Convenience reader for the title/feature ladder — lifetime points only. */
-export function getLifetimePoints() {
-  return getGamification().lifetimePoints;
-}
-
-/* ------------------------------------------------------------ Settings -- */
-/*
- * Removed — preferences moved to the server (CONTRACT.md §1.4, §4.7, §4.8). They now live in
- * store/settingsSlice.js and reach the API through services/settings.js.
+ * Watch the draft for changes made by ANOTHER tab (edge case E7).
  *
- * The old `pomodoro.v1.settings` key is deliberately not migrated and not cleared. It was never
- * scoped to a user — adoptCacheOwner() below clears only tasks, sessions and gamification — so
- * two accounts sharing a browser shared each other's durations, palette and labels. There is no
- * way to attribute a pre-existing local blob to an account, so it is abandoned rather than
- * adopted; a stale key does no harm because nothing reads it any more.
+ * The `storage` event only fires in other documents, which is exactly the signal needed: two tabs
+ * on one account share one draft key, so the tab that did not write last is the stale one and must
+ * stand down. The listener lives here because this module is the only thing that may know a
+ * localStorage key name.
+ *
+ * @param {(draft: object|null) => void} handler
+ * @returns {() => void} unsubscribe
  */
+export function subscribeToActiveSession(handler) {
+  if (typeof window === 'undefined') return () => {};
+  const watched = key(ACTIVE_SESSION_KEY);
+
+  function onStorage(event) {
+    if (event.key !== watched) return;
+    let next = null;
+    try {
+      next = event.newValue ? JSON.parse(event.newValue) : null;
+    } catch {
+      next = null;
+    }
+    handler(next);
+  }
+
+  window.addEventListener('storage', onStorage);
+  return () => window.removeEventListener('storage', onStorage);
+}
+
+/* --------------------------------------------------------------- Outbox -- */
+/*
+ * Finished records awaiting POST. Persisted rather than held in memory because the whole point is
+ * to survive the thing that stopped them being sent — a closed tab, a dead connection, a reload.
+ *
+ * It holds WHOLE RECORDS, not just their ids. The contract originally specified `clientSessionId[]`
+ * on the assumption that the session array would still be in localStorage to look them up in; that
+ * array is gone, so an id alone would name a record nothing could find.
+ */
+
+const OUTBOX_KEY = 'outbox';
+
+/** Finished-but-unsent records, oldest first (always an array). */
+export function getOutbox() {
+  const items = read(OUTBOX_KEY, []);
+  return Array.isArray(items) ? items.filter((item) => item?.clientSessionId) : [];
+}
+
+/** Persist the queue. */
+export function saveOutbox(items) {
+  return write(OUTBOX_KEY, Array.isArray(items) ? items : []);
+}

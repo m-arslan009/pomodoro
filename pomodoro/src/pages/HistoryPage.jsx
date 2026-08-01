@@ -1,36 +1,59 @@
 import { useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import AppLayout from '../components/AppLayout.jsx';
 import SummaryTile from '../components/history/SummaryTile.jsx';
 import TrendTile from '../components/history/TrendTile.jsx';
 import ComparisonTile from '../components/history/ComparisonTile.jsx';
 import OutcomeTile from '../components/history/OutcomeTile.jsx';
 import RecentTile from '../components/history/RecentTile.jsx';
-import { getSessions, getTasks, getGamification } from '../services/storage.js';
-import { summarize, taskOutcomes } from '../services/history.js';
+import { summarize, taskOutcomes, buildTimeline } from '../services/history.js';
+import {
+  selectFocusSessions,
+  selectGamification,
+  selectTasks,
+  selectTimerStatus,
+} from '../store/timerSelectors.js';
 import '../styles/HistoryPage.css';
 
 /*
- * HistoryPage — aggregates the persisted focus history into a responsive grid of
- * glassmorphic tiles. It reads the same records the timer writes (sessions,
- * tasks, gamification) once on mount and derives every view through the pure
- * helpers in services/history.js, so the page itself stays declarative.
+ * HistoryPage — the focus record, as a responsive grid of tiles.
  *
- * Layout: a single vertically-prioritised column on mobile (summary first),
- * balancing into a two-column grid from 992px where the summary header and the
- * recent-sessions log span the full width and the two charts share a row.
+ * HISTORY MAKES NO NETWORK CALL, AND HAS NO BACKEND OF ITS OWN. It reads the records the Timer
+ * already fetched and derives every view through the three pure helpers in services/history.js.
+ * That is the whole architecture: History's contract is the shape of an AGGREGATE — a Summary, a
+ * Bucket[], an Outcome[] — not the shape of a session, so it knows nothing about where the records
+ * behind them came from (CONTRACT.md §17.1, §17.4).
+ *
+ * This is why there are no /stats endpoints and no rollup tables. A statistics API would be a
+ * second source of truth to keep in step with the event log, and it would put a spinner and a
+ * failure mode on a page that currently has neither.
+ *
+ * The import list is load-bearing: nothing here reaches services/api.js, any service that does, or
+ * any slice thunk — even transitively. Selectors come from their own module for exactly that
+ * reason.
+ *
+ * Loading and failure belong to HYDRATION, not to History. A failed hydration renders whatever the
+ * store has behind a notice, because showing an empty chart to someone with months of history would
+ * be a worse defect than the one this replaced.
+ *
+ * The daily timeline is built ONCE and shared: the trend chart at its default range and the
+ * comparison chart both want it, and each used to walk the full session list for identical output
+ * (edge case E5).
  */
 
 function HistoryPage() {
-  // Snapshot storage on mount; the timer owns writes and retention (7-day window).
-  const sessions = useMemo(() => getSessions(), []);
-  const tasks = useMemo(() => getTasks(), []);
-  const gamification = useMemo(() => getGamification(), []);
+  // Focus intervals only — breaks are recorded but are not work (E12).
+  const sessions = useSelector(selectFocusSessions);
+  const tasks = useSelector(selectTasks);
+  const gamification = useSelector(selectGamification);
+  const status = useSelector(selectTimerStatus);
 
   const summary = useMemo(
     () => summarize(sessions, tasks, gamification),
     [sessions, tasks, gamification]
   );
   const outcomes = useMemo(() => taskOutcomes(tasks), [tasks]);
+  const dailyTimeline = useMemo(() => buildTimeline(sessions, 'daily'), [sessions]);
 
   return (
     <AppLayout>
@@ -38,14 +61,20 @@ function HistoryPage() {
         <header className="history-page__head">
           <h1 className="history-page__title">History</h1>
           <p className="history-page__subtitle">
-            Your focus record over the last week — points, sessions, and how your tasks resolved.
+            Your focus record — points, sessions, and how your tasks resolved.
           </p>
         </header>
 
+        {status === 'error' && (
+          <p className="history-page__notice" role="status">
+            We could not reach the server, so this may be incomplete. Sign in again to refresh it.
+          </p>
+        )}
+
         <div className="history-dashboard">
           <SummaryTile summary={summary} />
-          <TrendTile sessions={sessions} />
-          <ComparisonTile sessions={sessions} />
+          <TrendTile sessions={sessions} dailyTimeline={dailyTimeline} />
+          <ComparisonTile timeline={dailyTimeline} />
           <OutcomeTile outcomes={outcomes} />
           <RecentTile sessions={sessions} />
         </div>

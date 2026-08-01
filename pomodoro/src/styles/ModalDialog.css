@@ -1,0 +1,128 @@
+/*
+ * ModalDialog — the shared overlay + panel, styled from the forest/glass tokens
+ * the rest of the app already uses so a dialog never looks bolted on.
+ *
+ * Fluid by construction: the panel is width-capped but shrinks with the viewport
+ * and its actions wrap rather than overflow, so it stays usable at 320px.
+ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vw, 32px);
+  background: rgba(8, 16, 11, 0.62);
+  backdrop-filter: blur(4px);
+  animation: modal-fade 0.16s ease-out;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 30rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  padding: clamp(18px, 1.6vw + 14px, 28px);
+  border-radius: 18px;
+  background: var(--glass-bg, rgba(24, 38, 28, 0.92));
+  border: 1px solid var(--glass-border, rgba(207, 230, 180, 0.22));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: modal-rise 0.18s ease-out;
+}
+
+.modal-dialog:focus {
+  outline: none;
+}
+
+.modal-dialog__title {
+  margin: 0 0 8px;
+  font-size: clamp(1.05rem, 0.9rem + 0.7vw, 1.3rem);
+  font-weight: 600;
+  color: var(--fg-brand, #eaf3e2);
+}
+
+.modal-dialog__text {
+  margin: 0 0 clamp(14px, 1.2vw + 10px, 22px);
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  line-height: 1.55;
+  color: var(--fg-muted, #b9cbb2);
+  overflow-wrap: anywhere;
+}
+
+.modal-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.modal-dialog__actions .timer-btn {
+  flex: 1 1 9rem;
+}
+
+/* A vertical list of equally-weighted choices (e.g. a reason picker). */
+.modal-dialog__choices {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 clamp(14px, 1.2vw + 10px, 22px);
+  padding: 0;
+  list-style: none;
+}
+
+.modal-choice {
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  border-radius: 12px;
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  color: var(--fg-brand, #eaf3e2);
+  background: var(--glass-bg, rgba(24, 38, 28, 0.6));
+  border: 1px solid var(--glass-border, rgba(207, 230, 180, 0.22));
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.modal-choice:hover {
+  background: var(--glass-hover, rgba(207, 230, 180, 0.12));
+  border-color: var(--fg-wood, #cfe6b4);
+}
+
+.modal-choice:focus-visible {
+  outline: 2px solid var(--fg-wood, #cfe6b4);
+  outline-offset: 2px;
+}
+
+.modal-choice__label {
+  display: block;
+  font-weight: 500;
+}
+
+.modal-choice__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78em;
+  color: var(--fg-muted, #b9cbb2);
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-dialog {
+    animation: none;
+  }
+}

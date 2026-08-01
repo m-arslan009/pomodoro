@@ -3,6 +3,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from '../../store/authSlice.js';
 import settingsReducer from '../../store/settingsSlice.js';
+import timerReducer from '../../store/timerSlice.js';
 import { DEFAULT_SETTINGS } from '../../services/settings.js';
 
 /*
@@ -35,9 +36,28 @@ const TEST_USER = {
   createdAt: '2026-07-28T09:00:00.000Z',
 };
 
-function createTestStore(user, overrides, settings) {
+/**
+ * Zeroed progression, matching what the slice starts with before hydration.
+ *
+ * Exported alongside the component, which normally costs fast refresh — but this file is imported
+ * only by test suites, which never run under a dev server, and the suites that seed a partial
+ * progression need this exact object to spread over. Keeping it beside the store it preloads is
+ * worth more than a refresh guarantee nothing here can use.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const EMPTY_GAMIFICATION = {
+  balance: 0,
+  lifetimePoints: 0,
+  currentDayStreak: 0,
+  longestDayStreak: 0,
+  currentSessionRun: 0,
+  streakFreezesAvailable: 0,
+  unlockedTitles: [],
+};
+
+function createTestStore(user, overrides, settings, timer) {
   return configureStore({
-    reducer: { auth: authReducer, settings: settingsReducer },
+    reducer: { auth: authReducer, settings: settingsReducer, timer: timerReducer },
     preloadedState: {
       auth: {
         user,
@@ -56,6 +76,16 @@ function createTestStore(user, overrides, settings) {
         error: null,
         saving: false,
       },
+      timer: {
+        tasks: [],
+        sessions: [],
+        gamification: EMPTY_GAMIFICATION,
+        // 'ready' for the same reason as settings: hydration is what login does, and these suites
+        // skip login. A suite testing the failed-hydration banner overrides it.
+        status: 'ready',
+        error: null,
+        ...timer,
+      },
     },
   });
 }
@@ -69,10 +99,28 @@ function createTestStore(user, overrides, settings) {
  *
  * `settings` merges over the defaults, so a suite names only the preferences it cares about:
  * `settings={{ workMinutes: 2, breakMinutes: 1 }}` for a timer suite that needs short phases.
+ *
+ * `timer` merges over an empty, hydrated timer slice. Tasks, sessions and progression moved to the
+ * server (CONTRACT.md §13-§17), so a suite can no longer seed them by writing to localStorage —
+ * the store is where the pages read them from, and the real fetch happens on login, which these
+ * suites deliberately skip.
+ *
+ * `onStore` receives the store, for the few suites that need to dispatch into it or read it back.
  */
-export function AuthTestProvider({ children, user = TEST_USER, overrides = {}, settings = {} }) {
+export function AuthTestProvider({
+  children,
+  user = TEST_USER,
+  overrides = {},
+  settings = {},
+  timer = {},
+  onStore,
+}) {
   // Created once per mount: a store rebuilt on re-render would drop everything dispatched into it.
-  const [store] = useState(() => createTestStore(user, overrides, settings));
+  const [store] = useState(() => {
+    const created = createTestStore(user, overrides, settings, timer);
+    onStore?.(created);
+    return created;
+  });
 
   return <Provider store={store}>{children}</Provider>;
 }

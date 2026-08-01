@@ -1,19 +1,42 @@
 /*
- * gamification.js — the single source of truth for the points economy and the
- * title/feature ladder (see idea.md). Pure and side-effect free: it never reads
- * or writes storage or the DOM, so the same functions can back the timer, the
- * title badge, and the Settings feature gates, and stay trivially testable.
+ * gamification.js — the points economy and the title/feature ladder. Pure and
+ * side-effect free: it never reads or writes storage or the DOM, so the same
+ * functions back the timer, the title badge, and the Settings feature gates, and
+ * stay trivially testable.
  *
- * Titles derive from LIFETIME points (never lost to penalties); each title
- * unlocks exactly one previewable feature. Thresholds double at each rung, and
- * every tunable lives here so balancing is a one-line change.
+ * Titles derive from LIFETIME points, which never decrease; each title unlocks
+ * exactly one previewable feature. Thresholds double at each rung, and every
+ * tunable lives here so balancing is a one-line change.
+ *
+ * TWO STREAKS, deliberately (CONTRACT.md §14.2):
+ *   - currentDayStreak  — consecutive CALENDAR DAYS with at least one completed
+ *     focus session. This is the streak the UI shows.
+ *   - currentSessionRun — consecutive completed focus sessions. Internal to the
+ *     economy: it fires the +50 bonus every 3rd session and resets on terminate.
+ * Collapsing them into one number is what made "streak" mean two things at once.
+ *
+ * TERMINATING COSTS NOTHING. It scores 0 and resets the session run — there is no
+ * point penalty (§14.2, and the supersession in .claude/locked_decisions.md).
+ * Punishing an honest early stop taught users to let the clock run out in another
+ * tab, which is worse data and worse for them.
+ *
+ * THERE IS NO SCORING FUNCTION HERE, AND THERE MUST NEVER BE ONE AGAIN.
+ * `applyCompletion` and `applyTermination` lived here until the API existed; the
+ * server now owns the economy outright and returns new totals with every recorded
+ * session. What remains is presentation only — thresholds, names, progress
+ * arithmetic — because points drive titles and titles unlock features, so a
+ * client that could compute its own score could award itself the product
+ * (CONTRACT.md §14.3 rule 1, §18).
+ *
+ * The constants below MIRROR backend/src/domain/gamification.ts. They are not the
+ * authority: they exist so a tile can render a threshold without a round trip.
+ * Keep the numbers identical.
  */
 
 export const POINTS = {
   sessionComplete: 100,
   consecutiveBonus: 50,
   consecutiveThreshold: 3, // +50 on every 3rd consecutive completion
-  terminatePenalty: 200, // subtracted from balance; balance floors at 0
 };
 
 export const TITLES = [
@@ -78,54 +101,4 @@ export function isFeatureUnlocked(lifetimePoints, featureKey) {
   const title = featureTitle(featureKey);
   if (!title) return true; // unknown / ungated features are always available
   return safePoints(lifetimePoints) >= title.threshold;
-}
-
-/**
- * Apply a completed focus session to a gamification state, returning the next
- * state plus the point delta and any titles newly crossed. Lifetime and balance
- * both grow; the streak advances and earns the +50 bonus on each Nth completion.
- */
-export function applyCompletion(state) {
-  const lifetime = safePoints(state?.lifetimePoints);
-  const balance = safePoints(state?.balance);
-  const streak = safePoints(state?.currentStreak);
-
-  const nextStreak = streak + 1;
-  const bonus = nextStreak % POINTS.consecutiveThreshold === 0 ? POINTS.consecutiveBonus : 0;
-  const delta = POINTS.sessionComplete + bonus;
-
-  const before = titlesFor(lifetime);
-  const nextLifetime = lifetime + delta;
-  const after = titlesFor(nextLifetime);
-  const unlocked = after.filter((key) => !before.includes(key));
-
-  return {
-    state: {
-      lifetimePoints: nextLifetime,
-      balance: balance + delta,
-      currentStreak: nextStreak,
-      unlockedTitles: after,
-    },
-    delta,
-    bonus,
-    unlocked, // title keys crossed by this completion
-  };
-}
-
-/**
- * Apply an early termination: the balance loses the penalty (floored at 0), the
- * streak resets, and lifetime is untouched so earned titles never regress.
- */
-export function applyTermination(state) {
-  const lifetime = safePoints(state?.lifetimePoints);
-  const balance = safePoints(state?.balance);
-  return {
-    state: {
-      lifetimePoints: lifetime,
-      balance: Math.max(0, balance - POINTS.terminatePenalty),
-      currentStreak: 0,
-      unlockedTitles: titlesFor(lifetime),
-    },
-    delta: -POINTS.terminatePenalty,
-  };
 }

@@ -15,9 +15,9 @@
  * A single visually-hidden `role="timer"` element carries the accessible time so
  * the decorative visuals can be aria-hidden.
  *
- * The five controls are state-aware — each renders only in the lifecycle phases
- * where it is meaningful (Start only while idle and hidden once a session begins,
- * Resume only while paused, etc.).
+ * The controls are state-aware — each renders only in the lifecycle phases where
+ * it is meaningful (Start only while idle and hidden once a session begins,
+ * Resume only while paused, Skip break only during a break).
  */
 
 const RING_RADIUS = 54;
@@ -52,7 +52,10 @@ function TimerEngineTile({
   onResume,
   onRestart,
   onTerminate,
+  onSkipBreak,
 }) {
+  const isBreak = phase === 'break';
+  const isActive = isRunning || isPaused;
   const progress = totalMs > 0 ? Math.min(1, Math.max(0, remainingMs / totalMs)) : 0;
   const dashOffset = RING_CIRC * (1 - progress);
   const clock = formatClock(remainingMs);
@@ -133,16 +136,26 @@ function TimerEngineTile({
             Resume
           </button>
         )}
-        {(isRunning || isPaused) && (
+        {isActive && (
           <button type="button" className="timer-btn" onClick={onRestart}>
             Restart
           </button>
         )}
-        {(isRunning || isPaused) && (
-          <button type="button" className="timer-btn timer-btn--danger" onClick={onTerminate}>
-            Terminate
-          </button>
-        )}
+        {/*
+          A break is skipped, not terminated: leaving a rest early is not an
+          outcome worth explaining, so it needs no reason and carries no weight.
+          Ending a FOCUS block is the one that asks why.
+        */}
+        {isActive &&
+          (isBreak ? (
+            <button type="button" className="timer-btn" onClick={onSkipBreak}>
+              Skip break
+            </button>
+          ) : (
+            <button type="button" className="timer-btn timer-btn--danger" onClick={onTerminate}>
+              Terminate
+            </button>
+          ))}
       </div>
 
       {isIdle && !canStart && (

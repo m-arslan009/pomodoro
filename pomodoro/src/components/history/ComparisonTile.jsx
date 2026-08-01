@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
 import ComparisonBarChart from './charts/ComparisonBarChart.jsx';
 import GatedTile from './GatedTile.jsx';
-import { buildTimeline } from '../../services/history.js';
 
 /*
  * ComparisonTile — a daily grouped-bar view contrasting completed vs terminated
@@ -16,9 +14,9 @@ import { buildTimeline } from '../../services/history.js';
 const COMPLETED_COLOR = '#cfe6b4'; // forest --fg-accent (validated)
 const TERMINATED_COLOR = '#e0736b'; // --timer-danger (validated)
 
-function ComparisonTile({ sessions }) {
-  const data = useMemo(() => buildTimeline(sessions, 'daily'), [sessions]);
-  const hasData = data.some((d) => d.total > 0);
+/** `timeline` is the shared daily Bucket[] built once by HistoryPage (E5). */
+function ComparisonTile({ timeline = [] }) {
+  const hasData = timeline.some((d) => d.total > 0);
 
   const legend = (
     <ul className="hp-legend">
@@ -44,7 +42,7 @@ function ComparisonTile({ sessions }) {
     >
       {hasData ? (
         <ComparisonBarChart
-          data={data}
+          data={timeline}
           completedColor={COMPLETED_COLOR}
           terminatedColor={TERMINATED_COLOR}
         />

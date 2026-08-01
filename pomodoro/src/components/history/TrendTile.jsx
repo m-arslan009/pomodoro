@@ -21,13 +21,16 @@ const INTERVALS = [
   { key: 'monthly', label: 'Monthly' },
 ];
 
-function TrendTile({ sessions }) {
+function TrendTile({ sessions, dailyTimeline }) {
   const [range, setRange] = useState('daily');
 
   const series = useMemo(() => {
-    const timeline = buildTimeline(sessions, range);
+    // The daily timeline is built once by the page and shared with the comparison
+    // tile, so the default range costs no second pass over the sessions (E5).
+    const timeline =
+      range === 'daily' && dailyTimeline ? dailyTimeline : buildTimeline(sessions, range);
     return timeline.map((b) => ({ label: b.label, value: b.completed }));
-  }, [sessions, range]);
+  }, [sessions, range, dailyTimeline]);
 
   const hasData = series.some((d) => d.value > 0);
 

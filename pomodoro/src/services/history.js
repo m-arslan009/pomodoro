@@ -1,10 +1,24 @@
 /*
- * history.js — pure aggregation helpers that turn the raw persisted records
- * (sessions, tasks, gamification) into the shapes the History dashboard renders.
+ * history.js — pure aggregation helpers that turn Timer-generated records into
+ * the three shapes the History dashboard renders:
  *
- * Deliberately side-effect free: it never touches storage or the DOM, so the
- * same functions can back the future Stats page and stay trivially testable.
- * Reads come from services/storage.js in the page; this layer only derives.
+ *   summarize()     → Summary
+ *   buildTimeline() → Bucket[]
+ *   taskOutcomes()  → Outcome[]
+ *
+ * THIS IS THE SEAM (CONTRACT.md §17.1). History's contract is the shape of an
+ * AGGREGATE, not the shape of a session, and History knows nothing about where
+ * the underlying records came from. That is what keeps the whole feature
+ * backend-agnostic: the day these aggregates need to come from a server instead,
+ * only this file changes and not one History component does.
+ *
+ * Deliberately side-effect free — it never touches storage, the network or the
+ * DOM, so it stays trivially testable and can be called from any layer.
+ *
+ * EVERY AGGREGATE COUNTS FOCUS ONLY. Break intervals are recorded (every path out
+ * of a running interval produces a record) but they are not work, so each function
+ * filters them out. Letting them through would roughly double every figure the
+ * product reports (edge case E12).
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -33,15 +47,25 @@ function startOfWeek(ms) {
   return d.getTime();
 }
 
+/** Focus intervals only — breaks are recorded but never counted (E12). */
+function focusOnly(sessions) {
+  return sessions.filter((s) => s.type === 'focus');
+}
+
 /**
  * Top-line KPIs. Sessions carry the focus outcomes; tasks carry the to-do
- * outcomes; gamification carries the lifetime point economy.
- *   incompleteTasks = every task that never reached 'completed'
- *   (to-do, expired, or terminated).
+ * outcomes; gamification carries the point economy.
+ *   incompleteTasks = every task that never reached 'completed' (todo or abandoned)
+ *
+ * `points` is LIFETIME points, matching the "Lifetime points earned" caption the
+ * tile renders. It previously returned `balance` under that caption — the same
+ * number while nothing subtracts, but the wrong field, so the first spending rule
+ * would have turned the headline figure into a quiet lie (defect F5).
  */
 export function summarize(sessions = [], tasks = [], gamification = {}) {
-  const completedSessions = sessions.filter((s) => s.status === 'completed').length;
-  const terminatedSessions = sessions.filter((s) => s.status === 'terminated').length;
+  const focus = focusOnly(sessions);
+  const completedSessions = focus.filter((s) => s.status === 'completed').length;
+  const terminatedSessions = focus.filter((s) => s.status === 'terminated').length;
   const completedTasks = tasks.filter((t) => t.status === 'completed').length;
   const incompleteTasks = tasks.filter((t) => t.status !== 'completed').length;
 
@@ -49,14 +73,14 @@ export function summarize(sessions = [], tasks = [], gamification = {}) {
   const completionRate =
     totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
-  const focusMs = sessions
+  const focusMs = focus
     .filter((s) => s.status === 'completed')
-    .reduce((sum, s) => sum + (Number.isFinite(s.durationMs) ? s.durationMs : 0), 0);
+    .reduce((sum, s) => sum + (Number.isFinite(s.actualDurationMs) ? s.actualDurationMs : 0), 0);
   const focusMinutes = Math.round(focusMs / 60000);
 
   return {
-    points: Number.isFinite(gamification.balance) ? gamification.balance : 0,
-    streak: Number.isFinite(gamification.currentStreak) ? gamification.currentStreak : 0,
+    points: Number.isFinite(gamification.lifetimePoints) ? gamification.lifetimePoints : 0,
+    streak: Number.isFinite(gamification.currentDayStreak) ? gamification.currentDayStreak : 0,
     completedSessions,
     terminatedSessions,
     completedTasks,
@@ -112,7 +136,13 @@ export function buildTimeline(sessions = [], interval = 'daily', now = Date.now(
     b.terminated = 0;
   });
 
-  sessions.forEach((s) => {
+  /*
+   * `endedAt` decides the bucket, while the day STREAK is decided by `startedAt`
+   * (§14.2). They differ by design for a session spanning local midnight: the
+   * chart shows the work where it finished, the streak credits the day it was
+   * begun. Recorded here so neither gets "fixed" to match the other (edge case E8).
+   */
+  focusOnly(sessions).forEach((s) => {
     const t = timeOf(s.endedAt);
     const bucket = buckets.find((b) => t >= b.start && t < b.end);
     if (!bucket) return;
@@ -129,11 +159,17 @@ export function buildTimeline(sessions = [], interval = 'daily', now = Date.now(
 }
 
 /**
- * Task outcome breakdown for the horizontal-bar view, in a stable display
- * order. `tone` maps each outcome to a semantic colour role in the CSS.
+ * Task outcome breakdown for the horizontal-bar view, in a stable display order.
+ * `tone` maps each outcome to a semantic colour role in the CSS.
+ *
+ * The three buckets are the three task statuses, and nothing else (§13.1). The
+ * previous version bucketed on `expired` and `terminated`: `expired` came from a
+ * 24-hour rule that no longer exists, and `terminated` is what happens to a
+ * SESSION — a task is `abandoned`. Both bars were therefore permanently empty,
+ * and the chart mixed session vocabulary into a task breakdown (defect F11).
  */
 export function taskOutcomes(tasks = []) {
-  const counts = { completed: 0, todo: 0, expired: 0, terminated: 0 };
+  const counts = { completed: 0, todo: 0, abandoned: 0 };
   tasks.forEach((t) => {
     if (t.status in counts) counts[t.status] += 1;
   });
@@ -141,7 +177,6 @@ export function taskOutcomes(tasks = []) {
   return [
     { key: 'completed', label: 'Completed', count: counts.completed, tone: 'good' },
     { key: 'todo', label: 'In progress', count: counts.todo, tone: 'neutral' },
-    { key: 'expired', label: 'Expired', count: counts.expired, tone: 'muted' },
-    { key: 'terminated', label: 'Terminated', count: counts.terminated, tone: 'bad' },
+    { key: 'abandoned', label: 'Abandoned', count: counts.abandoned, tone: 'bad' },
   ];
 }

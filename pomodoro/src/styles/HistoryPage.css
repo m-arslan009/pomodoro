@@ -248,10 +248,6 @@
   background: linear-gradient(90deg, rgba(213, 155, 108, 0.55), var(--fg-wood));
 }
 
-.hp-bar__fill--muted {
-  background: linear-gradient(90deg, rgba(174, 191, 160, 0.4), var(--fg-muted));
-}
-
 /* =============================================================== Summary */
 .hp-summary__hero {
   margin-bottom: var(--sp-3);
@@ -664,6 +660,45 @@
 .hp-recent__when {
   white-space: nowrap;
   color: var(--fg-muted);
+}
+
+/* Hydration failed, so this view may be partial. History itself never fetches — it says what it
+   knows rather than pretending the record is empty. */
+.history-page__notice {
+  margin: 0 0 var(--sp-2, 12px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+/* Reveals the next page of records; the list is capped, never truncated. */
+.hp-recent__more {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--fg-brand);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.hp-recent__more:hover {
+  background: var(--glass-hover);
+  border-color: var(--fg-wood);
+}
+
+.hp-recent__more:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
 }
 
 .hp-badge {

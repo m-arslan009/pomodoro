@@ -1,67 +1,77 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import TimerPage from './TimerPage.jsx';
-import { AuthTestProvider } from '../tests/helpers/authTestContext.jsx';
-import {
-  getGamification,
-  getSessions,
-  getTasks,
-  saveGamification,
-  saveSessions,
-  saveTasks,
-} from '../services/storage.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
- * Suite A3 — log write-through on session resolution.
+ * Suite A3 — what a resolved block writes, and what it deliberately leaves alone.
  *
- * Integration level: the real timer hook, the real tiles, and the real storage
- * service, wired together by TimerPage. Proves that resolving a focus block
- * updates the log, the task record, and the economy in one go — a completion
- * records the full configured duration, a termination records the time actually
- * spent, and a break resolution records nothing at all.
+ * The three rules under test all say the same thing from different directions: a SESSION and a TASK
+ * are different nouns. Finishing one pomodoro does not finish the work, abandoning one block does
+ * not abandon the work, and a break is not work at all. The previous build got all three wrong —
+ * completing a pomodoro marked the whole task done, terminating marked it abandoned, and breaks
+ * were never recorded — which meant a multi-day task vanished from the backlog after twenty-five
+ * minutes.
  *
- * Task, session and economy fixtures are seeded through services/storage.js because TimerPage
- * hydrates from it in `useState` initializers, and the persisted records are read back for the
- * exact millisecond assertions the DOM only shows rounded ("N min").
- *
- * Durations are seeded through the store instead: preferences moved to the server
- * (CONTRACT.md §4.7), so AuthTestProvider preloads them the way login would.
+ * Integration level: the real TimerPage, the real timer hook, the real tiles and the real store,
+ * with only the HTTP calls mocked. Records are asserted against the store rather than the DOM where
+ * the DOM only shows a rounded "N min".
  */
+
+vi.mock('../services/tasks.js', () => ({
+  fetchTasks: vi.fn(async () => ({ tasks: [], nextCursor: null })),
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
+  TITLE_MAX_LENGTH: 120,
+}));
+
+vi.mock('../services/sessions.js', () => ({
+  recordSession: vi.fn(),
+  fetchSessions: vi.fn(async () => ({ sessions: [], nextCursor: null })),
+  fetchGamification: vi.fn(),
+  HYDRATION_WINDOW_DAYS: 180,
+}));
+
+const { recordSession } = await import('../services/sessions.js');
+const { AuthTestProvider } = await import('../tests/helpers/authTestContext.jsx');
+const { default: TimerPage } = await import('./TimerPage.jsx');
 
 const WORK_MINUTES = 2;
 const BREAK_MINUTES = 1;
-const WORK_MS = WORK_MINUTES * 60 * 1000; // 120,000 ms
-const BREAK_MS = BREAK_MINUTES * 60 * 1000; // 60,000 ms
+const WORK_MS = WORK_MINUTES * 60 * 1000;
+const BREAK_MS = BREAK_MINUTES * 60 * 1000;
 
-// A fixed *local* 09:00 so the seeded fixtures and everything produced by the run
-// land on the same calendar day in any timezone — the dashboard filters its log
-// and backlog by the local day.
+// A fixed *local* 09:00 so seeded fixtures and everything produced by the run land on the same
+// calendar day in any timezone — the dashboard filters its log by the local day.
 const START_TIME = new Date(2026, 0, 15, 9, 0, 0);
 
-// Integration renders advance hundreds of 250 ms ticks, each re-rendering the
-// whole dashboard; jsdom needs more headroom than the 5 s default.
+// Integration renders advance hundreds of ticks; jsdom needs more headroom than the 5 s default.
 const TEST_TIMEOUT_MS = 20000;
 
-function isoAt(offsetMs) {
-  return new Date(START_TIME.getTime() + offsetMs).toISOString();
-}
-
-function seed({ tasks = [], sessions = [] } = {}) {
-  saveTasks(tasks);
-  saveSessions(sessions);
-  saveGamification({ points: 0, streak: 0, balance: 0, currentStreak: 0, lifetimePoints: 0 });
-}
-
 function todoTask(id, title) {
-  return { id, title, status: 'todo', createdAt: isoAt(0) };
+  return {
+    id,
+    title,
+    status: 'todo',
+    estimatedPomodoros: null,
+    createdAt: START_TIME.toISOString(),
+    completedAt: null,
+    updatedAt: START_TIME.toISOString(),
+  };
 }
 
-// AppLayout reads the signed-in account and the account's preferences from the store; this suite
-// is about the timer, so both are supplied directly rather than through a real sign-in.
-function renderTimerPage() {
+let store;
+
+function renderTimerPage(tasks = []) {
   return render(
     <MemoryRouter>
-      <AuthTestProvider settings={{ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES }}>
+      <AuthTestProvider
+        settings={{ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES }}
+        timer={{ tasks }}
+        onStore={(created) => {
+          store = created;
+        }}
+      >
         <TimerPage />
       </AuthTestProvider>
     </MemoryRouter>
@@ -72,13 +82,10 @@ const engineTile = () => screen.getByRole('region', { name: 'Session' });
 const tasksTile = () => screen.getByRole('region', { name: /Today.s Focus/ });
 const logTile = () => screen.getByRole('region', { name: /Today.s Log/ });
 
-// Everything that lands in storage, for before/after comparison.
-function persisted() {
-  return { sessions: getSessions(), tasks: getTasks(), gamification: getGamification() };
-}
+const sessions = () => store.getState().timer.sessions;
+const tasks = () => store.getState().timer.tasks;
 
-// One phase boundary per act() so effects flush and the interval re-subscribes
-// before the next phase is advanced.
+// One phase boundary per act() so effects flush and the interval re-subscribes.
 function advance(ms) {
   act(() => {
     vi.advanceTimersByTime(ms);
@@ -94,11 +101,15 @@ function clickControl(name) {
   fireEvent.click(within(engineTile()).getByRole('button', { name }));
 }
 
-describe('A3. Log write-through on session resolution (TimerPage integration)', () => {
+describe('A3. Session write-through on resolution (TimerPage integration)', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.useFakeTimers();
     vi.setSystemTime(START_TIME);
+    vi.mocked(recordSession).mockImplementation(async (session) => ({
+      session: { ...session, id: 'server-id', pointsAwarded: 100 },
+      gamification: { lifetimePoints: 100, pointsDelta: 100, newlyUnlocked: [] },
+    }));
   });
 
   afterEach(() => {
@@ -107,142 +118,135 @@ describe('A3. Log write-through on session resolution (TimerPage integration)', 
   });
 
   it(
-    'A3.1 logs a completed focus block for the full configured duration and resolves its task',
+    'A3.1 records a completed block for the full duration and LEAVES the task in the backlog',
     () => {
-      seed({
-        tasks: [todoTask('task-1', 'Draft the report')],
-        sessions: [
-          {
-            id: 'earlier-block',
-            taskTitle: 'Earlier block',
-            durationMs: WORK_MS,
-            endedAt: isoAt(-2 * 60 * 60 * 1000),
-            status: 'completed',
-          },
-        ],
-      });
-      renderTimerPage();
-
-      expect(within(logTile()).getByText('1')).toBeInTheDocument();
+      renderTimerPage([todoTask('task-1', 'Draft the report')]);
 
       bindTask('Draft the report');
       clickControl('Start');
+      advance(WORK_MS);
 
-      advance(WORK_MS); // the focus block reaches 00:00
-
-      // Persisted record — the exact duration the DOM can only show rounded.
-      const sessions = getSessions();
-      expect(sessions).toHaveLength(2);
-      expect(sessions[0]).toMatchObject({
+      const focus = sessions().filter((s) => s.type === 'focus');
+      expect(focus).toHaveLength(1);
+      expect(focus[0]).toMatchObject({
+        taskId: 'task-1',
         taskTitle: 'Draft the report',
+        type: 'focus',
         status: 'completed',
-        durationMs: WORK_MS,
+        plannedDurationMs: WORK_MS,
+        actualDurationMs: WORK_MS,
+        terminationReason: null,
       });
-      // Newest first: the new record was prepended, not appended.
-      expect(sessions[1].id).toBe('earlier-block');
 
-      // The bound task carries the outcome and a resolution timestamp.
-      const [storedTask] = getTasks();
-      expect(storedTask.status).toBe('completed');
-      expect(storedTask.endedAt).toBe(isoAt(WORK_MS));
+      /*
+       * THE POINT OF THIS TEST. A task spans as many pomodoros as it takes, so one completed block
+       * resolves nothing — the task is untouched and still in the backlog.
+       */
+      expect(tasks()[0].status).toBe('todo');
+      expect(tasks()[0].completedAt).toBeNull();
+      expect(within(tasksTile()).getByText('Draft the report')).toBeInTheDocument();
+      expect(within(tasksTile()).getByText('1 left')).toBeInTheDocument();
 
-      // What the user sees: a new newest-first row in Today's Log, and the count.
-      const rows = within(logTile()).getAllByRole('row'); // [header, newest, older]
+      // What the user sees in the log.
+      const rows = within(logTile()).getAllByRole('row'); // [header, the block]
       expect(within(rows[1]).getByText('Draft the report')).toBeInTheDocument();
       expect(within(rows[1]).getByText(`${WORK_MINUTES} min`)).toBeInTheDocument();
       expect(within(rows[1]).getByText('Completed')).toBeInTheDocument();
-      expect(within(rows[2]).getByText('Earlier block')).toBeInTheDocument();
-      expect(within(logTile()).getByText('2')).toBeInTheDocument();
-
-      // The resolved task leaves the backlog...
-      expect(within(tasksTile()).queryByText('Draft the report')).not.toBeInTheDocument();
-      expect(within(tasksTile()).getByText('0 left')).toBeInTheDocument();
-
-      // ...and nothing is bound any more: the engine falls back to its prompt
-      // (rendered only when no active task resolves) and Start comes back
-      // disabled once the auto-started break returns the page to idle.
-      expect(within(engineTile()).getByText('Pick a task to begin')).toBeInTheDocument();
-
-      advance(BREAK_MS);
-
-      expect(within(engineTile()).getByRole('button', { name: 'Start' })).toBeDisabled();
     },
     TEST_TIMEOUT_MS
   );
 
   it(
-    'A3.2 logs a terminated focus block with the elapsed time, not the nominal duration',
+    'A3.2 requires a reason to terminate, records the elapsed time, and leaves the task alone',
     () => {
-      seed({ tasks: [todoTask('task-1', 'Refactor the parser')] });
-      renderTimerPage();
+      renderTimerPage([todoTask('task-1', 'Refactor the parser')]);
 
       bindTask('Refactor the parser');
       clickControl('Start');
-
       advance(60 * 1000); // one minute into a two-minute block
 
       clickControl('Terminate');
 
-      const sessions = getSessions();
-      expect(sessions).toHaveLength(1);
-      expect(sessions[0]).toMatchObject({
+      // Terminating costs no points, so the reason is the entire thing the product gets for it.
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('Refactor the parser');
+      expect(sessions()).toHaveLength(0); // nothing recorded until the reason is given
+
+      act(() => {
+        fireEvent.click(within(dialog).getByRole('button', { name: /Something interrupted me/i }));
+      });
+
+      const [recorded] = sessions();
+      expect(recorded).toMatchObject({
         taskTitle: 'Refactor the parser',
         status: 'terminated',
-        durationMs: 60 * 1000, // totalMs − remainingMs, i.e. the work actually done
+        terminationReason: 'interrupted',
+        actualDurationMs: 60 * 1000, // the work actually done, not the nominal two minutes
       });
-      expect(sessions[0].durationMs).not.toBe(WORK_MS);
+      expect(recorded.actualDurationMs).not.toBe(WORK_MS);
 
-      const [storedTask] = getTasks();
-      expect(storedTask.status).toBe('terminated');
-      expect(storedTask.endedAt).toBe(isoAt(60 * 1000));
+      // Giving up on a BLOCK is not giving up on the WORK.
+      expect(tasks()[0].status).toBe('todo');
+      expect(within(tasksTile()).getByText('Refactor the parser')).toBeInTheDocument();
 
-      // The log row shows the elapsed minute, not the nominal two.
-      const rows = within(logTile()).getAllByRole('row'); // [header, the block]
-      expect(within(rows[1]).getByText('Refactor the parser')).toBeInTheDocument();
+      const rows = within(logTile()).getAllByRole('row');
       expect(within(rows[1]).getByText('1 min')).toBeInTheDocument();
       expect(within(rows[1]).getByText('Terminated')).toBeInTheDocument();
-
-      expect(within(engineTile()).getByRole('button', { name: 'Start' })).toBeDisabled();
     },
     TEST_TIMEOUT_MS
   );
 
   it(
-    'A3.3 neither logs nor scores a break, whether it runs out or is terminated',
+    'A3.3 records a break as its own interval but never counts it as focus',
     () => {
-      seed({
-        tasks: [todoTask('task-1', 'First block'), todoTask('task-2', 'Second block')],
-      });
-      renderTimerPage();
+      renderTimerPage([todoTask('task-1', 'First block')]);
 
-      // (a) A break left to run to 00:00. Reaching a break requires completing a
-      // focus block, which does write — so that write becomes the baseline.
       bindTask('First block');
       clickControl('Start');
-      advance(WORK_MS);
+      advance(WORK_MS); // work → break
 
-      const afterFirstWork = persisted();
-      expect(afterFirstWork.sessions).toHaveLength(1);
+      expect(within(logTile()).getByText('1')).toBeInTheDocument();
 
       advance(BREAK_MS); // the break reaches 00:00
 
-      expect(persisted()).toEqual(afterFirstWork);
-      expect(within(logTile()).getAllByRole('row')).toHaveLength(2); // header + one block
-      expect(within(logTile()).getByText('1')).toBeInTheDocument();
+      // Every path out of a running interval produces a record, breaks included — that is what
+      // lets a missing record prove a block never happened.
+      const all = sessions();
+      const breaks = all.filter((s) => s.type === 'break');
+      expect(breaks).toHaveLength(1);
+      expect(breaks[0]).toMatchObject({ type: 'break', status: 'completed' });
 
-      // (b) A break abandoned early.
-      bindTask('Second block');
+      /*
+       * But a break is not work. Letting it through the aggregates would roughly double every
+       * figure the product reports, so Today's Log still shows exactly one row.
+       */
+      expect(within(logTile()).getAllByRole('row')).toHaveLength(2); // header + one focus block
+      expect(within(logTile()).getByText('1')).toBeInTheDocument();
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'A3.4 keeps a block that could not be delivered, and says so rather than losing it',
+    () => {
+      vi.mocked(recordSession).mockRejectedValue(
+        Object.assign(new Error('Network error'), { status: 0 })
+      );
+
+      renderTimerPage([todoTask('task-1', 'Write the abstract')]);
+
+      bindTask('Write the abstract');
       clickControl('Start');
       advance(WORK_MS);
 
-      const afterSecondWork = persisted();
-      expect(afterSecondWork.sessions).toHaveLength(2);
+      const [recorded] = sessions();
+      // The block happened, so the record exists whatever the network says.
+      expect(recorded.status).toBe('completed');
+      expect(recorded.syncState).toBe('pending');
+      // Points are the server's to award; showing 0 here would be a claim the client cannot make.
+      expect(recorded.pointsAwarded).toBeNull();
 
-      clickControl('Terminate'); // terminating during the break
-
-      expect(persisted()).toEqual(afterSecondWork);
-      expect(within(logTile()).getAllByRole('row')).toHaveLength(3); // header + two blocks
-      expect(within(logTile()).getByText('2')).toBeInTheDocument();
+      expect(screen.getByText(/waiting to sync/i)).toBeInTheDocument();
     },
     TEST_TIMEOUT_MS
   );

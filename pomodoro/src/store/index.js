@@ -1,17 +1,23 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer, { sessionCleared } from './authSlice.js';
 import settingsReducer from './settingsSlice.js';
+import timerReducer from './timerSlice.js';
 import { setAuthTokenAccessor, setOnAuthFailure } from '../services/api.js';
 
 /*
- * The application store. Authentication and settings live here — timer, gamification and history
- * keep their existing local state and localStorage cache.
+ * The application store: authentication, settings, and the timer's records.
  *
- * Settings joined the store because it stopped being local: the backend owns it now
- * (CONTRACT.md §9). The others have not moved, and a wholesale migration is still declined.
+ * Each of these joined for the same reason — it stopped being local. Settings moved when the
+ * backend took ownership of preferences; tasks, sessions and progression moved when the backend
+ * took ownership of those (CONTRACT.md §13-§17).
+ *
+ * The RUNNING COUNTDOWN is still not here and is not going to be. It changes once a second, is read
+ * by one component, and nothing outside that component can act on it — putting it in Redux would
+ * dispatch some 1,500 actions per session for no subscriber. The frontend owns real-time execution;
+ * the store owns what survives the block.
  */
 export const store = configureStore({
-  reducer: { auth: authReducer, settings: settingsReducer },
+  reducer: { auth: authReducer, settings: settingsReducer, timer: timerReducer },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

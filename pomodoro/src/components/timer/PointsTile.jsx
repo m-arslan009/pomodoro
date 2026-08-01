@@ -1,20 +1,30 @@
+import { memo } from 'react';
 import TitleBadge from '../TitleBadge.jsx';
 
 /*
  * PointsTile — top-right tile: the gamified productivity hub.
  *
- * Presentational: reflects the gamification tally maintained by TimerPage. Shows
- * the spendable point score (penalty-affected balance), the current title with a
- * progress bar toward the next threshold (driven by lifetime points, which never
- * regress), a daily progress bar toward a session goal, and a row of streak
- * "milestone" dots that glow as the +50 bonus interval (every `bonusEvery`
- * completions) is reached.
+ * Presentational: reflects the gamification tally maintained by TimerPage.
+ *
+ * IT RENDERS LIFETIME POINTS (CONTRACT.md §14.3 rule 2). Lifetime is what drives
+ * the title ladder and what never decreases, so it is the number that means
+ * something to a player. `balance` exists in the model only so a future spending
+ * sink can arrive without a migration; while nothing subtracts, the two are equal
+ * and showing both would be showing the same number twice.
+ *
+ * THE TWO STREAKS ARE DIFFERENT THINGS (§14.2). `dayStreak` — consecutive days
+ * with a completed session — is the one worth celebrating, so it gets the stat
+ * slot. `sessionRun` is internal to the economy and surfaces only as the milestone
+ * dots, because its whole job is to say "one more for +50".
+ *
+ * Memoised: it re-renders once a session, but sits beside a countdown that used to
+ * push new props at it four times a second (defect F6).
  */
 
 function PointsTile({
-  points,
   lifetimePoints,
-  streak,
+  dayStreak,
+  sessionRun,
   completedCount,
   terminatedCount,
   lastDelta,
@@ -23,8 +33,8 @@ function PointsTile({
 }) {
   const goalReached = Math.min(completedCount, dailyGoal);
   const progressPct = dailyGoal > 0 ? Math.round((goalReached / dailyGoal) * 100) : 0;
-  // How far into the current bonus cycle the streak is (0..bonusEvery).
-  const cycleFilled = streak === 0 ? 0 : ((streak - 1) % bonusEvery) + 1;
+  // How far into the current bonus cycle the run is (0..bonusEvery).
+  const cycleFilled = sessionRun === 0 ? 0 : ((sessionRun - 1) % bonusEvery) + 1;
   const dots = Array.from({ length: bonusEvery }, (_, i) => i < cycleFilled);
 
   const deltaLabel = lastDelta > 0 ? `+${lastDelta}` : lastDelta < 0 ? `${lastDelta}` : '—';
@@ -40,7 +50,7 @@ function PointsTile({
       </header>
 
       <p className="points-tile__score">
-        <span className="points-tile__score-value">{points}</span>
+        <span className="points-tile__score-value">{lifetimePoints.toLocaleString()}</span>
         <span className="points-tile__score-unit">pts</span>
       </p>
 
@@ -48,8 +58,8 @@ function PointsTile({
 
       <dl className="points-tile__stats">
         <div className="points-tile__stat">
-          <dt>Streak</dt>
-          <dd>{streak}</dd>
+          <dt>Day streak</dt>
+          <dd>{dayStreak}</dd>
         </div>
         <div className="points-tile__stat">
           <dt>Completed</dt>
@@ -94,4 +104,4 @@ function PointsTile({
   );
 }
 
-export default PointsTile;
+export default memo(PointsTile);

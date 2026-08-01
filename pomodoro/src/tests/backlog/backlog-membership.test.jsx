@@ -1,57 +1,71 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import TimerPage from '../../pages/TimerPage.jsx';
-import { AuthTestProvider } from '../helpers/authTestContext.jsx';
-import { getTasks, saveGamification, saveSessions, saveTasks } from '../../services/storage.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /*
- * Suite B1 — backlog membership & timer binding.
+ * Suite B1 — backlog membership and timer binding.
  *
- * Integration level: the real TasksTile, AddTask, and timer hook wired together
- * by TimerPage. Proves the queue only ever surfaces unresolved work, that
- * selecting a task is what arms the engine, that a running block cannot be
- * re-pointed, and that a newly added task is born with the fields the expiry
- * engine depends on.
+ * Proves the queue surfaces only unresolved work, that resolved work stays REACHABLE rather than
+ * being thrown away, that selecting a task is what arms the engine, and that a running block cannot
+ * be re-pointed mid-flight.
  *
- * Task, session and economy fixtures are seeded through services/storage.js because TimerPage
- * hydrates from it in `useState` initializers; records are read back from it for the field-level
- * assertions (id/status/createdAt) the DOM never shows.
- *
- * Durations are seeded through the store instead: preferences moved to the server
- * (CONTRACT.md §4.7), so AuthTestProvider preloads them the way login would.
+ * Integration level: the real TasksTile, TaskRow, AddTask and timer hook wired together by
+ * TimerPage, with only the HTTP calls mocked. Tasks are seeded through the store because that is
+ * where the page reads them from — they moved to the server, so a suite can no longer seed them by
+ * writing to localStorage.
  */
 
+vi.mock('../../services/tasks.js', () => ({
+  fetchTasks: vi.fn(async () => ({ tasks: [], nextCursor: null })),
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
+  deleteTask: vi.fn(),
+  TITLE_MAX_LENGTH: 120,
+}));
+
+vi.mock('../../services/sessions.js', () => ({
+  recordSession: vi.fn(async (s) => ({
+    session: { ...s, id: 'server-id', pointsAwarded: 100 },
+    gamification: { lifetimePoints: 100, pointsDelta: 100, newlyUnlocked: [] },
+  })),
+  fetchSessions: vi.fn(async () => ({ sessions: [], nextCursor: null })),
+  fetchGamification: vi.fn(),
+  HYDRATION_WINDOW_DAYS: 180,
+}));
+
+const tasksService = await import('../../services/tasks.js');
+const { AuthTestProvider } = await import('../helpers/authTestContext.jsx');
+const { default: TimerPage } = await import('../../pages/TimerPage.jsx');
+
 const WORK_MINUTES = 2;
-const BREAK_MINUTES = 1;
-
-// A fixed *local* 09:00 so seeded fixtures and anything created during the run
-// land on the same calendar day in any timezone.
 const START_TIME = new Date(2026, 0, 15, 9, 0, 0);
-
 const HOUR_MS = 60 * 60 * 1000;
 
-function isoAt(offsetMs) {
-  return new Date(START_TIME.getTime() + offsetMs).toISOString();
+function task(id, title, status = 'todo', ageMs = 0) {
+  const created = new Date(START_TIME.getTime() - ageMs).toISOString();
+  return {
+    id,
+    title,
+    status,
+    estimatedPomodoros: null,
+    createdAt: created,
+    completedAt: status === 'completed' ? created : null,
+    updatedAt: created,
+  };
 }
 
-function seed(tasks = []) {
-  saveTasks(tasks);
-  saveSessions([]);
-  saveGamification({ points: 0, streak: 0, balance: 0, currentStreak: 0, lifetimePoints: 0 });
-}
+let store;
 
-// Created an hour ago: inside both the 24h expiry window and the 7-day retention
-// window, so reconcileTasks passes every fixture through untouched.
-function task(id, title, status, extra = {}) {
-  return { id, title, status, createdAt: isoAt(-HOUR_MS), ...extra };
-}
-
-// AppLayout reads the signed-in account and the account's preferences from the store; this suite
-// is about the backlog, so both are supplied directly rather than through a real sign-in.
-function renderTimerPage() {
+function renderTimerPage(tasks = []) {
   return render(
     <MemoryRouter>
-      <AuthTestProvider settings={{ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES }}>
+      <AuthTestProvider
+        settings={{ workMinutes: WORK_MINUTES, breakMinutes: 1 }}
+        timer={{ tasks }}
+        onStore={(created) => {
+          store = created;
+        }}
+      >
         <TimerPage />
       </AuthTestProvider>
     </MemoryRouter>
@@ -60,32 +74,17 @@ function renderTimerPage() {
 
 const engineTile = () => screen.getByRole('region', { name: 'Session' });
 const tasksTile = () => screen.getByRole('region', { name: /Today.s Focus/ });
+const backlogTitles = () =>
+  within(tasksTile())
+    .getAllByRole('listitem')
+    .map((row) => row.querySelector('.tasks-tile__name')?.textContent.trim());
 
-// Each backlog row's binding control: "Focus" until bound, "Active" once bound.
-function focusButton(title) {
-  const row = within(tasksTile()).getByText(title).closest('li');
-  return within(row).getByRole('button', { name: /^(Focus|Active)$/ });
-}
-
-function startButton() {
-  return within(engineTile()).getByRole('button', { name: 'Start' });
-}
-
-function clickControl(name) {
-  fireEvent.click(within(engineTile()).getByRole('button', { name }));
-}
-
-// The engine tile names its bound task, or prompts when nothing is bound.
-function boundTaskText() {
-  return within(engineTile()).getByText((_, element) => element?.className === 'timer-engine__task')
-    .textContent;
-}
-
-describe('Suite B1 — Backlog membership & timer binding', () => {
+describe('B1. Backlog membership and timer binding', () => {
   beforeEach(() => {
     window.localStorage.clear();
     vi.useFakeTimers();
     vi.setSystemTime(START_TIME);
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -93,135 +92,107 @@ describe('Suite B1 — Backlog membership & timer binding', () => {
     window.localStorage.clear();
   });
 
-  it('B1.1 — lists only unresolved tasks in Today’s Focus while retaining the resolved ones', () => {
-    seed([
-      task('t-1', 'Draft the report', 'todo'),
-      task('t-2', 'Review the PR', 'completed', { endedAt: isoAt(-30 * 60 * 1000) }),
-      task('t-3', 'Write the migration', 'terminated', { endedAt: isoAt(-20 * 60 * 1000) }),
-      task('t-4', 'Answer the ticket', 'expired', { endedAt: isoAt(-10 * 60 * 1000) }),
-      task('t-5', 'Plan the sprint', 'todo'),
+  it('B1.1 lists only open tasks, and keeps resolved ones reachable rather than discarding them', () => {
+    renderTimerPage([
+      task('t-1', 'Open work'),
+      task('t-2', 'Finished work', 'completed', HOUR_MS),
+      task('t-3', 'Given up on', 'abandoned', 2 * HOUR_MS),
     ]);
-    renderTimerPage();
 
-    const tile = within(tasksTile());
+    expect(backlogTitles()).toEqual(['Open work']);
+    expect(within(tasksTile()).getByText('1 left')).toBeInTheDocument();
 
-    // Only the two `todo` tasks are queued...
-    expect(tile.getByText('Draft the report')).toBeInTheDocument();
-    expect(tile.getByText('Plan the sprint')).toBeInTheDocument();
-    expect(tile.getAllByRole('listitem')).toHaveLength(2);
-    expect(tile.getByText('2 left')).toBeInTheDocument();
+    // Resolved work is COLLAPSED, not absent: reopening and deleting have to stay reachable, and a
+    // completed task nobody can find again is indistinguishable from one that was lost.
+    const disclosure = within(tasksTile()).getByRole('button', { name: /Show resolved \(2\)/ });
+    expect(within(tasksTile()).queryByText('Finished work')).not.toBeInTheDocument();
 
-    // ...every resolved status is dequeued, regardless of how it resolved.
-    expect(tile.queryByText('Review the PR')).not.toBeInTheDocument();
-    expect(tile.queryByText('Write the migration')).not.toBeInTheDocument();
-    expect(tile.queryByText('Answer the ticket')).not.toBeInTheDocument();
+    fireEvent.click(disclosure);
 
-    // Dequeued is not deleted: all five records survive in the task record with
-    // their outcome intact, so the stats layer can still read them.
-    const stored = getTasks();
-    expect(stored).toHaveLength(5);
-    expect(stored.map((t) => t.status)).toEqual([
-      'todo',
-      'completed',
-      'terminated',
-      'expired',
-      'todo',
-    ]);
+    expect(within(tasksTile()).getByText('Finished work')).toBeInTheDocument();
+    expect(within(tasksTile()).getByText(/Given up on/)).toBeInTheDocument();
   });
 
-  it('B1.2 — binds a selected task to the timer and enables Start', () => {
-    seed([task('t-1', 'Draft the report', 'todo')]);
-    renderTimerPage();
+  it('B1.2 arms the engine only once a task is selected', () => {
+    renderTimerPage([task('t-1', 'Draft the report')]);
 
-    // Before selection the engine has nothing to run.
-    expect(boundTaskText()).toBe('Pick a task to begin');
-    expect(startButton()).toBeDisabled();
-    expect(
-      within(engineTile()).getByText(/Select a task from Today.s Focus to enable Start/)
-    ).toBeInTheDocument();
+    // Nothing bound: Start is disabled and the tile says why.
+    expect(within(engineTile()).getByRole('button', { name: 'Start' })).toBeDisabled();
+    expect(within(engineTile()).getByText('Pick a task to begin')).toBeInTheDocument();
 
-    fireEvent.click(focusButton('Draft the report'));
+    const row = within(tasksTile()).getByText('Draft the report').closest('li');
+    fireEvent.click(within(row).getByRole('button', { name: 'Focus' }));
 
-    // The task is now the active one — the row reports it and cannot re-select
-    // itself, the engine names it, and Start is armed.
-    const bound = focusButton('Draft the report');
-    expect(bound).toHaveTextContent('Active');
-    expect(bound).toHaveAttribute('aria-pressed', 'true');
-    expect(bound).toBeDisabled();
-
-    expect(boundTaskText()).toBe('Draft the report');
-    expect(startButton()).toBeEnabled();
+    expect(within(engineTile()).getByRole('button', { name: 'Start' })).toBeEnabled();
+    expect(within(engineTile()).getByText('Draft the report')).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Active' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
-  it('B1.3 — freezes task binding while a session is running or paused', () => {
-    seed([task('t-1', 'Draft the report', 'todo'), task('t-2', 'Plan the sprint', 'todo')]);
-    renderTimerPage();
+  it('B1.3 will not re-point a block that is already running', () => {
+    renderTimerPage([task('t-1', 'First task'), task('t-2', 'Second task')]);
 
-    // Baseline: while idle, binding can be re-pointed freely.
-    fireEvent.click(focusButton('Draft the report'));
-    fireEvent.click(focusButton('Plan the sprint'));
-    expect(boundTaskText()).toBe('Plan the sprint');
+    const first = within(tasksTile()).getByText('First task').closest('li');
+    fireEvent.click(within(first).getByRole('button', { name: 'Focus' }));
+    fireEvent.click(within(engineTile()).getByRole('button', { name: 'Start' }));
 
-    fireEvent.click(focusButton('Draft the report'));
-    expect(boundTaskText()).toBe('Draft the report');
+    const second = within(tasksTile()).getByText('Second task').closest('li');
+    const focusSecond = within(second).getByRole('button', { name: 'Focus' });
 
-    clickControl('Start');
+    expect(focusSecond).toBeDisabled();
 
-    // Every binding control in the backlog is now non-actionable — the bound
-    // row and the unbound one alike.
-    const controls = within(tasksTile()).getAllByRole('button', { name: /^(Focus|Active)$/ });
-    expect(controls).toHaveLength(2);
-    controls.forEach((control) => expect(control).toBeDisabled());
-
-    // And the attempt is genuinely inert, not merely styled as such: clicking
-    // through leaves the running block bound to its own task.
-    fireEvent.click(focusButton('Plan the sprint'));
-    expect(boundTaskText()).toBe('Draft the report');
-
-    // Pausing is not idle either — the block is still mid-flight.
-    clickControl('Pause');
-    expect(focusButton('Plan the sprint')).toBeDisabled();
-    fireEvent.click(focusButton('Plan the sprint'));
-    expect(boundTaskText()).toBe('Draft the report');
-
-    // Resolving the block returns the queue to a bindable state.
-    clickControl('Resume');
-    clickControl('Terminate');
-
-    expect(focusButton('Plan the sprint')).toBeEnabled();
-    fireEvent.click(focusButton('Plan the sprint'));
-    expect(boundTaskText()).toBe('Plan the sprint');
+    // Even if the control were actuated, the bound task does not change: the record being built
+    // already carries the title it started with.
+    act(() => {
+      fireEvent.click(focusSecond);
+    });
+    expect(within(engineTile()).getByText('First task')).toBeInTheDocument();
   });
 
-  it('B1.4 — creates an expiry-trackable record when a task is added', () => {
-    seed([]);
+  it('B1.4 shows a newly added task at once and sends it to the server', async () => {
+    let resolveCreate;
+    vi.mocked(tasksService.createTask).mockReturnValue(
+      new Promise((resolve) => {
+        resolveCreate = resolve;
+      })
+    );
+
     renderTimerPage();
 
-    const input = screen.getByLabelText('Add a task for today');
-    const add = screen.getByRole('button', { name: 'Add' });
+    fireEvent.change(screen.getByLabelText(/Add a task/i), {
+      target: { value: '  Write the abstract  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
 
-    fireEvent.change(input, { target: { value: 'Draft the report' } });
-    fireEvent.click(add);
+    // Optimistic: a task is the user's own text, so showing it before the server agrees is honest.
+    expect(within(tasksTile()).getByText('Write the abstract')).toBeInTheDocument();
+    expect(within(tasksTile()).getByText(/saving/i)).toBeInTheDocument();
 
-    const [created] = getTasks();
-    expect(created).toMatchObject({ title: 'Draft the report', status: 'todo' });
-    // The two fields reconcileTasks keys off: a stable identity and a parseable
-    // ISO creation stamp taken at the moment of creation.
-    expect(created.id).toEqual(expect.any(String));
-    expect(created.id).not.toBe('');
-    expect(created.createdAt).toBe(START_TIME.toISOString());
-    expect(Number.isNaN(Date.parse(created.createdAt))).toBe(false);
+    // Trimmed at the boundary, so the server never sees the user's stray spaces.
+    expect(tasksService.createTask).toHaveBeenCalledWith({ title: 'Write the abstract' });
 
-    // It is queued immediately, and a second task gets its own identity.
-    fireEvent.change(input, { target: { value: 'Plan the sprint' } });
-    fireEvent.click(add);
+    await act(async () => {
+      resolveCreate(task('server-1', 'Write the abstract'));
+    });
 
-    const stored = getTasks();
-    expect(stored).toHaveLength(2);
-    expect(stored[1].id).not.toBe(stored[0].id);
-    expect(stored[1]).toMatchObject({ title: 'Plan the sprint', status: 'todo' });
+    expect(within(tasksTile()).queryByText(/saving/i)).not.toBeInTheDocument();
+    expect(store.getState().timer.tasks[0].id).toBe('server-1');
+  });
 
-    expect(within(tasksTile()).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(tasksTile()).getByText('2 left')).toBeInTheDocument();
+  it('B1.5 refuses to start a block against a task the server has not acknowledged yet', () => {
+    // A task still in flight has a local id the API would reject, so the block must wait for the
+    // real one. One round trip, so the state is momentary.
+    vi.mocked(tasksService.createTask).mockReturnValue(new Promise(() => {}));
+
+    renderTimerPage();
+
+    fireEvent.change(screen.getByLabelText(/Add a task/i), { target: { value: 'Brand new task' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    const row = within(tasksTile()).getByText('Brand new task').closest('li');
+    expect(within(row).getByRole('button', { name: 'Focus' })).toBeDisabled();
+    expect(within(engineTile()).getByRole('button', { name: 'Start' })).toBeDisabled();
   });
 });

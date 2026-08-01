@@ -7,8 +7,14 @@ import TimerEngineTile from '../../components/timer/TimerEngineTile.jsx';
  * The tile is presentational: every piece of timer state arrives as props, so the
  * contract worth proving is which controls exist in each lifecycle phase and what
  * they dispatch. `Start` is the only control gated by a `disabled` attribute (via
- * `canStart`); the other four are phase-scoped renders, absent from the DOM
- * entirely outside their phase.
+ * `canStart`); the rest are phase-scoped renders, absent from the DOM entirely
+ * outside their phase.
+ *
+ * The fifth slot is the one that carries meaning: a focus block ends with
+ * `Terminate`, which asks for a reason and writes a terminated record, while a
+ * break ends with `Skip break`, which asks nothing. Leaving a rest early is not
+ * an outcome worth explaining, and prompting for one would train people to lie
+ * to the dialog.
  *
  * Controls are queried by accessible role and name. Class names, copy, the clock
  * format, and the progress geometry are out of scope here.
@@ -34,6 +40,7 @@ function tileProps(overrides = {}) {
     onResume: vi.fn(),
     onRestart: vi.fn(),
     onTerminate: vi.fn(),
+    onSkipBreak: vi.fn(),
     ...overrides,
   };
 }
@@ -56,9 +63,10 @@ describe('A2. Control enablement matrix (TimerEngineTile)', () => {
     expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Terminate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Skip break' })).not.toBeInTheDocument();
   });
 
-  it('A2.2 offers Pause, Restart and Terminate while running, in both work and break', () => {
+  it('A2.2 offers Pause and Restart while running, and an exit that matches the phase', () => {
     const props = tileProps({
       phase: 'work',
       isIdle: false,
@@ -71,32 +79,45 @@ describe('A2. Control enablement matrix (TimerEngineTile)', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
+    // Focus: the exit is the one that asks why.
     expect(screen.getByRole('button', { name: 'Terminate' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Skip break' })).not.toBeInTheDocument();
 
-    // The running row is phase-agnostic: a break offers exactly the same controls.
     rerender(<TimerEngineTile {...props} phase="break" />);
 
+    // The first four slots are phase-agnostic...
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Resume' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Terminate' })).toBeInTheDocument();
+
+    // ...but the exit is not. Offering Terminate here would demand a termination reason for
+    // declining a rest, and the reason list has no honest answer to that.
+    expect(screen.getByRole('button', { name: 'Skip break' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Terminate' })).not.toBeInTheDocument();
   });
 
-  it('A2.3 swaps Pause for Resume while paused, keeping Restart and Terminate', () => {
+  it('A2.3 swaps Pause for Resume while paused, keeping Restart and the phase exit', () => {
     const props = tileProps({
       phase: 'work',
       isIdle: false,
       isPaused: true,
       canStart: true,
     });
-    render(<TimerEngineTile {...props} />);
+    const { rerender } = render(<TimerEngineTile {...props} />);
 
     expect(screen.queryByRole('button', { name: 'Start' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Restart' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Terminate' })).toBeInTheDocument();
+
+    // Pausing does not change which exit a phase owns — a paused break is still a break.
+    rerender(<TimerEngineTile {...props} phase="break" />);
+
+    expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Skip break' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Terminate' })).not.toBeInTheDocument();
   });
 
   it('A2.4 dispatches each rendered control once and dispatches nothing from a disabled Start', () => {
@@ -113,6 +134,14 @@ describe('A2. Control enablement matrix (TimerEngineTile)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
     expect(props.onPause).toHaveBeenCalledTimes(1);
     expect(props.onRestart).toHaveBeenCalledTimes(1);
+    expect(props.onTerminate).toHaveBeenCalledTimes(1);
+
+    rerender(<TimerEngineTile {...props} phase="break" isIdle={false} isRunning />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Skip break' }));
+    expect(props.onSkipBreak).toHaveBeenCalledTimes(1);
+    // The break exit is its own handler: routing it through onTerminate would land a terminated
+    // record with a reason nobody gave.
     expect(props.onTerminate).toHaveBeenCalledTimes(1);
 
     rerender(<TimerEngineTile {...props} phase="work" isIdle={false} isPaused />);

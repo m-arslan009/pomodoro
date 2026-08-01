@@ -9,6 +9,7 @@ import {
   userUpdated,
 } from '../store/authSlice.js';
 import { loadSettings } from '../store/settingsSlice.js';
+import { hydrateTimer } from '../store/timerSlice.js';
 
 /**
  * The only way components read authentication state. Components never import the auth service
@@ -48,22 +49,41 @@ export default function useAuth() {
     dispatch(loadSettings());
   }, [dispatch]);
 
+  /*
+   * Tasks, history and progression are fetched once per session, on the same terms and for the same
+   * reason as preferences: signing in is the only moment an authenticated session begins.
+   *
+   * ONCE IS ENOUGH, and only because the token is memory-only. A reload IS a sign-in, so the store
+   * can never be staler than the current session — that is why this needs no refetch-on-focus, no
+   * polling and no cache invalidation. It would not be true of an app with a refresh token.
+   *
+   * Not awaited: the Timer page renders and is fully usable while this is in flight, so blocking
+   * the login form on it would add a spinner for data nothing is waiting on. A failure lands in the
+   * slice as `status: 'error'` and History shows what it has behind a retry — it must never turn a
+   * successful sign-in into a failed one.
+   */
+  const hydrateTimerData = useCallback(() => {
+    dispatch(hydrateTimer());
+  }, [dispatch]);
+
   const signIn = useCallback(
     async (credentials) => {
       const session = await dispatch(login(credentials)).unwrap();
       fetchPreferences();
+      hydrateTimerData();
       return session.user;
     },
-    [dispatch, fetchPreferences]
+    [dispatch, fetchPreferences, hydrateTimerData]
   );
 
   const signUp = useCallback(
     async (values) => {
       const session = await dispatch(signUpThunk(values)).unwrap();
       fetchPreferences();
+      hydrateTimerData();
       return session.user;
     },
-    [dispatch, fetchPreferences]
+    [dispatch, fetchPreferences, hydrateTimerData]
   );
 
   const signOut = useCallback(async () => {

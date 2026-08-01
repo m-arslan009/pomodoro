@@ -1,11 +1,16 @@
+import { memo } from 'react';
+
 /*
  * HistoryTile — bottom-right tile: the day's processed-block stream.
  *
- * Renders today's finished focus blocks newest-first as a compact table, with a
- * status badge that visually distinguishes Completed (forest accent) from
- * Terminated (crimson). New rows are appended in real time by TimerPage the
- * moment a session ends. The table scrolls locally on narrow widths instead of
- * widening the page.
+ * Renders today's finished FOCUS blocks newest-first as a compact table, with a
+ * status badge that distinguishes Completed from Terminated by shape and text,
+ * never colour alone. New rows appear the moment a session ends. The table
+ * scrolls locally on narrow widths instead of widening the page.
+ *
+ * Break intervals are recorded too, but TimerPage filters them out before they
+ * get here — a break is not a focus block and counting it as one would double
+ * every number on this tile (edge case E12).
  */
 
 function formatTime(iso) {
@@ -49,9 +54,9 @@ function HistoryTile({ entries }) {
             </thead>
             <tbody>
               {entries.map((entry) => (
-                <tr key={entry.id}>
+                <tr key={entry.clientSessionId}>
                   <td className="history-tile__task">{entry.taskTitle}</td>
-                  <td>{formatDuration(entry.durationMs)}</td>
+                  <td>{formatDuration(entry.actualDurationMs)}</td>
                   <td>{formatTime(entry.endedAt)}</td>
                   <td>
                     <span className={`history-badge history-badge--${entry.status}`}>
@@ -68,4 +73,4 @@ function HistoryTile({ entries }) {
   );
 }
 
-export default HistoryTile;
+export default memo(HistoryTile);

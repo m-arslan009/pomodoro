@@ -1,28 +1,46 @@
+import { memo, useState } from 'react';
+import TaskRow from './TaskRow.jsx';
+
 /*
- * TasksTile — bottom-left tile: today's active backlog.
+ * TasksTile — bottom-left tile: the open backlog, and a way back to what is already resolved.
  *
- * Lists only tasks still to do (status 'todo'); tasks whose session is completed
- * or terminated leave this list but are kept (with their outcome) in the task
- * record. Each row has two quick actions: "Focus" binds the task as the active
- * one for the next session (Start stays disabled until something is active), and
- * a complete toggle marks it done. Selecting the active task is disabled while a
- * session runs so the running block can't be re-pointed mid-flight.
+ * A TASK LEAVES THIS LIST ONLY WHEN THE USER SAYS SO (CONTRACT.md §14.3 rules 4-6). Finishing a
+ * pomodoro does not finish the task, abandoning a block does not abandon it, and nothing expires:
+ * a task spans as many pomodoros as it takes. The previous build did all three, so real work that
+ * outlived a day or a single block silently disappeared.
  *
- * The add-task form is provided by TimerPage as `children` and rendered in the
- * footer so a user can add as many tasks as they like at any time. When the day
- * starts with no tasks at all, the empty state prompts the user to add some.
+ * Resolved tasks are COLLAPSED, NOT ABSENT. Reopening and deleting have to stay reachable, and a
+ * completed task that cannot be found again is indistinguishable from one that was lost.
+ *
+ * Composition only: row behaviour lives in TaskRow. Memoised because it sits beside a countdown and
+ * its own props change only when a task does (defect F6).
  */
 
 function TasksTile({
-  tasks,
+  backlog,
+  resolvedTasks,
   activeTaskId,
   canChangeTask,
-  handledToday,
+  canMutate,
+  loading,
+  failed,
+  onRetry,
   onFocusTask,
-  onCompleteTask,
+  onRenameTask,
+  onSetTaskStatus,
+  onDeleteTask,
   children,
 }) {
-  const backlog = tasks.filter((task) => task.status === 'todo');
+  const [showResolved, setShowResolved] = useState(false);
+
+  const rowProps = {
+    canChangeTask,
+    canMutate,
+    onFocus: onFocusTask,
+    onRename: onRenameTask,
+    onSetStatus: onSetTaskStatus,
+    onDelete: onDeleteTask,
+  };
 
   return (
     <section className="timer-tile tasks-tile" aria-labelledby="tasks-heading">
@@ -36,58 +54,57 @@ function TasksTile({
       <div className="tasks-tile__body">
         {backlog.length > 0 ? (
           <ul className="tasks-tile__list">
-            {backlog.map((task) => {
-              const isActive = task.id === activeTaskId;
-              return (
-                <li
-                  key={task.id}
-                  className={`tasks-tile__item${isActive ? ' tasks-tile__item--active' : ''}`}
-                >
-                  <span className="tasks-tile__name">{task.title}</span>
-                  <span className="tasks-tile__actions">
-                    <button
-                      type="button"
-                      className="tasks-tile__action"
-                      onClick={() => onFocusTask(task.id)}
-                      disabled={!canChangeTask || isActive}
-                      aria-pressed={isActive}
-                    >
-                      {isActive ? 'Active' : 'Focus'}
-                    </button>
-                    <button
-                      type="button"
-                      className="tasks-tile__action tasks-tile__action--check"
-                      onClick={() => onCompleteTask(task.id)}
-                      aria-label={`Mark “${task.title}” done`}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        width="16"
-                        height="16"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                        focusable="false"
-                      >
-                        <path d="M20 6 9 17l-5-5" />
-                      </svg>
-                    </button>
-                  </span>
-                </li>
-              );
-            })}
+            {backlog.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                isActive={task.id === activeTaskId}
+                {...rowProps}
+              />
+            ))}
           </ul>
-        ) : handledToday ? (
+        ) : loading ? (
+          <p className="tasks-tile__empty">Loading your tasks…</p>
+        ) : failed ? (
+          /*
+           * An empty backlog and a failed fetch must never look alike. Inviting someone with
+           * twenty open tasks to "add your first one" is worse than showing nothing at all.
+           */
           <p className="tasks-tile__empty">
-            Every task for today is handled. Add another below to keep going. 🌿
+            We could not load your tasks.{' '}
+            <button type="button" className="tasks-tile__inline-btn" onClick={onRetry}>
+              Try again
+            </button>
+          </p>
+        ) : resolvedTasks.length > 0 ? (
+          <p className="tasks-tile__empty">
+            Every task is done. Add another below to keep going. 🌿
           </p>
         ) : (
           <p className="tasks-tile__empty">
-            No tasks yet for today. Add your first one below to start focusing.
+            No tasks yet. Add your first one below to start focusing.
           </p>
+        )}
+
+        {resolvedTasks.length > 0 && (
+          <div className="tasks-tile__resolved">
+            <button
+              type="button"
+              className="tasks-tile__disclosure"
+              aria-expanded={showResolved}
+              onClick={() => setShowResolved((open) => !open)}
+            >
+              {showResolved ? 'Hide' : 'Show'} resolved ({resolvedTasks.length})
+            </button>
+
+            {showResolved && (
+              <ul className="tasks-tile__list tasks-tile__list--resolved">
+                {resolvedTasks.map((task) => (
+                  <TaskRow key={task.id} task={task} isActive={false} {...rowProps} />
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
 
@@ -96,4 +113,4 @@ function TasksTile({
   );
 }
 
-export default TasksTile;
+export default memo(TasksTile);

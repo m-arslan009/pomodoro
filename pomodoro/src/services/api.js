@@ -148,5 +148,7 @@ export const api = {
   post: (path, body) => request(path, { method: 'POST', body }),
   patch: (path, body) => request(path, { method: 'PATCH', body }),
   put: (path, body) => request(path, { method: 'PUT', body }),
+  /** Resolves to null: the API answers 204 with no body for a successful delete. */
+  del: (path) => request(path, { method: 'DELETE' }),
   getBlob: (path) => request(path, { blob: true }),
 };

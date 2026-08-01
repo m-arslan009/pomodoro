@@ -23,11 +23,15 @@ const TICK_MS = 250; // matches the hook's internal interval
 
 const START_TIME = new Date('2026-01-01T09:00:00.000Z');
 
-function renderTimer() {
+function renderTimer(options = {}) {
   const onComplete = vi.fn();
-  const view = renderHook(() =>
-    usePomodoroTimer({ workMinutes: WORK_MINUTES, breakMinutes: BREAK_MINUTES, onComplete })
-  );
+  const view = renderHook((props) => usePomodoroTimer({ ...props, onComplete }), {
+    initialProps: {
+      workMinutes: WORK_MINUTES,
+      breakMinutes: BREAK_MINUTES,
+      ...options,
+    },
+  });
   return { ...view, onComplete };
 }
 
@@ -61,7 +65,11 @@ describe('A1. Phase transition engine (usePomodoroTimer)', () => {
     advance(WORK_MS);
 
     expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(onComplete).toHaveBeenCalledWith('work');
+    // The second argument is the record-shaped description the page finalizes from.
+    expect(onComplete).toHaveBeenCalledWith('work', expect.objectContaining({
+      plannedDurationMs: WORK_MS,
+      actualDurationMs: WORK_MS,
+    }));
     expect(result.current.phase).toBe('break');
     expect(result.current.status).toBe('running');
     expect(result.current.remainingMs).toBe(BREAK_MS);
@@ -76,7 +84,7 @@ describe('A1. Phase transition engine (usePomodoroTimer)', () => {
     advance(WORK_MS); // work → break
     advance(BREAK_MS); // break → idle
 
-    expect(onComplete.mock.calls).toEqual([['work'], ['break']]);
+    expect(onComplete.mock.calls.map(([phase]) => phase)).toEqual(['work', 'break']);
     expect(result.current.phase).toBe('idle');
     expect(result.current.status).toBe('idle');
     expect(result.current.remainingMs).toBe(WORK_MS);
@@ -187,5 +195,106 @@ describe('A1. Phase transition engine (usePomodoroTimer)', () => {
     expect(result.current.status).toBe('idle');
     expect(result.current.remainingMs).toBe(WORK_MS);
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('A1.6 reports a break as finished when it is skipped, and returns to idle', () => {
+    const { result, onComplete } = renderTimer();
+
+    act(() => {
+      result.current.start();
+    });
+    advance(WORK_MS); // work → break
+    advance(20 * 1000); // 20 s into the break
+
+    act(() => {
+      result.current.skipBreak();
+    });
+
+    // The break still produces a record: every path out of a running interval does, which is what
+    // lets History treat a missing record as proof the interval never happened.
+    expect(onComplete.mock.calls.map(([phase]) => phase)).toEqual(['work', 'break']);
+    const [, detail] = onComplete.mock.calls[1];
+    expect(detail.actualDurationMs).toBe(20 * 1000);
+    expect(detail.plannedDurationMs).toBe(BREAK_MS);
+
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.remainingMs).toBe(WORK_MS);
+  });
+
+  it('A1.7 excludes paused time from the focused duration a terminated block reports', () => {
+    const { result } = renderTimer();
+
+    act(() => {
+      result.current.start();
+    });
+    advance(60 * 1000); // a minute of actual focus
+
+    act(() => {
+      result.current.pause();
+    });
+    advance(10 * 60 * 1000); // ten minutes away from the desk
+
+    act(() => {
+      result.current.resume();
+    });
+    advance(30 * 1000); // half a minute more
+
+    let detail;
+    act(() => {
+      detail = result.current.terminate('interrupted');
+    });
+
+    // 90 s focused inside an 11½-minute span. Reporting the wall clock here is what the server's
+    // "focused time cannot exceed elapsed time" rule exists to catch.
+    expect(detail.actualDurationMs).toBe(90 * 1000);
+    expect(detail.reason).toBe('interrupted');
+
+    const spanMs = new Date(detail.endedAt) - new Date(detail.startedAt);
+    expect(spanMs).toBe(11 * 60 * 1000 + 30 * 1000);
+    expect(detail.actualDurationMs).toBeLessThan(spanMs);
+  });
+
+  it('A1.8 follows a duration change while idle but keeps the one a running block began with', () => {
+    const { result, rerender } = renderTimer();
+
+    // Preferences resolving after mount must reach an idle clock: landing on the page before the
+    // fetch returned used to pin it to the default until a remount (defect F1).
+    rerender({ workMinutes: 50, breakMinutes: 10 });
+    expect(result.current.remainingMs).toBe(50 * 60 * 1000);
+    expect(result.current.totalMs).toBe(50 * 60 * 1000);
+
+    act(() => {
+      result.current.start();
+    });
+    advance(60 * 1000);
+
+    // Changing Settings mid-block must NOT retarget the block already running.
+    rerender({ workMinutes: 5, breakMinutes: 1 });
+
+    expect(result.current.totalMs).toBe(50 * 60 * 1000);
+    expect(result.current.remainingMs).toBe(50 * 60 * 1000 - 60 * 1000);
+  });
+
+  it('A1.9 is born mid-block when handed a draft, rather than mounting idle', () => {
+    const startedAt = new Date(START_TIME.getTime() - 60 * 1000).toISOString();
+    const { result } = renderTimer({
+      initialDraft: {
+        clientSessionId: 'draft-1',
+        type: 'focus',
+        startedAt,
+        plannedDurationMs: WORK_MS,
+        endTime: new Date(START_TIME.getTime() + (WORK_MS - 60 * 1000)).toISOString(),
+        accumulatedMs: 0,
+        pausedAt: null,
+      },
+    });
+
+    // First render, not after an effect: a recovered block never shows 00:00.
+    expect(result.current.phase).toBe('work');
+    expect(result.current.status).toBe('running');
+    expect(result.current.remainingMs).toBe(WORK_MS - 60 * 1000);
+
+    advance(30 * 1000);
+    expect(result.current.remainingMs).toBe(WORK_MS - 90 * 1000);
   });
 });

@@ -671,6 +671,129 @@
   height: 32px;
 }
 
+/* --------------------------------------------- Task CRUD (T2) additions */
+
+/* A row whose mutation is in flight. Dimmed, not disabled-looking: the value shown is the one the
+   user asked for, and it is very likely about to be confirmed. */
+.tasks-tile__item--pending {
+  opacity: 0.6;
+}
+
+.tasks-tile__item--resolved .tasks-tile__name {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.tasks-tile__saving,
+.tasks-tile__tag {
+  font-size: var(--fs-eyebrow);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.tasks-tile__action--danger {
+  color: var(--timer-danger);
+}
+
+.tasks-tile__action--danger:hover:not(:disabled) {
+  background: var(--timer-danger-bg);
+  border-color: var(--timer-danger-border);
+}
+
+/* Inline text button used inside a sentence — a link's weight with a button's semantics. */
+.tasks-tile__inline-btn {
+  padding: 0;
+  font: inherit;
+  color: var(--fg-accent);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tasks-tile__inline-btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.tasks-tile__resolved {
+  margin-top: var(--sp-2);
+  border-top: 1px solid var(--glass-border);
+  padding-top: var(--sp-2);
+}
+
+.tasks-tile__disclosure {
+  width: 100%;
+  padding: 6px 4px;
+  font-size: var(--fs-label);
+  text-align: left;
+  color: var(--fg-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tasks-tile__disclosure:hover {
+  color: var(--fg-brand);
+}
+
+.tasks-tile__disclosure:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.tasks-tile__list--resolved {
+  margin-top: var(--sp-1);
+}
+
+/* -------- Inline rename -------- */
+.tasks-tile__item--editing {
+  padding: 6px;
+}
+
+.task-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+
+.task-edit__input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: var(--fs-body);
+  color: var(--fg-brand);
+  background: var(--glass-bg);
+  border: 1px solid var(--fg-wood);
+}
+
+.task-edit__input:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 1px;
+}
+
+.task-edit__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Records finished but not yet delivered. Stated plainly rather than as an error icon: nothing has
+   gone wrong, and the user's work is safe. */
+.timer-page__sync {
+  margin: 0 0 var(--sp-2);
+  padding: 10px var(--sp-2);
+  border-radius: 12px;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
 .tasks-tile__action--check:hover {
   color: var(--fg-accent);
   border-color: var(--fg-accent);
