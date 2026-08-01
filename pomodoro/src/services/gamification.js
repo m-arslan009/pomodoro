@@ -1,12 +1,21 @@
 /*
- * gamification.js — the points economy and the title/feature ladder. Pure and
+ * gamification.js — the points economy and the title ladder. Pure and
  * side-effect free: it never reads or writes storage or the DOM, so the same
- * functions back the timer, the title badge, and the Settings feature gates, and
- * stay trivially testable.
+ * functions back the timer and the title badge, and stay trivially testable.
  *
- * Titles derive from LIFETIME points, which never decrease; each title unlocks
- * exactly one previewable feature. Thresholds double at each rung, and every
- * tunable lives here so balancing is a one-line change.
+ * Titles derive from LIFETIME points, which never decrease. Thresholds double at
+ * each rung, and every tunable lives here so balancing is a one-line change.
+ *
+ * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.5). Each title used to unlock
+ * exactly one previewable feature. Nothing is gated by points any more: Settings
+ * was ungated on 2026-07-30 (§9.4) and the History charts on 2026-08-01, so
+ * `TITLES[].feature` is currently DEAD DATA on both sides of the mirror —
+ * `scheduling` names a component deleted on 2026-07-30, and the other four name
+ * surfaces that render for everyone. The field is kept rather than removed
+ * because it is `readonly feature: string` on the backend and the two files must
+ * stay identical; the cosmetic ladder (N5) repopulates it. `featureTitle` and
+ * `isFeatureUnlocked` below are retained for the same reason and have no
+ * production caller today.
  *
  * TWO STREAKS, deliberately (CONTRACT.md §14.2):
  *   - currentDayStreak  — consecutive CALENDAR DAYS with at least one completed

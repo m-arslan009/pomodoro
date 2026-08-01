@@ -444,3 +444,20 @@ Rulings given during this prompt, each resolving a Gate-0 decision the analysis 
 `Title`: Cover the History feature with tests
 
 `User prompt`: Create new test cases or reuse existing ones if required for the History feature.
+
+## Un-gate the History/Analytics charts
+
+`Title`: Remove feature gating from Analytics/History so the charts are available to every user from session one
+
+`User prompt`: Analyze the existing Analytics/History UI and compare it against the approved product architecture and CONTRACT.md. The original design gated analytics features behind lifetime-point thresholds, but the approved product direction changed to make these features available to every user from the beginning of their journey. Verify that the implementation follows this approved architecture. If the analytics, charts, task outcomes, trends, and related insights are already accessible to all users, remove all remaining feature-gating artifacts, including lock icons, locked badges (e.g., The Catalyst, The Vanguard), "Reach X lifetime points to unlock" messages, conditional rendering based on points, and any obsolete gating logic. Refactor the code to eliminate dead or unused feature-unlocking mechanisms while preserving the underlying achievement/title system for profile progression if it still exists. If, after reviewing the approved architecture and documentation, the decision is instead to retain feature gating, then restore a complete and consistent gating implementation so that features remain inaccessible until the required point thresholds are reached. Do not leave the application in a partially gated state.
+
+Resolution given during this prompt, after the audit found the documents said the opposite:
+The audit reported that `CONTRACT.md` §9.4 and §22 and `locked_decisions.md` all retained the
+History gates, and that the shipped implementation matched them. The user overrode that record:
+"Remove all remaining feature-gating UI elements from the Analytics and History pages, including
+lock badges, lock icons, and 'Reach X lifetime points to unlock' messages, since these features are
+now available to all users by design. Also remove any obsolete gating logic associated with these
+elements while preserving the underlying achievement/title system if it is still used elsewhere in
+the application."
+
+Recorded as a supersession in `.claude/locked_decisions.md` and as §9.5 + phase H5 in `CONTRACT.md`.

@@ -20,6 +20,14 @@ import {
  * Thresholds are read from the exported TITLES config instead of being restated
  * here, so re-balancing the economy re-points these tests rather than breaking
  * them.
+ *
+ * WHAT `isFeatureUnlocked` STILL GOVERNS (CONTRACT.md §9.5). Nothing in the
+ * shipped product: Settings was ungated on 2026-07-30 and the History charts on
+ * 2026-08-01, so every `TITLES[].feature` key is currently inert. The function
+ * and this suite are retained deliberately — the ladder arithmetic is the
+ * mechanism the cosmetic ladder (N5) reuses, and C1.1's `feature` assertion is
+ * what pins this mirror to backend/src/domain/gamification.ts. Read the cases
+ * below as "the ladder resolves correctly", not "these features are locked".
  */
 
 describe('Suite C1 — Threshold & tier ladder', () => {
@@ -44,8 +52,8 @@ describe('Suite C1 — Threshold & tier ladder', () => {
 
   it('C1.2 — unlocks every tier up to the earned one and no tier beyond it', () => {
     // 4000 lifetime points is exactly The Catalyst's rung: the three tiers at or
-    // below it are earned, and the two above it stay gated even though the user
-    // is well past the first threshold.
+    // below it resolve as earned, and the two above it do not, even though the
+    // user is well past the first threshold.
     expect(isFeatureUnlocked(4000, 'themeEditor')).toBe(true);
     expect(isFeatureUnlocked(4000, 'backgroundAndLabels')).toBe(true);
     expect(isFeatureUnlocked(4000, 'timeUtilization')).toBe(true);

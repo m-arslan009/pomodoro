@@ -30,7 +30,6 @@ const ENTRY_POINTS = [
   'components/history/ComparisonTile.jsx',
   'components/history/OutcomeTile.jsx',
   'components/history/RecentTile.jsx',
-  'components/history/GatedTile.jsx',
 ];
 
 /**

@@ -157,11 +157,12 @@
   border: 0;
 }
 
-/* ------------------------------------------------------------- Gated tiles */
+/* --------------------------------------------------------- Chart tile body */
 /*
  * The chart body sits in its own flex column so the chart / empty state grow to
- * fill the tile exactly as before. When the tile is locked this wrapper is the
- * dimmed, `inert` preview; the lock chip and hint stay fully readable outside it.
+ * fill the tile. This wrapper was also the dimmed, `inert` preview while a tile
+ * was title-locked; the tiles are ungated (CONTRACT.md §9.5) and it is now
+ * layout only.
  */
 .hp-tile__viz {
   display: flex;
@@ -169,44 +170,6 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-}
-
-.hp-tile--locked .hp-tile__viz {
-  opacity: 0.5;
-  filter: grayscale(0.35);
-  user-select: none;
-  /* `inert` already blocks interaction; this only reinforces it visually. */
-}
-
-.hp-lock-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  padding: 5px 11px;
-  border-radius: 999px;
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  color: var(--fg-wood);
-  background: rgba(213, 155, 108, 0.14);
-  border: 1px solid rgba(213, 155, 108, 0.4);
-}
-
-.hp-lock-hint {
-  margin: var(--sp-3) 0 0;
-  padding-top: var(--sp-2);
-  border-top: 1px solid var(--glass-border);
-  font-size: var(--fs-label);
-  line-height: 1.5;
-  color: var(--fg-muted);
-  overflow-wrap: anywhere;
-}
-
-.hp-lock-hint strong {
-  color: var(--fg-brand);
-  font-weight: 600;
 }
 
 /* -------------------------------------------------------------- Empty state */
@@ -780,9 +743,5 @@
   .hp-segment__btn,
   .hp-kpi {
     transition: none;
-  }
-
-  .hp-tile--locked .hp-tile__viz {
-    filter: none;
   }
 }

@@ -7,9 +7,13 @@ import '../styles/TitleBadge.css';
  * Presentational: given the LIFETIME point total (which never regresses on a
  * terminate penalty — see services/gamification.js), it names the highest title
  * earned and renders a progress bar toward the next threshold, plus how many
- * lifetime points remain. Because each title unlocks a previewable feature, this
- * doubles as a hint of what is about to open up. Once every title is earned the
- * bar reads as complete.
+ * lifetime points remain. Once every title is earned the bar reads as complete.
+ *
+ * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.5). A title used to unlock one
+ * previewable feature, so this badge doubled as a hint of what was about to open
+ * up. Nothing is gated by points any more — the copy below says "top rank"
+ * rather than "all features unlocked" because the latter would promise a payload
+ * that no longer exists. The cosmetic ladder (N5) is what gives it one back.
  */
 function TitleBadge({ lifetimePoints = 0 }) {
   const title = currentTitle(lifetimePoints);
@@ -37,7 +41,7 @@ function TitleBadge({ lifetimePoints = 0 }) {
       <p className="title-badge__meta">
         {next
           ? `${remaining.toLocaleString()} lifetime pts to ${next.name}`
-          : 'Every title earned — all features unlocked.'}
+          : 'Every title earned — you are at the top rank.'}
       </p>
     </section>
   );
