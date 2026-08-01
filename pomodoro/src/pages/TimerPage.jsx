@@ -85,6 +85,8 @@ function TimerPage() {
     renameTask,
     setTaskStatus,
     removeTask,
+    taskError,
+    dismissTaskError,
     finalize,
     retrySync,
     reload,
@@ -434,16 +436,29 @@ function TimerPage() {
     [deleteTarget, sessions]
   );
 
-  // A block in progress pins its task: it may be renamed, but not abandoned or deleted out from
-  // under itself.
-  const canMutateActive = timer.isIdle;
+  /*
+   * Two sources, one toast, and the failure wins.
+   *
+   * A session message reports something the user watched happen; a rolled-back task write is the
+   * opposite — the row snaps back to where it was and nothing else on screen changes. Left unsaid
+   * it is indistinguishable from a button that does nothing, which is how two row actions that
+   * genuinely send different statuses came to look like one.
+   *
+   * The handler is memoised because this page re-renders every second: an inline closure would
+   * restart the toast's auto-dismiss timer on every tick, so it would never dismiss itself while a
+   * block is running.
+   */
+  const dismissNotice = useCallback(() => {
+    setNotification(null);
+    dismissTaskError();
+  }, [dismissTaskError]);
 
   return (
     <AppLayout>
       <Notification
-        type={notification?.type}
-        message={notification?.message}
-        onClose={() => setNotification(null)}
+        type={taskError ? 'error' : notification?.type}
+        message={taskError ?? notification?.message}
+        onClose={dismissNotice}
       />
 
       {recoveryDraft && (
@@ -540,7 +555,7 @@ function TimerPage() {
             resolvedTasks={resolvedTasks}
             activeTaskId={activeTaskId}
             canChangeTask={timer.isIdle}
-            canMutate={canMutateActive}
+            timerIdle={timer.isIdle}
             loading={backlogHydration.status === 'loading'}
             failed={backlogHydration.status === 'error'}
             onRetry={reload}

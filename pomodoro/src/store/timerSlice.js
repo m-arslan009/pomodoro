@@ -71,6 +71,15 @@ const initialState = {
    */
   status: 'idle',
   error: null,
+  /**
+   * The last task write that failed, in the user's language.
+   *
+   * SEPARATE FROM `error`, which is the hydration roll-up: `rollUp` overwrites that field on every
+   * hydration outcome, so a rollback message parked there would be erased by the next read — and
+   * the banner reads `hydration`, not `error`, so nothing rendered it in the first place. A silent
+   * rollback is indistinguishable from a button that does nothing.
+   */
+  taskError: null,
 };
 
 /** Recompute the roll-up after any per-resource change. Loading wins, then error, then ready. */
@@ -248,6 +257,7 @@ function clearTimer(state) {
   state.truncated = false;
   state.status = 'idle';
   state.error = null;
+  state.taskError = null;
 }
 
 const timerSlice = createSlice({
@@ -280,6 +290,11 @@ const timerSlice = createSlice({
 
     tasksPageLoaded(state, action) {
       state.tasks = mergeTasks(state.tasks, action.payload);
+    },
+
+    /** The user has read the rollback message. */
+    taskErrorCleared(state) {
+      state.taskError = null;
     },
   },
 
@@ -377,6 +392,7 @@ const timerSlice = createSlice({
        * unlike points, which are a claim the server can contradict.
        */
       .addCase(createTask.pending, (state, action) => {
+        state.taskError = null;
         state.tasks.push({
           id: provisionalId(),
           title: action.meta.arg.title,
@@ -396,10 +412,11 @@ const timerSlice = createSlice({
       })
       .addCase(createTask.rejected, (state, action) => {
         state.tasks = state.tasks.filter((task) => task.requestId !== action.meta.requestId);
-        state.error = action.error?.message ?? 'We could not add that task.';
+        state.taskError = action.error?.message ?? 'We could not add that task.';
       })
 
       .addCase(updateTask.pending, (state, action) => {
+        state.taskError = null;
         const task = state.tasks.find((item) => item.id === action.meta.arg.id);
         if (!task) return;
         task.previous = { ...task };
@@ -429,10 +446,17 @@ const timerSlice = createSlice({
 
         const { previous } = state.tasks[index];
         if (previous) state.tasks[index] = { ...previous };
-        state.error = action.error?.message ?? 'We could not save that change.';
+
+        /*
+         * The row is back where it started, which is the honest outcome — but a rollback nobody is
+         * told about looks exactly like a button that does nothing, and two different buttons that
+         * both do nothing look like the same button.
+         */
+        state.taskError = action.error?.message ?? 'We could not save that change.';
       })
 
       .addCase(deleteTask.pending, (state, action) => {
+        state.taskError = null;
         const task = state.tasks.find((item) => item.id === action.meta.arg.id);
         if (task) task.removing = true;
       })
@@ -450,7 +474,7 @@ const timerSlice = createSlice({
         }
 
         delete state.tasks[index].removing;
-        state.error = action.error?.message ?? 'We could not delete that task.';
+        state.taskError = action.error?.message ?? 'We could not delete that task.';
       })
 
       /* Everything here belongs to an account, so it leaves with the account. */
@@ -460,5 +484,6 @@ const timerSlice = createSlice({
   },
 });
 
-export const { sessionFinalized, sessionsPageLoaded, tasksPageLoaded } = timerSlice.actions;
+export const { sessionFinalized, sessionsPageLoaded, tasksPageLoaded, taskErrorCleared } =
+  timerSlice.actions;
 export default timerSlice.reducer;

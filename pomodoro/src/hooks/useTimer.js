@@ -7,6 +7,7 @@ import {
   hydrateTimer,
   recordSession,
   sessionFinalized,
+  taskErrorCleared,
   updateTask,
 } from '../store/timerSlice.js';
 import {
@@ -19,6 +20,7 @@ import {
   selectRejectedSessions,
   selectResolvedTasks,
   selectSessionsTruncated,
+  selectTaskError,
   selectTimerError,
   selectTimerStatus,
 } from '../store/timerSelectors.js';
@@ -37,13 +39,15 @@ import {
  *
  * @returns {{
  *   backlog: object[], resolvedTasks: object[], sessions: object[], gamification: object,
- *   status: 'idle'|'loading'|'ready'|'error', error: string|null, pendingSync: number,
+ *   status: 'idle'|'loading'|'ready'|'error', error: string|null, taskError: string|null,
+ *   pendingSync: number,
  *   rejectedSessions: object[], hydrationFailures: {key: string, label: string, error: string}[],
  *   backlogHydration: {status: string, error: string|null}, sessionsTruncated: boolean,
  *   addTask: (title: string) => Promise<object>,
  *   renameTask: (id: string, title: string) => Promise<object>,
  *   setTaskStatus: (id: string, status: string) => Promise<object>,
  *   removeTask: (id: string) => Promise<object>,
+ *   dismissTaskError: () => void,
  *   finalize: (record: object) => Promise<object>,
  *   retrySync: () => void,
  *   reload: () => void,
@@ -58,6 +62,7 @@ export default function useTimer() {
   const gamification = useSelector(selectGamification);
   const status = useSelector(selectTimerStatus);
   const error = useSelector(selectTimerError);
+  const taskError = useSelector(selectTaskError);
   const pendingSync = useSelector(selectPendingSyncCount);
   const rejectedSessions = useSelector(selectRejectedSessions);
   const hydrationFailures = useSelector(selectHydrationFailures);
@@ -77,6 +82,8 @@ export default function useTimer() {
   );
 
   const removeTask = useCallback((id) => dispatch(deleteTask({ id })), [dispatch]);
+
+  const dismissTaskError = useCallback(() => dispatch(taskErrorCleared()), [dispatch]);
 
   /**
    * Adopt a finalized record and deliver it.
@@ -104,6 +111,7 @@ export default function useTimer() {
       gamification,
       status,
       error,
+      taskError,
       pendingSync,
       rejectedSessions,
       hydrationFailures,
@@ -113,6 +121,7 @@ export default function useTimer() {
       renameTask,
       setTaskStatus,
       removeTask,
+      dismissTaskError,
       finalize,
       retrySync,
       reload,
@@ -124,6 +133,7 @@ export default function useTimer() {
       gamification,
       status,
       error,
+      taskError,
       pendingSync,
       rejectedSessions,
       hydrationFailures,
@@ -133,6 +143,7 @@ export default function useTimer() {
       renameTask,
       setTaskStatus,
       removeTask,
+      dismissTaskError,
       finalize,
       retrySync,
       reload,

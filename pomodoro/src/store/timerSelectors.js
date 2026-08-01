@@ -27,6 +27,17 @@ export const selectTimerStatus = (state) => state.timer.status;
 /** @param {{timer: object}} state */
 export const selectTimerError = (state) => state.timer.error;
 
+/**
+ * The last task write that failed and was rolled back.
+ *
+ * Its own field rather than `error`, which `rollUp` rewrites on every hydration outcome. Nothing
+ * rendered a rolled-back write before this, so a failed complete or abandon reverted in silence —
+ * which is what makes two different row actions look like one action that does nothing.
+ *
+ * @param {{timer: object}} state
+ */
+export const selectTaskError = (state) => state.timer.taskError ?? null;
+
 /** Lifetime points drive the title ladder, and never decrease. */
 export const selectLifetimePoints = createSelector(
   selectGamification,

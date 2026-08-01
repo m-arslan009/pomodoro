@@ -690,6 +690,14 @@
   font-size: var(--fs-eyebrow);
   color: var(--fg-muted);
   white-space: nowrap;
+  /* The title above is struck through; the outcome label describing it is not. */
+  text-decoration: none;
+}
+
+/* Completed and abandoned are different outcomes, so they do not read alike. The WORD carries the
+   distinction; the existing danger accent — no new colour — only reinforces it. */
+.tasks-tile__tag--abandoned {
+  color: var(--timer-danger);
 }
 
 .tasks-tile__action--danger {

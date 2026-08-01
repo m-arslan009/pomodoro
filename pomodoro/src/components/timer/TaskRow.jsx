@@ -9,8 +9,12 @@ import { TITLE_MAX_LENGTH } from '../../services/tasks.js';
  * belong to the row.
  *
  * The rules it enforces:
- *   - The ACTIVE task cannot be abandoned or deleted while its block runs. Renaming is fine — the
- *     running block took its own title snapshot when it started, so a rename cannot disturb it.
+ *   - The ACTIVE task cannot be abandoned or deleted while its block runs (§14.5 rule 3). THE
+ *     ACTIVE ONE ONLY: the guard used to read "the timer is idle" and was handed to every row
+ *     alike, so starting a block froze abandon and delete across the whole backlog. A block pins
+ *     the work it is recording against; it has no claim on the rest of the list.
+ *     Renaming is fine even there — the running block took its own title snapshot when it started,
+ *     so a rename cannot disturb it.
  *   - A task whose id is still provisional cannot be focused: the id would be sent with the
  *     session and rejected. One round trip, so the state is momentary.
  *   - Empty or unchanged titles are a no-op that restores the previous value, never a request.
@@ -20,7 +24,7 @@ function TaskRow({
   task,
   isActive,
   canChangeTask,
-  canMutate,
+  timerIdle,
   onFocus,
   onRename,
   onSetStatus,
@@ -37,6 +41,8 @@ function TaskRow({
   const isPending = Boolean(task.pending) || Boolean(task.removing);
   const isDone = task.status === 'completed';
   const isAbandoned = task.status === 'abandoned';
+  /** This row is the one the running block is recording against, so it cannot be removed. */
+  const isPinned = isActive && !timerIdle;
 
   function beginEdit() {
     setDraft(task.title);
@@ -110,7 +116,13 @@ function TaskRow({
       <span className="tasks-tile__name">
         {task.title}
         {isPending && <span className="tasks-tile__saving"> saving…</span>}
-        {isAbandoned && <span className="tasks-tile__tag"> abandoned</span>}
+        {/*
+          Both outcomes are named. A struck-through row with no word on it meant "done" was
+          conveyed only by the absence of "abandoned" — so the two row actions, which do land the
+          task in different statuses, produced results that read as the same thing.
+        */}
+        {isDone && <span className="tasks-tile__tag"> done</span>}
+        {isAbandoned && <span className="tasks-tile__tag tasks-tile__tag--abandoned"> abandoned</span>}
       </span>
 
       <span className="tasks-tile__actions">
@@ -163,8 +175,8 @@ function TaskRow({
               type="button"
               className="tasks-tile__action"
               onClick={() => onSetStatus(task.id, 'abandoned')}
-              disabled={isPending || !canMutate}
-              title={canMutate ? undefined : 'Finish or end the running block first'}
+              disabled={isPending || isPinned}
+              title={isPinned ? 'Finish or end the running block first' : undefined}
             >
               Give up
             </button>
@@ -184,9 +196,9 @@ function TaskRow({
           type="button"
           className="tasks-tile__action tasks-tile__action--danger"
           onClick={() => onDelete(task)}
-          disabled={isPending || !canMutate}
+          disabled={isPending || isPinned}
           aria-label={`Delete “${task.title}”`}
-          title={canMutate ? undefined : 'Finish or end the running block first'}
+          title={isPinned ? 'Finish or end the running block first' : undefined}
         >
           <svg
             viewBox="0 0 24 24"

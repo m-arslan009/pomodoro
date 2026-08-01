@@ -21,7 +21,7 @@ function TasksTile({
   resolvedTasks,
   activeTaskId,
   canChangeTask,
-  canMutate,
+  timerIdle,
   loading,
   failed,
   onRetry,
@@ -33,9 +33,11 @@ function TasksTile({
 }) {
   const [showResolved, setShowResolved] = useState(false);
 
+  // `timerIdle` is a fact about the timer, not a per-row permission: each row decides for itself
+  // what it means, and only the active one is pinned by a running block.
   const rowProps = {
     canChangeTask,
-    canMutate,
+    timerIdle,
     onFocus: onFocusTask,
     onRename: onRenameTask,
     onSetStatus: onSetTaskStatus,
