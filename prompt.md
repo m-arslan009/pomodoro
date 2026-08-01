@@ -461,3 +461,15 @@ elements while preserving the underlying achievement/title system if it is still
 the application."
 
 Recorded as a supersession in `.claude/locked_decisions.md` and as §9.5 + phase H5 in `CONTRACT.md`.
+
+## Task action workflow — Focus feature
+
+`Title`: Fix the task action workflow so Mark as Done and Give Up are distinct and resolved tasks leave the Focus list
+
+`User prompt`: Investigate and fix the task action workflow in the Focus feature. There are three
+related issues that need to be resolved: first, the Mark as Done and Give Up buttons currently
+perform the same action even though they should update the task with different statuses (completed
+vs. abandoned); second, after a task is marked as completed or terminate after focus, it incorrectly
+remains visible in the Focus list instead of being removed immediately and shown only in its
+appropriate history section. Analyze the frontend code to fix this issue. If it requires backend
+analysis then mention it before moving into backend.
