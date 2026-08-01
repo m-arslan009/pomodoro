@@ -11,10 +11,14 @@ import {
 } from '../store/timerSlice.js';
 import {
   selectBacklog,
+  selectBacklogHydration,
   selectFocusSessions,
   selectGamification,
+  selectHydrationFailures,
   selectPendingSyncCount,
+  selectRejectedSessions,
   selectResolvedTasks,
+  selectSessionsTruncated,
   selectTimerError,
   selectTimerStatus,
 } from '../store/timerSelectors.js';
@@ -34,6 +38,8 @@ import {
  * @returns {{
  *   backlog: object[], resolvedTasks: object[], sessions: object[], gamification: object,
  *   status: 'idle'|'loading'|'ready'|'error', error: string|null, pendingSync: number,
+ *   rejectedSessions: object[], hydrationFailures: {key: string, label: string, error: string}[],
+ *   backlogHydration: {status: string, error: string|null}, sessionsTruncated: boolean,
  *   addTask: (title: string) => Promise<object>,
  *   renameTask: (id: string, title: string) => Promise<object>,
  *   setTaskStatus: (id: string, status: string) => Promise<object>,
@@ -53,6 +59,10 @@ export default function useTimer() {
   const status = useSelector(selectTimerStatus);
   const error = useSelector(selectTimerError);
   const pendingSync = useSelector(selectPendingSyncCount);
+  const rejectedSessions = useSelector(selectRejectedSessions);
+  const hydrationFailures = useSelector(selectHydrationFailures);
+  const backlogHydration = useSelector(selectBacklogHydration);
+  const sessionsTruncated = useSelector(selectSessionsTruncated);
 
   const addTask = useCallback((title) => dispatch(createTask({ title })), [dispatch]);
 
@@ -95,6 +105,10 @@ export default function useTimer() {
       status,
       error,
       pendingSync,
+      rejectedSessions,
+      hydrationFailures,
+      backlogHydration,
+      sessionsTruncated,
       addTask,
       renameTask,
       setTaskStatus,
@@ -111,6 +125,10 @@ export default function useTimer() {
       status,
       error,
       pendingSync,
+      rejectedSessions,
+      hydrationFailures,
+      backlogHydration,
+      sessionsTruncated,
       addTask,
       renameTask,
       setTaskStatus,

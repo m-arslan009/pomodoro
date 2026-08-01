@@ -249,8 +249,38 @@
 }
 
 /* =============================================================== Summary */
+/*
+ * Points and streak sit side by side and wrap to a stack when there is no room for both.
+ * `auto-fit` rather than two fixed columns so the pair collapses on content, not on a breakpoint.
+ */
 .hp-summary__hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: var(--sp-2);
   margin-bottom: var(--sp-3);
+}
+
+.hp-summary__streak-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin: 0;
+  font-size: var(--fs-score);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fg-strong, var(--fg-brand));
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-summary__streak-unit {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.hp-summary__streak-best {
+  color: var(--fg-muted);
 }
 
 .hp-summary__score {
@@ -664,16 +694,6 @@
 
 /* Hydration failed, so this view may be partial. History itself never fetches — it says what it
    knows rather than pretending the record is empty. */
-.history-page__notice {
-  margin: 0 0 var(--sp-2, 12px);
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: var(--fs-label);
-  color: var(--fg-muted);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-}
-
 /* Reveals the next page of records; the list is capped, never truncated. */
 .hp-recent__more {
   width: 100%;
@@ -722,6 +742,34 @@
   color: var(--hp-bad);
   background: var(--hp-bad-bg);
   border-color: var(--hp-bad-border);
+}
+
+/*
+ * Delivery state, beside the outcome badge rather than instead of it: they answer different
+ * questions — what the block was, and whether the server has it. Both are text, never colour alone.
+ */
+.hp-badge--sync {
+  margin-left: 6px;
+}
+
+.hp-badge--pending {
+  color: var(--fg-muted);
+  background: var(--glass-bg);
+  border-style: dashed;
+}
+
+.hp-badge--rejected {
+  color: var(--hp-bad);
+  background: var(--hp-bad-bg);
+  border-color: var(--hp-bad-border);
+  font-weight: 600;
+}
+
+/* The captured termination reason. Secondary to the outcome it qualifies. */
+.hp-recent__reason {
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  white-space: nowrap;
 }
 
 /* --------------------------------------------------------- Reduced motion */

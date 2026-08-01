@@ -7,12 +7,7 @@ import ComparisonTile from '../components/history/ComparisonTile.jsx';
 import OutcomeTile from '../components/history/OutcomeTile.jsx';
 import RecentTile from '../components/history/RecentTile.jsx';
 import { summarize, taskOutcomes, buildTimeline } from '../services/history.js';
-import {
-  selectFocusSessions,
-  selectGamification,
-  selectTasks,
-  selectTimerStatus,
-} from '../store/timerSelectors.js';
+import { selectFocusSessions, selectGamification, selectTasks } from '../store/timerSelectors.js';
 import '../styles/HistoryPage.css';
 
 /*
@@ -32,9 +27,14 @@ import '../styles/HistoryPage.css';
  * any slice thunk — even transitively. Selectors come from their own module for exactly that
  * reason.
  *
- * Loading and failure belong to HYDRATION, not to History. A failed hydration renders whatever the
- * store has behind a notice, because showing an empty chart to someone with months of history would
- * be a worse defect than the one this replaced.
+ * Loading and failure belong to HYDRATION, not to History — and since they belong to hydration, the
+ * notice about them belongs to the SHELL, which owns hydration. This page therefore has no status
+ * branch at all: it renders the store unconditionally, and AppLayout's banner says what is missing,
+ * names the read that failed, and offers the retry (§17.4).
+ *
+ * That is not a tidy-up. A retry has to dispatch a thunk, so a Retry button rendered here would drag
+ * services/api.js into this page's import graph and undo the one rule the feature is defined by.
+ * The banner moved so that both halves of §17.4 could be true at once.
  *
  * The daily timeline is built ONCE and shared: the trend chart at its default range and the
  * comparison chart both want it, and each used to walk the full session list for identical output
@@ -46,7 +46,6 @@ function HistoryPage() {
   const sessions = useSelector(selectFocusSessions);
   const tasks = useSelector(selectTasks);
   const gamification = useSelector(selectGamification);
-  const status = useSelector(selectTimerStatus);
 
   const summary = useMemo(
     () => summarize(sessions, tasks, gamification),
@@ -64,12 +63,6 @@ function HistoryPage() {
             Your focus record — points, sessions, and how your tasks resolved.
           </p>
         </header>
-
-        {status === 'error' && (
-          <p className="history-page__notice" role="status">
-            We could not reach the server, so this may be incomplete. Sign in again to refresh it.
-          </p>
-        )}
 
         <div className="history-dashboard">
           <SummaryTile summary={summary} />

@@ -53,41 +53,65 @@ function focusOnly(sessions) {
 }
 
 /**
- * Top-line KPIs. Sessions carry the focus outcomes; tasks carry the to-do
- * outcomes; gamification carries the point economy.
- *   incompleteTasks = every task that never reached 'completed' (todo or abandoned)
+ * Top-line KPIs, and the full `Summary` shape of CONTRACT.md §17.1. Sessions carry
+ * the focus outcomes; tasks carry the to-do outcomes; gamification carries the
+ * point economy and the streaks.
+ *
+ * EVERY FIELD HERE IS RENDERED. §17.1 fixes this shape precisely so it can be
+ * checked, because the version before it carried a `streak` no tile read and a
+ * `longestDayStreak` the app fetched from the server and showed nowhere — a
+ * `Summary` field with no consumer is how the shape starts lying about what
+ * History displays (defect F14).
  *
  * `points` is LIFETIME points, matching the "Lifetime points earned" caption the
  * tile renders. It previously returned `balance` under that caption — the same
  * number while nothing subtracts, but the wrong field, so the first spending rule
  * would have turned the headline figure into a quiet lie (defect F5).
+ *
+ * `focusMinutes` COUNTS TERMINATED BLOCKS TOO. A block honestly ended after twenty
+ * minutes was twenty minutes of focus, and the caption reads "min focused", not
+ * "min completed". This is the termination-penalty supersession applied to the
+ * clock: the product stopped punishing an honest early stop, so it must not
+ * quietly erase the work either. Summing is safe because the server clamps
+ * `actualDurationMs` to the planned length before it ever reaches us (§15.1).
+ *
+ * OPEN AND ABANDONED ARE SEPARATE. They were one `incompleteTasks` field while
+ * taskOutcomes() drew them as two bars on the same page, so the tile and the chart
+ * counted the same tasks two different ways.
  */
 export function summarize(sessions = [], tasks = [], gamification = {}) {
   const focus = focusOnly(sessions);
   const completedSessions = focus.filter((s) => s.status === 'completed').length;
   const terminatedSessions = focus.filter((s) => s.status === 'terminated').length;
   const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const incompleteTasks = tasks.filter((t) => t.status !== 'completed').length;
+  const openTasks = tasks.filter((t) => t.status === 'todo').length;
+  const abandonedTasks = tasks.filter((t) => t.status === 'abandoned').length;
 
   const totalSessions = completedSessions + terminatedSessions;
   const completionRate =
     totalSessions > 0 ? Math.round((completedSessions / totalSessions) * 100) : 0;
 
-  const focusMs = focus
-    .filter((s) => s.status === 'completed')
-    .reduce((sum, s) => sum + (Number.isFinite(s.actualDurationMs) ? s.actualDurationMs : 0), 0);
-  const focusMinutes = Math.round(focusMs / 60000);
+  const focusMs = focus.reduce(
+    (sum, s) => sum + (Number.isFinite(s.actualDurationMs) ? s.actualDurationMs : 0),
+    0
+  );
 
   return {
     points: Number.isFinite(gamification.lifetimePoints) ? gamification.lifetimePoints : 0,
-    streak: Number.isFinite(gamification.currentDayStreak) ? gamification.currentDayStreak : 0,
+    currentDayStreak: Number.isFinite(gamification.currentDayStreak)
+      ? gamification.currentDayStreak
+      : 0,
+    longestDayStreak: Number.isFinite(gamification.longestDayStreak)
+      ? gamification.longestDayStreak
+      : 0,
     completedSessions,
     terminatedSessions,
-    completedTasks,
-    incompleteTasks,
     totalSessions,
+    completedTasks,
+    openTasks,
+    abandonedTasks,
     completionRate,
-    focusMinutes,
+    focusMinutes: Math.round(focusMs / 60000),
   };
 }
 

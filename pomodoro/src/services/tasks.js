@@ -21,8 +21,11 @@ export const TASK_STATUSES = ['todo', 'completed', 'abandoned'];
 /** Mirrors TASK_ESTIMATE_MIN / MAX. Accepted by the API; no control writes it yet. */
 export const ESTIMATE_LIMITS = { min: 1, max: 20 };
 
-/** Mirrors the `limit` bound on every list endpoint. */
+/** Mirrors the `limit` bound on every list endpoint. The largest page the API will serve. */
 export const PAGE_LIMIT_MAX = 100;
+
+/** Runaway guard on the §17.3 cursor loop, not a product bound — see `fetchAllTasks`. */
+export const MAX_TASK_PAGES = 50;
 
 /**
  * A task as the API returns it (CONTRACT.md §16).
@@ -58,6 +61,35 @@ function toQuery(params) {
  */
 export async function fetchTasks(params = {}) {
   return api.get(`/tasks${toQuery(params)}`);
+}
+
+/**
+ * Lists every task matching `params`, following `nextCursor` to exhaustion (§17.3 rule 3).
+ *
+ * The backlog read has no product bound — an open task is a commitment and is never evicted (§17.2,
+ * E18) — so the page cap here is a runaway guard rather than a window. Hitting it would mean an
+ * account with more than 5 000 tasks, which is an N7 conversation, not a rule.
+ *
+ * @param {{status?: string, from?: string}} [params]
+ * @param {{maxPages?: number, onPage?: (tasks: Task[]) => void}} [options]
+ * @returns {Promise<{tasks: Task[], truncated: boolean}>}
+ */
+export async function fetchAllTasks(params = {}, options = {}) {
+  const { maxPages = MAX_TASK_PAGES, onPage } = options;
+  const collected = [];
+  let cursor;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const { tasks, nextCursor } = await fetchTasks({ ...params, cursor, limit: PAGE_LIMIT_MAX });
+
+    collected.push(...tasks);
+    onPage?.(tasks);
+
+    if (!nextCursor) return { tasks: collected, truncated: false };
+    cursor = nextCursor;
+  }
+
+  return { tasks: collected, truncated: true };
 }
 
 /**

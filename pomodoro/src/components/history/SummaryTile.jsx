@@ -1,18 +1,29 @@
 /*
  * SummaryTile — the high-level KPI header. A hero point figure anchors the tile,
- * with the four remaining status metrics (completed/terminated sessions,
- * completed/incomplete tasks) in an auto-fitting grid so they never crowd at
- * intermediate widths, plus a completion-rate bar. Fluid type keeps every value
- * legible from mobile up.
+ * with the day streak beside it, the five status metrics in an auto-fitting grid
+ * so they never crowd at intermediate widths, and a completion-rate bar. Fluid
+ * type keeps every value legible from mobile up.
+ *
+ * IT RENDERS EVERY FIELD OF `Summary` (CONTRACT.md §17.1). That is a rule, not a
+ * layout preference: the shape is fixed at the seam precisely so a field cannot be
+ * computed and then quietly dropped, which is how the day streak came to be
+ * calculated on every render and shown nowhere, and how `longestDayStreak` was
+ * fetched from the server for a tile that never mentioned it (defect F14).
+ *
+ * The task counts are the same three buckets OutcomeTile draws, so the tile and
+ * the chart beside it cannot disagree about the same tasks.
  */
 
 function SummaryTile({ summary }) {
   const {
     points,
+    currentDayStreak,
+    longestDayStreak,
     completedSessions,
     terminatedSessions,
     completedTasks,
-    incompleteTasks,
+    openTasks,
+    abandonedTasks,
     completionRate,
     focusMinutes,
   } = summary;
@@ -21,7 +32,8 @@ function SummaryTile({ summary }) {
     { label: 'Completed sessions', value: completedSessions, tone: 'good' },
     { label: 'Terminated sessions', value: terminatedSessions, tone: 'bad' },
     { label: 'Completed tasks', value: completedTasks, tone: 'good' },
-    { label: 'Incomplete tasks', value: incompleteTasks, tone: 'muted' },
+    { label: 'Open tasks', value: openTasks, tone: 'muted' },
+    { label: 'Abandoned tasks', value: abandonedTasks, tone: 'bad' },
   ];
 
   return (
@@ -34,11 +46,33 @@ function SummaryTile({ summary }) {
       </header>
 
       <div className="hp-summary__hero">
-        <p className="hp-summary__score">
-          <span className="hp-summary__score-value">{points.toLocaleString()}</span>
-          <span className="hp-summary__score-unit">pts</span>
-        </p>
-        <p className="hp-summary__score-caption">Lifetime points earned</p>
+        <div>
+          <p className="hp-summary__score">
+            <span className="hp-summary__score-value">{points.toLocaleString()}</span>
+            <span className="hp-summary__score-unit">pts</span>
+          </p>
+          <p className="hp-summary__score-caption">Lifetime points earned</p>
+        </div>
+
+        {/*
+          The DISPLAYED streak is the day streak (§14.2) — consecutive days with at least one
+          completed session. The session run that fires the +50 bonus is internal and belongs to
+          PointsTile's milestone dots, not here.
+        */}
+        <div className="hp-summary__streak">
+          <p className="hp-summary__streak-value">
+            {currentDayStreak}
+            <span className="hp-summary__streak-unit">
+              {currentDayStreak === 1 ? ' day' : ' days'}
+            </span>
+          </p>
+          <p className="hp-summary__score-caption">
+            Current streak
+            {longestDayStreak > 0 && (
+              <span className="hp-summary__streak-best"> · best {longestDayStreak}</span>
+            )}
+          </p>
+        </div>
       </div>
 
       <dl className="hp-summary__grid">

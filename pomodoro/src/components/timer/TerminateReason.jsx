@@ -1,4 +1,5 @@
 import ModalDialog from '../ModalDialog.jsx';
+import { TERMINATION_REASONS } from '../../services/sessions.js';
 
 /*
  * TerminateReason — the one-tap reason capture shown when a focus block is ended
@@ -15,12 +16,19 @@ import ModalDialog from '../ModalDialog.jsx';
  * and SessionRecovery is not.
  */
 
-const REASONS = [
-  { key: 'interrupted', label: 'Something interrupted me', hint: 'A person, a call, a notification' },
-  { key: 'wrong_task', label: 'Wrong task', hint: 'I picked the wrong thing to work on' },
-  { key: 'finished_early', label: 'Finished early', hint: 'The work was done before the timer was' },
-  { key: 'out_of_energy', label: 'Out of energy', hint: 'I could not keep focusing' },
-];
+/*
+ * Copy only. The KEYS come from services/sessions.js, which mirrors the server enum — this file
+ * used to declare its own identical list, so one product had two copies of one server rule and
+ * nothing would have noticed them drifting apart until a 422 (§15 mirror discipline).
+ */
+const REASON_COPY = {
+  interrupted: { label: 'Something interrupted me', hint: 'A person, a call, a notification' },
+  wrong_task: { label: 'Wrong task', hint: 'I picked the wrong thing to work on' },
+  finished_early: { label: 'Finished early', hint: 'The work was done before the timer was' },
+  out_of_energy: { label: 'Out of energy', hint: 'I could not keep focusing' },
+};
+
+const REASONS = TERMINATION_REASONS.map((key) => ({ key, ...REASON_COPY[key] }));
 
 function TerminateReason({ taskTitle, onSelect, onCancel }) {
   return (

@@ -80,8 +80,7 @@ function TimerPage() {
     resolvedTasks,
     sessions,
     gamification,
-    status,
-    pendingSync,
+    backlogHydration,
     addTask,
     renameTask,
     setTaskStatus,
@@ -489,14 +488,11 @@ function TimerPage() {
           </p>
         </header>
 
-        {pendingSync > 0 && (
-          <p className="timer-page__sync" role="status">
-            {pendingSync} {pendingSync === 1 ? 'session is' : 'sessions are'} waiting to sync.{' '}
-            <button type="button" className="tasks-tile__inline-btn" onClick={retrySync}>
-              Retry now
-            </button>
-          </p>
-        )}
+        {/*
+          The pending-sync strip that used to live here is now part of the shell's hydration
+          banner (§17.4). One message about the account's data, in one place, on every page —
+          rather than a Timer-only dialect of it that History never showed at all.
+        */}
 
         <div className="timer-dashboard">
           <TimerEngineTile
@@ -534,14 +530,19 @@ function TimerPage() {
             bonusEvery={POINTS.consecutiveThreshold}
           />
 
+          {/*
+            The BACKLOG read decides what this tile says, not the roll-up. Reporting "we could not
+            load your tasks" because the points read was slow would be the E9 defect facing the
+            other way — and the tasks would be right there on screen (§17.3 rule 5).
+          */}
           <TasksTile
             backlog={backlog}
             resolvedTasks={resolvedTasks}
             activeTaskId={activeTaskId}
             canChangeTask={timer.isIdle}
             canMutate={canMutateActive}
-            loading={status === 'loading'}
-            failed={status === 'error'}
+            loading={backlogHydration.status === 'loading'}
+            failed={backlogHydration.status === 'error'}
             onRetry={reload}
             onFocusTask={handleFocusTask}
             onRenameTask={renameTask}

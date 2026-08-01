@@ -15,6 +15,44 @@ import { useMemo, useState } from 'react';
 
 const PAGE_SIZE = 50;
 
+/*
+ * The one-tap reason captured when a block is terminated, in the user's words rather than the
+ * wire's. Showing it costs a span and closes the loop on an answer the user already gave — it is
+ * NOT the deferred Focus insight panel (N1), which reads ACROSS reasons and says something the user
+ * does not already know (CONTRACT.md §21).
+ *
+ * DELIBERATELY NOT IMPORTED from services/sessions.js, even though that module owns the enum: a
+ * History component may not import a service, transitively or otherwise (§17.4). This is the seam
+ * doing its job rather than a lapse — History renders a value it was handed on the record, and does
+ * not reach for the module that defines it. An unrecognised value renders readably instead of
+ * vanishing, so a reason added server-side degrades rather than disappears.
+ */
+const REASON_LABELS = {
+  interrupted: 'interrupted',
+  wrong_task: 'wrong task',
+  finished_early: 'finished early',
+  out_of_energy: 'out of energy',
+};
+
+function reasonLabel(reason) {
+  if (!reason) return null;
+  return REASON_LABELS[reason] ?? String(reason).replace(/_/g, ' ');
+}
+
+/*
+ * A record's delivery state (§17.5, edge case E1). `synced` draws nothing: the overwhelming majority
+ * of rows are synced, and a badge on all of them would be noise that makes the two that matter
+ * harder to see.
+ *
+ * `rejected` is the one this exists for. The store has always kept refused records — but it drew
+ * them identically to delivered ones, so "kept and surfaced" was true in the state and false on the
+ * screen, which is the same outcome as dropping them (defect F15).
+ */
+const SYNC_BADGES = {
+  pending: { label: 'Pending', hint: 'Not delivered to the server yet' },
+  rejected: { label: 'Rejected', hint: 'The server refused this record' },
+};
+
 function formatWhen(iso) {
   try {
     const d = new Date(iso);
@@ -76,18 +114,41 @@ function RecentTile({ sessions }) {
                 </tr>
               </thead>
               <tbody>
-                {shown.map((s) => (
-                  <tr key={s.clientSessionId}>
-                    <td className="hp-recent__task">{s.taskTitle}</td>
-                    <td>{formatDuration(s.actualDurationMs)}</td>
-                    <td className="hp-recent__when">{formatWhen(s.endedAt)}</td>
-                    <td>
-                      <span className={`hp-badge hp-badge--${s.status}`}>
-                        {s.status === 'completed' ? 'Completed' : 'Terminated'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {shown.map((s) => {
+                  const sync = SYNC_BADGES[s.syncState];
+                  const reason = s.status === 'terminated' ? reasonLabel(s.terminationReason) : null;
+
+                  return (
+                    <tr key={s.clientSessionId}>
+                      <td className="hp-recent__task">{s.taskTitle}</td>
+                      <td>{formatDuration(s.actualDurationMs)}</td>
+                      <td className="hp-recent__when">{formatWhen(s.endedAt)}</td>
+                      <td>
+                        <span className={`hp-badge hp-badge--${s.status}`}>
+                          {s.status === 'completed' ? 'Completed' : 'Terminated'}
+                        </span>
+                        {reason && <span className="hp-recent__reason"> · {reason}</span>}
+                        {sync && (
+                          /*
+                           * Text, not colour alone, and the detail the server gave is the
+                           * accessible description rather than a tooltip nobody on a touch device
+                           * can reach.
+                           */
+                          <span
+                            className={`hp-badge hp-badge--sync hp-badge--${s.syncState}`}
+                            title={s.rejectionDetail ?? sync.hint}
+                          >
+                            {sync.label}
+                            <span className="hp-visually-hidden">
+                              {' — '}
+                              {s.rejectionDetail ?? sync.hint}
+                            </span>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

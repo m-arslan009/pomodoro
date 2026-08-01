@@ -14,6 +14,19 @@ import { api } from './api.js';
 /** Mirrors HYDRATION_WINDOW_DAYS. Exactly the span History's widest chart can render. */
 export const HYDRATION_WINDOW_DAYS = 180;
 
+/** Mirrors the `limit` bound on every list endpoint (§15). The largest page the API will serve. */
+export const PAGE_LIMIT_MAX = 100;
+
+/**
+ * The §17.2 record cap, expressed in pages: 5 000 / 100.
+ *
+ * Derived, not chosen — if the storage bound moves, this moves with it and nothing else changes.
+ * Reaching it is not an error; it is the IndexedDB (N7) trigger, and it is reported so the banner
+ * can tell the user their view is bounded. A chart that is quietly incomplete is the defect this
+ * whole phase exists to remove.
+ */
+export const MAX_HYDRATION_PAGES = 50;
+
 /** Mirrors TERMINATION_REASONS. Required on a terminated focus block, forbidden otherwise. */
 export const TERMINATION_REASONS = [
   'interrupted',
@@ -90,6 +103,44 @@ export async function fetchSessions(params = {}) {
   }
   const query = search.toString();
   return api.get(`/sessions${query ? `?${query}` : ''}`);
+}
+
+/**
+ * Reads the whole window, following `nextCursor` to exhaustion (§17.3 rule 3).
+ *
+ * `limit` caps a PAGE; §17.2's 180 days and 5 000 records cap the WINDOW. Issuing one request and
+ * leaving `nextCursor` unread silently replaces the second bound with the first, which is how
+ * History came to render at most 100 sessions against a 3 600-record budget — the 7-day prune that
+ * T1 deleted, re-implemented as a page size (defect F12).
+ *
+ * `onPage` is called with each page as it lands so the caller can adopt records progressively. At
+ * full volume this loop is ~36 sequential round trips, and the user must see the charts filling in
+ * rather than a spinner holding a complete answer hostage.
+ *
+ * @param {{from?: string, to?: string}} [params]
+ * @param {{maxPages?: number, onPage?: (sessions: Session[]) => void}} [options]
+ * @returns {Promise<{sessions: Session[], truncated: boolean}>} `truncated` when the cap stopped it
+ */
+export async function fetchAllSessions(params = {}, options = {}) {
+  const { maxPages = MAX_HYDRATION_PAGES, onPage } = options;
+  const collected = [];
+  let cursor;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const { sessions, nextCursor } = await fetchSessions({
+      ...params,
+      cursor,
+      limit: PAGE_LIMIT_MAX,
+    });
+
+    collected.push(...sessions);
+    onPage?.(sessions);
+
+    if (!nextCursor) return { sessions: collected, truncated: false };
+    cursor = nextCursor;
+  }
+
+  return { sessions: collected, truncated: true };
 }
 
 /**

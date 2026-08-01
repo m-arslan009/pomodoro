@@ -66,3 +66,63 @@ export const selectPendingSyncCount = createSelector(
   selectSessions,
   (sessions) => sessions.filter((session) => session.syncState === 'pending').length
 );
+
+/**
+ * Records the server has permanently refused (§17.5).
+ *
+ * They are kept, never dropped — but keeping a rejection nothing renders is the same outcome as
+ * dropping it, arrived at more expensively (defect F15). This is what makes it visible.
+ */
+export const selectRejectedSessions = createSelector(selectSessions, (sessions) =>
+  sessions.filter((session) => session.syncState === 'rejected')
+);
+
+/* ------------------------------------------------------- Hydration state -- */
+
+/** Human labels for the four reads, so the banner can name what is missing. */
+const RESOURCE_LABELS = {
+  sessions: 'your session history',
+  backlog: 'your tasks',
+  resolved: 'your resolved tasks',
+  gamification: 'your points',
+};
+
+/**
+ * Per-resource hydration outcome (§17.3 rule 5).
+ *
+ * Falls back to synthesising all four from the flat `status` when `hydration` is absent. That is not
+ * defensive clutter: `preloadedState` is a public Redux API, so a partially-shaped timer slice is a
+ * state the store can genuinely be in, and a selector that returned `undefined` there would push a
+ * null check into every consumer.
+ */
+export const selectHydration = createSelector(
+  (state) => state.timer.hydration,
+  selectTimerStatus,
+  selectTimerError,
+  (hydration, status, error) => {
+    if (hydration) return hydration;
+    const synthesised = { status: status ?? 'idle', error: error ?? null };
+    return {
+      sessions: synthesised,
+      backlog: synthesised,
+      resolved: synthesised,
+      gamification: synthesised,
+    };
+  }
+);
+
+/** Just the reads that failed, each with the label the banner shows. */
+export const selectHydrationFailures = createSelector(selectHydration, (hydration) =>
+  Object.entries(hydration)
+    .filter(([, resource]) => resource.status === 'error')
+    .map(([key, resource]) => ({ key, label: RESOURCE_LABELS[key] ?? key, error: resource.error }))
+);
+
+/** The backlog read alone — the task tile must not report failure because points were slow (E9). */
+export const selectBacklogHydration = createSelector(
+  selectHydration,
+  (hydration) => hydration.backlog
+);
+
+/** True when the §17.2 record cap stopped the session loop short of the full window. */
+export const selectSessionsTruncated = (state) => state.timer.truncated ?? false;

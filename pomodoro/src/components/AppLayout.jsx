@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Nav from './Nav.jsx';
+import HydrationBanner from './HydrationBanner.jsx';
 import useAuth from '../hooks/useAuth.js';
 import useSettings from '../hooks/useSettings.js';
 import { applyBaseTheme, applyCustomTheme, applyBackground } from '../services/appearance.js';
@@ -179,7 +180,15 @@ function AppLayout({ children }) {
         </div>
       </aside>
 
-      <main className="app-main">{children}</main>
+      {/*
+        Hydration state belongs to the shell, not to any page (§17.4). It sits above the page
+        content so every authenticated surface reports the account's data state identically — and
+        so History can keep rendering the store unconditionally, with no status branch of its own.
+      */}
+      <main className="app-main">
+        <HydrationBanner />
+        {children}
+      </main>
     </div>
   );
 }

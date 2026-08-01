@@ -782,18 +782,6 @@
   flex-wrap: wrap;
 }
 
-/* Records finished but not yet delivered. Stated plainly rather than as an error icon: nothing has
-   gone wrong, and the user's work is safe. */
-.timer-page__sync {
-  margin: 0 0 var(--sp-2);
-  padding: 10px var(--sp-2);
-  border-radius: 12px;
-  font-size: var(--fs-label);
-  color: var(--fg-muted);
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-}
-
 .tasks-tile__action--check:hover {
   color: var(--fg-accent);
   border-color: var(--fg-accent);
