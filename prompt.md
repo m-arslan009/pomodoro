@@ -416,3 +416,31 @@ Reuse existing API clients, hooks, services, state management, and coding patter
 `Title`: Create the frontend test suite for the Timer feature
 
 `User prompt`: Create test cases for the frontend of the Timer feature. Cover the behaviour the feature actually promises rather than the way it is currently written: the timer state machine and its phase transitions, the control affordances each phase offers, what a resolved block writes and what it deliberately leaves alone, backlog membership and task binding, the full task CRUD surface including the distinction between deleting and abandoning a task, the hydration and sync states the dashboard can be in, recovery of a block interrupted by a reload, the outbox's delivery and retry rules, the store's optimistic mutations and rollback, the History import boundary, and the HTTP wire contract of the timer services. Treat the approved plan and CONTRACT.md as the source of truth for expected behaviour, not the existing implementation — where an existing test encodes a rule the product has since reversed, repoint the test at the rule that now holds and record why it changed. Report any production defect the tests uncover instead of adjusting the test to accommodate it. Run only the suites the change impacts, never the full suite, and finish with lint and build clean.
+
+## History phase — H0 audit and contract amendment
+
+`Title`: Audit the History feature against the approved architecture
+
+`User prompt`: Analyze the History feature across the frontend, backend, CONTRACT.md, approved architecture, and implementation plans to verify whether it requires any updates, modifications, refactoring, or additional functionality. Do not assume the current implementation is correct simply because it already exists. Instead, compare the implementation against the approved architecture, where the Timer feature is the single source of truth for session data and the History feature derives its information from persisted Timer sessions with minimal backend-specific logic. Identify any inconsistencies, architectural conflicts, missing functionality, redundant code, inefficient data flow, UI/UX issues, performance concerns, or obsolete implementations. Verify that the frontend correctly consumes the available Timer session data without requiring unnecessary History-specific APIs or business logic. If new backend endpoints, frontend changes, data transformations, pagination, filtering, searching, grouping, statistics, or other improvements are genuinely required, recommend and justify them. Remove or refactor dead code, legacy implementations, mock data, and unused files where appropriate. Provide a detailed assessment covering correct functionality, issues to fix, recommended improvements, missing features, required frontend or backend modifications, API contract changes, and a prioritized implementation plan before making any code changes. Do not implement anything until the analysis and recommendations have been reviewed and approved.
+
+`Title`: Record the approved History analysis in the contract
+
+`User prompt`: Update the CONTRACT.md for the History feature based on the approved analysis and architecture.
+
+Rulings given during this prompt, each resolving a Gate-0 decision the analysis raised:
+- The hydration retry banner is owned by the shell (`AppLayout`), not by History, resolving the conflict between §17.4's retry requirement and its import boundary.
+- `terminationReason` is rendered inline on terminated rows in `RecentTile`; the deferred Focus insight panel (N1) is unaffected.
+- `summarize().focusMinutes` counts all focus time, terminated blocks included, not completed sessions only.
+- `summarize()` splits `incompleteTasks` into separate `openTasks` and `abandonedTasks` counts so the summary and the outcome chart agree.
+
+## History phase — H1–H4 frontend implementation
+
+`Title`: Implement the approved History fixes, frontend only
+
+`User prompt`: Implement the approved fixes, improvements, and recommendations identified during the History feature analysis recorded in CONTRACT.md. Implement only the frontend changes and document any backend dependencies that cannot yet be completed. Refactor the existing History feature where necessary to resolve architectural issues, remove redundant or dead code, improve maintainability, and align the implementation with the approved design. Update the UI, state management, data flow, API integration, filtering, sorting, searching, grouping, pagination, session presentation, error handling, loading states, empty states, and overall user experience wherever required by the approved recommendations.
+
+## History phase — coverage
+
+`Title`: Cover the History feature with tests
+
+`User prompt`: Create new test cases or reuse existing ones if required for the History feature.
