@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../services/tasks.js', () => ({
   fetchTasks: vi.fn(async () => ({ tasks: [], nextCursor: null })),
+  fetchAllTasks: vi.fn(async () => ({ tasks: [], truncated: false })),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(async () => {}),
@@ -32,8 +33,10 @@ vi.mock('../../services/sessions.js', () => ({
     gamification: { lifetimePoints: 100, pointsDelta: 100, newlyUnlocked: [] },
   })),
   fetchSessions: vi.fn(async () => ({ sessions: [], nextCursor: null })),
+  fetchAllSessions: vi.fn(async () => ({ sessions: [], truncated: false })),
   fetchGamification: vi.fn(),
   HYDRATION_WINDOW_DAYS: 180,
+  TERMINATION_REASONS: ['interrupted', 'wrong_task', 'finished_early', 'out_of_energy'],
 }));
 
 const tasksService = await import('../../services/tasks.js');

@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../services/tasks.js', () => ({
   fetchTasks: vi.fn(async () => ({ tasks: [], nextCursor: null })),
+  fetchAllTasks: vi.fn(async () => ({ tasks: [], truncated: false })),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -28,6 +29,7 @@ vi.mock('../../services/tasks.js', () => ({
 vi.mock('../../services/sessions.js', () => ({
   recordSession: vi.fn(),
   fetchSessions: vi.fn(async () => ({ sessions: [], nextCursor: null })),
+  fetchAllSessions: vi.fn(async () => ({ sessions: [], truncated: false })),
   // The whole progression object, as §16.7 defines it. A partial one is not a response the API can
   // produce, and standing one in here would be testing against a server that does not exist.
   fetchGamification: vi.fn(async () => ({
@@ -40,6 +42,7 @@ vi.mock('../../services/sessions.js', () => ({
     unlockedTitles: [],
   })),
   HYDRATION_WINDOW_DAYS: 180,
+  TERMINATION_REASONS: ['interrupted', 'wrong_task', 'finished_early', 'out_of_energy'],
 }));
 
 vi.mock('../../services/outbox.js', () => ({
@@ -53,7 +56,9 @@ vi.mock('../../services/outbox.js', () => ({
 }));
 
 const tasksService = await import('../../services/tasks.js');
+const sessionsService = await import('../../services/sessions.js');
 const outbox = await import('../../services/outbox.js');
+const { hydrateTimer } = await import('../../store/timerSlice.js');
 const { AuthTestProvider } = await import('../helpers/authTestContext.jsx');
 const { default: TimerPage } = await import('../../pages/TimerPage.jsx');
 
@@ -92,14 +97,20 @@ function pendingSession(clientSessionId) {
   };
 }
 
-function renderTimerPage(timer = {}) {
+function renderTimerPage(timer = {}, onStore) {
   return render(
     <MemoryRouter>
-      <AuthTestProvider settings={{ workMinutes: 25, breakMinutes: 5 }} timer={timer}>
+      <AuthTestProvider settings={{ workMinutes: 25, breakMinutes: 5 }} timer={timer} onStore={onStore}>
         <TimerPage />
       </AuthTestProvider>
     </MemoryRouter>
   );
+}
+
+/** The four per-resource hydration outcomes (§17.3 rule 5), all ready unless named otherwise. */
+function hydration(overrides = {}) {
+  const ready = { status: 'ready', error: null };
+  return { sessions: ready, backlog: ready, resolved: ready, gamification: ready, ...overrides };
 }
 
 const tasksTile = () => screen.getByRole('region', { name: /Today.s Focus/ });
@@ -135,14 +146,15 @@ describe('B2. Hydration and sync states', () => {
     expect(tile.queryByText(INVITATION)).not.toBeInTheDocument();
 
     // Not a dead end: the retry re-issues the same hydration read, so a dropped connection costs a
-    // click rather than a reload — and a reload would sign the user out (ADR-008).
-    vi.mocked(tasksService.fetchTasks).mockClear();
+    // click rather than a reload — and a reload would sign the user out (ADR-008). The read it
+    // re-issues is the cursor-following one, which is what hydration actually calls.
+    vi.mocked(tasksService.fetchAllTasks).mockClear();
 
     await act(async () => {
       fireEvent.click(tile.getByRole('button', { name: /Try again/i }));
     });
 
-    expect(tasksService.fetchTasks).toHaveBeenCalled();
+    expect(tasksService.fetchAllTasks).toHaveBeenCalled();
   });
 
   it('B2.3 tells someone who has finished everything apart from someone who has nothing', () => {
@@ -196,5 +208,87 @@ describe('B2. Hydration and sync states', () => {
     expect(engine.getByRole('timer')).toHaveTextContent('25:00');
     expect(engine.getByRole('button', { name: 'Start' })).toBeDisabled();
     expect(engine.getByText(/Add a task in Today.s Focus/i)).toBeInTheDocument();
+  });
+
+  it('B2.6 names the read that failed, and offers a retry the page itself could not', async () => {
+    renderTimerPage({
+      status: 'error',
+      error: 'We could not load your history.',
+      // Only the history read is unreachable. The tasks and the points answered.
+      hydration: hydration({ sessions: { status: 'error', error: 'Network error' } }),
+      tasks: [task('t-1', 'Thesis chapter 3')],
+    });
+
+    const banner = screen.getByRole('status');
+
+    /*
+     * "Something went wrong" tells a user nothing they can act on. The four reads answer four
+     * different questions, and only one is unanswered — so the banner says which, and the other
+     * three stay on screen rather than being retracted along with it.
+     */
+    expect(banner).toHaveTextContent(/could not load your session history/i);
+    expect(banner).not.toHaveTextContent(/your tasks/i);
+
+    // And the tile is not dragged down with it: the tasks loaded, so they are shown (E9, §17.3
+    // rule 5) rather than replaced by a failure the backlog read never had.
+    const tile = within(tasksTile());
+    expect(tile.getByText('Thesis chapter 3')).toBeInTheDocument();
+    expect(tile.queryByText(/We could not load your tasks/i)).not.toBeInTheDocument();
+
+    /*
+     * The retry lives HERE and nowhere else (§17.4). Dispatching hydration is what a retry means,
+     * and History may not import a thunk — so a Retry button on that page would undo the one rule
+     * the whole feature is defined by. The shell already owns hydration, so the shell offers it,
+     * on every authenticated page at once.
+     */
+    vi.mocked(sessionsService.fetchAllSessions).mockClear();
+
+    await act(async () => {
+      fireEvent.click(within(banner).getByRole('button', { name: /^Retry$/i }));
+    });
+
+    expect(sessionsService.fetchAllSessions).toHaveBeenCalled();
+  });
+
+  it('B2.7 lets a notice be dismissed, but never silences a different one that follows', async () => {
+    let store;
+    renderTimerPage(
+      {
+        status: 'ready',
+        hydration: hydration(),
+        tasks: [task('t-1', 'Thesis chapter 3')],
+        sessions: [pendingSession('block-1'), pendingSession('block-2')],
+      },
+      (created) => {
+        store = created;
+      }
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('2 sessions are waiting to sync.');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Dismiss this notice/i }));
+    });
+
+    // Acknowledged, so it stops taking up the top of every page.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    // Now a genuinely different thing goes wrong: the history read fails.
+    vi.mocked(sessionsService.fetchAllSessions).mockRejectedValueOnce(new Error('Network error'));
+
+    await act(async () => {
+      await store.dispatch(hydrateTimer());
+    });
+
+    /*
+     * Dismissal is keyed on WHAT is wrong, not on a boolean. A flag would mean the click that
+     * acknowledged two queued records also swallowed the outage that arrived ten minutes later —
+     * the banner would be permanently gone and the user permanently uninformed.
+     */
+    const banner = screen.getByRole('status');
+    expect(banner).toHaveTextContent(/could not load your session history/i);
+
+    // The queued records are still queued, and still counted: nothing was dropped by the failure.
+    expect(banner).toHaveTextContent('2 sessions are waiting to sync.');
   });
 });

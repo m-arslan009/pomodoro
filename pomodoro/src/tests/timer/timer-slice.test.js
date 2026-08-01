@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../services/tasks.js', () => ({
   fetchTasks: vi.fn(),
+  fetchAllTasks: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('../../services/tasks.js', () => ({
 vi.mock('../../services/sessions.js', () => ({
   recordSession: vi.fn(),
   fetchSessions: vi.fn(),
+  fetchAllSessions: vi.fn(),
   fetchGamification: vi.fn(),
   HYDRATION_WINDOW_DAYS: 180,
 }));
@@ -111,19 +113,22 @@ describe('D3. Timer store (store/timerSlice.js)', () => {
     store.dispatch(sessionFinalized(session('queued-offline')));
     store.dispatch(sessionFinalized(session('already-known', { endedAt: '2026-07-31T08:00:00.000Z' })));
 
-    vi.mocked(sessionsService.fetchSessions).mockResolvedValue({
-      // The server has seen one of them, and clamped its duration.
-      sessions: [
+    // The server has seen one of them, and clamped its duration. Records reach the store through
+    // `onPage` now rather than the thunk's return value: hydration follows the cursor and adopts
+    // each page as it lands, so the mock delivers its page the same way the service does.
+    vi.mocked(sessionsService.fetchAllSessions).mockImplementation(async (_params, options = {}) => {
+      const sessions = [
         session('already-known', {
           id: 'server-1',
           actualDurationMs: 900000,
           pointsAwarded: 100,
           endedAt: '2026-07-31T08:00:00.000Z',
         }),
-      ],
-      nextCursor: null,
+      ];
+      options.onPage?.(sessions);
+      return { sessions, truncated: false };
     });
-    vi.mocked(tasksService.fetchTasks).mockResolvedValue({ tasks: [], nextCursor: null });
+    vi.mocked(tasksService.fetchAllTasks).mockResolvedValue({ tasks: [], truncated: false });
     vi.mocked(sessionsService.fetchGamification).mockResolvedValue(GAMIFICATION);
 
     await store.dispatch(hydrateTimer());
@@ -145,20 +150,42 @@ describe('D3. Timer store (store/timerSlice.js)', () => {
     expect(store.getState().timer.status).toBe('ready');
   });
 
-  it('D3.2 renders what the server has when hydration fails, rather than an empty history', async () => {
+  it('D3.2 keeps what it has when one read fails, and the other three still land', async () => {
     const store = makeStore();
     store.dispatch(sessionFinalized(session('local-only')));
 
-    vi.mocked(sessionsService.fetchSessions).mockRejectedValue(apiError(0, 'Network error'));
-    vi.mocked(tasksService.fetchTasks).mockResolvedValue({ tasks: [], nextCursor: null });
+    // Only the session history is unreachable. The tasks and the points are fine.
+    vi.mocked(sessionsService.fetchAllSessions).mockRejectedValue(apiError(0, 'Network error'));
+    vi.mocked(tasksService.fetchAllTasks).mockImplementation(async (_params, options = {}) => {
+      const tasks = [task('task-1')];
+      options.onPage?.(tasks);
+      return { tasks, truncated: false };
+    });
     vi.mocked(sessionsService.fetchGamification).mockResolvedValue(GAMIFICATION);
 
     await store.dispatch(hydrateTimer());
 
-    expect(store.getState().timer.status).toBe('error');
+    const state = store.getState().timer;
+
+    /*
+     * The four reads settle independently. Awaiting them as one unit meant a single failure threw
+     * away three successful answers — a partial outage rendered as total data loss, which is the
+     * defect this replaced. Only the failed read is unanswered.
+     */
+    expect(state.hydration.sessions.status).toBe('error');
+    expect(state.hydration.backlog.status).toBe('ready');
+    expect(state.hydration.resolved.status).toBe('ready');
+    expect(state.hydration.gamification.status).toBe('ready');
+
+    expect(state.tasks).toHaveLength(1);
+    expect(state.gamification).toEqual(GAMIFICATION);
+
     // Showing an empty chart to someone with months of history would be worse than showing a
-    // partial one with a notice.
-    expect(store.getState().timer.sessions).toHaveLength(1);
+    // partial one with a notice, so the locally-held record survives.
+    expect(state.sessions).toHaveLength(1);
+
+    // The roll-up still reports a problem, because one genuinely happened.
+    expect(state.status).toBe('error');
   });
 
   it('D3.3 shows a new task immediately and takes it back only if the server refuses it', async () => {
