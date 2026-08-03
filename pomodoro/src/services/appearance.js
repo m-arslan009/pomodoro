@@ -18,7 +18,7 @@ export const THEME_VARS = [
 ];
 
 /**
- * Background choices for the gated Pace Setter feature. `image: null` is the
+ * Background choices, available to every user. `image: null` is the
  * built-in forest artwork (restored by clearing the inline override); the rest
  * are self-contained CSS gradients — no external assets — kept dark enough to
  * preserve the shell's light-on-dark contrast.

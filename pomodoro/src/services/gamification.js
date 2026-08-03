@@ -6,16 +6,17 @@
  * Titles derive from LIFETIME points, which never decrease. Thresholds double at
  * each rung, and every tunable lives here so balancing is a one-line change.
  *
- * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.5). Each title used to unlock
- * exactly one previewable feature. Nothing is gated by points any more: Settings
- * was ungated on 2026-07-30 (§9.4) and the History charts on 2026-08-01, so
- * `TITLES[].feature` is currently DEAD DATA on both sides of the mirror —
- * `scheduling` names a component deleted on 2026-07-30, and the other four name
- * surfaces that render for everyone. The field is kept rather than removed
- * because it is `readonly feature: string` on the backend and the two files must
- * stay identical; the cosmetic ladder (N5) repopulates it. `featureTitle` and
- * `isFeatureUnlocked` below are retained for the same reason and have no
- * production caller today.
+ * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.6). Each title used to unlock
+ * exactly one previewable feature. Nothing is gated by points, by titles, by
+ * streaks, or by anything else: Settings was ungated on 2026-07-30 (§9.4), the
+ * History charts on 2026-08-01 (§9.5), and on 2026-08-03 the mechanism itself was
+ * deleted — `FeatureGate.jsx`, `useFeatureGate.js`, `featureTitle`,
+ * `isFeatureUnlocked`, and the `feature` field on every title, on both sides of
+ * the mirror. Every product surface is available to every authenticated user.
+ *
+ * DO NOT REINTRODUCE A GATE HERE. If the cosmetic ladder (N5) ever needs one it
+ * gets a fresh mechanism and a `feature` field added back to BOTH mirrors in the
+ * same phase (§14) — it does not get resurrected from git history unexamined.
  *
  * TWO STREAKS, deliberately (CONTRACT.md §14.2):
  *   - currentDayStreak  — consecutive CALENDAR DAYS with at least one completed
@@ -33,8 +34,8 @@
  * `applyCompletion` and `applyTermination` lived here until the API existed; the
  * server now owns the economy outright and returns new totals with every recorded
  * session. What remains is presentation only — thresholds, names, progress
- * arithmetic — because points drive titles and titles unlock features, so a
- * client that could compute its own score could award itself the product
+ * arithmetic — because the server owns the economy outright and a client that
+ * could compute its own score could award itself points it never earned
  * (CONTRACT.md §14.3 rule 1, §18).
  *
  * The constants below MIRROR backend/src/domain/gamification.ts. They are not the
@@ -49,11 +50,11 @@ export const POINTS = {
 };
 
 export const TITLES = [
-  { key: 'anchor', name: 'The Anchor', threshold: 1000, feature: 'themeEditor' },
-  { key: 'paceSetter', name: 'The Pace Setter', threshold: 2000, feature: 'backgroundAndLabels' },
-  { key: 'catalyst', name: 'The Catalyst', threshold: 4000, feature: 'timeUtilization' },
-  { key: 'vanguard', name: 'The Vanguard', threshold: 8000, feature: 'graphicalReports' },
-  { key: 'paragon', name: 'The Paragon', threshold: 16000, feature: 'scheduling' },
+  { key: 'anchor', name: 'The Anchor', threshold: 1000 },
+  { key: 'paceSetter', name: 'The Pace Setter', threshold: 2000 },
+  { key: 'catalyst', name: 'The Catalyst', threshold: 4000 },
+  { key: 'vanguard', name: 'The Vanguard', threshold: 8000 },
+  { key: 'paragon', name: 'The Paragon', threshold: 16000 },
 ];
 
 /** Coerce any input to a non-negative finite point total. */
@@ -98,16 +99,4 @@ export function progressToNext(lifetimePoints) {
   const gained = points - floor;
   const percent = span > 0 ? Math.min(100, Math.max(0, Math.round((gained / span) * 100))) : 0;
   return { current, next, percent, remaining: Math.max(0, next.threshold - points) };
-}
-
-/** The title that unlocks a given feature key, or null when the key is unknown. */
-export function featureTitle(featureKey) {
-  return TITLES.find((title) => title.feature === featureKey) ?? null;
-}
-
-/** Whether a feature is unlocked at the given lifetime points. */
-export function isFeatureUnlocked(lifetimePoints, featureKey) {
-  const title = featureTitle(featureKey);
-  if (!title) return true; // unknown / ungated features are always available
-  return safePoints(lifetimePoints) >= title.threshold;
 }

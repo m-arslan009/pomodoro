@@ -516,3 +516,16 @@ reads the field while the backend consumption logic stays deferred.
 wire.] if the current implement is not enough to implement this feature, update the code and
 implement it. and mention in CONTRACT.md so that when i implementing this feature in backend, it
 must have full picture of what it needs to be updated
+
+## Feature gating — remove the title-based unlocking system completely
+
+`Title`: Remove title-based feature unlocking; every feature available to every authenticated user
+
+`User prompt`: Remove the title-based feature unlocking system completely. All product features must
+be available to every authenticated user regardless of title, level, points, streak, or gamification
+progress. Use the appropriate project skills for conflict handling, contract updates, implementation,
+verification, and testing. Do not bypass documented decisions silently.
+
+[On the decision-conflict prompt: chose full removal across both projects — the gate component, hook,
+helpers, and `TITLES[].feature` in both mirrors — and chose to keep titles themselves as identity and
+progression.]

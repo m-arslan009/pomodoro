@@ -4,9 +4,9 @@
  * Knows only how to talk to the API; state lives in store/timerSlice.js.
  *
  * THE CLIENT COMPUTES NOTHING. `recordSession` sends what happened and returns what the server
- * decided it was worth. There is no scoring function anywhere in the frontend any more — points
- * drive titles and titles unlock features, so a client that scored itself could award itself the
- * product (CONTRACT.md §14.3 rule 1).
+ * decided it was worth. There is no scoring function anywhere in the frontend any more — the server
+ * owns the economy outright, so a client that scored itself could award itself points it never
+ * earned (CONTRACT.md §14.3 rule 1).
  */
 
 import { api } from './api.js';

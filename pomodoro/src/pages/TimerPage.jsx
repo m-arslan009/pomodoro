@@ -241,7 +241,7 @@ function TimerPage() {
       setNotification({
         type: 'success',
         message: names
-          ? `New title unlocked — ${names}! +${totals.pointsDelta} points and a new feature to explore.`
+          ? `New title earned — ${names}! +${totals.pointsDelta} points.`
           : `Session complete! +${totals.pointsDelta} points. Break time.`,
       });
     });

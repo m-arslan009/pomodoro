@@ -9,7 +9,7 @@ import '../styles/TitleBadge.css';
  * earned and renders a progress bar toward the next threshold, plus how many
  * lifetime points remain. Once every title is earned the bar reads as complete.
  *
- * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.5). A title used to unlock one
+ * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.6). A title used to unlock one
  * previewable feature, so this badge doubled as a hint of what was about to open
  * up. Nothing is gated by points any more — the copy below says "top rank"
  * rather than "all features unlocked" because the latter would promise a payload

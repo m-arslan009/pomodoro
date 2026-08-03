@@ -1,68 +1,61 @@
-import {
-  TITLES,
-  currentTitle,
-  isFeatureUnlocked,
-  progressToNext,
-  titlesFor,
-} from '../../services/gamification.js';
+import { TITLES, currentTitle, progressToNext, titlesFor } from '../../services/gamification.js';
 
 /*
- * Suite C1/C4 — the title & feature ladder in services/gamification.js.
+ * Suite C1/C4 — the title ladder in services/gamification.js.
  * (Formerly Suite D1/D4; renumbered to C after the points-engine suite was
  * dropped from the implemented set.)
  *
  * Unit level: these are pure functions of a lifetime-point total, so no DOM,
  * storage, or timers are involved. The suite proves the three rules the rest of
  * the app leans on: a threshold is reached *at* its value (not one point later),
- * tiers unlock cumulatively and strictly in order, and a rank's progress is
+ * tiers are earned cumulatively and strictly in order, and a rank's progress is
  * measured from the rung below it rather than from zero.
  *
  * Thresholds are read from the exported TITLES config instead of being restated
  * here, so re-balancing the economy re-points these tests rather than breaking
  * them.
  *
- * WHAT `isFeatureUnlocked` STILL GOVERNS (CONTRACT.md §9.5). Nothing in the
- * shipped product: Settings was ungated on 2026-07-30 and the History charts on
- * 2026-08-01, so every `TITLES[].feature` key is currently inert. The function
- * and this suite are retained deliberately — the ladder arithmetic is the
- * mechanism the cosmetic ladder (N5) reuses, and C1.1's `feature` assertion is
- * what pins this mirror to backend/src/domain/gamification.ts. Read the cases
- * below as "the ladder resolves correctly", not "these features are locked".
+ * TITLES ARE IDENTITY, NOT ACCESS (CONTRACT.md §9.6). This suite once also
+ * covered `isFeatureUnlocked` and asserted each title's `feature` key. Gating was
+ * deleted outright on 2026-08-03 — no product surface is withheld from any
+ * authenticated user — and the function and field went with it. What survives is
+ * the ladder arithmetic, which still drives TitleBadge. C1.1's key assertion is
+ * now what pins this mirror to backend/src/domain/gamification.ts (§14). Read
+ * these cases as "the ladder resolves correctly", never as "these features are
+ * locked" — nothing is.
  */
 
 describe('Suite C1 — Threshold & tier ladder', () => {
-  it('C1.1 — unlocks each feature exactly at its threshold, never one point earlier', () => {
-    // Guards the loops below against a vacuous pass: the ladder is the five
-    // documented tiers, whatever their thresholds are tuned to.
-    expect(TITLES.map((title) => title.feature)).toEqual([
-      'themeEditor',
-      'backgroundAndLabels',
-      'timeUtilization',
-      'graphicalReports',
-      'scheduling',
+  it('C1.1 — earns each title exactly at its threshold, never one point earlier', () => {
+    // Guards the loops below against a vacuous pass, and pins the mirror: the
+    // ladder is these five tiers, in this order, whatever the thresholds are
+    // tuned to. The backend's TITLES must agree key-for-key (§14).
+    expect(TITLES.map((title) => title.key)).toEqual([
+      'anchor',
+      'paceSetter',
+      'catalyst',
+      'vanguard',
+      'paragon',
     ]);
 
-    TITLES.forEach(({ feature, threshold }) => {
+    TITLES.forEach(({ key, threshold }) => {
       // One point short is still short — a partially earned rung grants nothing.
-      expect(isFeatureUnlocked(threshold - 1, feature)).toBe(false);
+      expect(titlesFor(threshold - 1)).not.toContain(key);
       // The comparison is inclusive: landing exactly on the threshold promotes.
-      expect(isFeatureUnlocked(threshold, feature)).toBe(true);
+      expect(titlesFor(threshold)).toContain(key);
     });
   });
 
-  it('C1.2 — unlocks every tier up to the earned one and no tier beyond it', () => {
+  it('C1.2 — earns every tier up to the reached one and no tier beyond it', () => {
     // 4000 lifetime points is exactly The Catalyst's rung: the three tiers at or
     // below it resolve as earned, and the two above it do not, even though the
     // user is well past the first threshold.
-    expect(isFeatureUnlocked(4000, 'themeEditor')).toBe(true);
-    expect(isFeatureUnlocked(4000, 'backgroundAndLabels')).toBe(true);
-    expect(isFeatureUnlocked(4000, 'timeUtilization')).toBe(true);
-    expect(isFeatureUnlocked(4000, 'graphicalReports')).toBe(false);
-    expect(isFeatureUnlocked(4000, 'scheduling')).toBe(false);
-
+    //
     // Ascending order matters: the earned set is a prefix of the ladder, so a
     // higher tier can never leak in ahead of a lower one it outranks.
     expect(titlesFor(4000)).toEqual(['anchor', 'paceSetter', 'catalyst']);
+    expect(titlesFor(4000)).not.toContain('vanguard');
+    expect(titlesFor(4000)).not.toContain('paragon');
   });
 });
 
