@@ -49,8 +49,8 @@ import {
  *   acknowledgeStreakFreeze: () => void,
  *   rejectedSessions: object[], hydrationFailures: {key: string, label: string, error: string}[],
  *   backlogHydration: {status: string, error: string|null}, sessionsTruncated: boolean,
- *   addTask: (title: string) => Promise<object>,
- *   renameTask: (id: string, title: string) => Promise<object>,
+ *   addTask: (title: string, estimatedPomodoros?: number|null) => Promise<object>,
+ *   editTask: (id: string, patch: {title?: string, estimatedPomodoros?: number|null}) => Promise<object>,
  *   setTaskStatus: (id: string, status: string) => Promise<object>,
  *   removeTask: (id: string) => Promise<object>,
  *   dismissTaskError: () => void,
@@ -76,12 +76,22 @@ export default function useTimer() {
   const sessionsTruncated = useSelector(selectSessionsTruncated);
   const streakFreeze = useSelector(selectStreakFreeze);
 
-  const addTask = useCallback((title) => dispatch(createTask({ title })), [dispatch]);
-
-  const renameTask = useCallback(
-    (id, title) => dispatch(updateTask({ id, patch: { title } })),
+  const addTask = useCallback(
+    (title, estimatedPomodoros = null) => dispatch(createTask({ title, estimatedPomodoros })),
     [dispatch]
   );
+
+  /**
+   * Rename and re-estimate — ONE operation (CONTRACT.md §14.5), so one call and one request.
+   *
+   * The caller passes only what changed; an empty patch is its own bug and the row never sends one.
+   * `status` does not belong here — it has its own verb below, because the four status transitions
+   * are user intents with their own rules, not a field to be patched in passing.
+   *
+   * @param {string} id
+   * @param {{title?: string, estimatedPomodoros?: number|null}} patch
+   */
+  const editTask = useCallback((id, patch) => dispatch(updateTask({ id, patch })), [dispatch]);
 
   const setTaskStatus = useCallback(
     (id, taskStatus) => dispatch(updateTask({ id, patch: { status: taskStatus } })),
@@ -131,7 +141,7 @@ export default function useTimer() {
       sessionsTruncated,
       streakFreeze,
       addTask,
-      renameTask,
+      editTask,
       setTaskStatus,
       removeTask,
       dismissTaskError,
@@ -155,7 +165,7 @@ export default function useTimer() {
       sessionsTruncated,
       streakFreeze,
       addTask,
-      renameTask,
+      editTask,
       setTaskStatus,
       removeTask,
       dismissTaskError,

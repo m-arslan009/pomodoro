@@ -290,7 +290,10 @@ export const flushOutbox = createAsyncThunk('timer/flushOutbox', async () => out
 
 export const createTask = createAsyncThunk(
   'timer/createTask',
-  async ({ title }) => tasksService.createTask({ title }),
+  // `estimatedPomodoros` is nullable on the wire, and null is exactly what "no estimate" means
+  // (§16.2) — so it is sent as given rather than conditionally omitted.
+  async ({ title, estimatedPomodoros = null }) =>
+    tasksService.createTask({ title, estimatedPomodoros }),
   thunkOptions
 );
 
@@ -471,7 +474,10 @@ const timerSlice = createSlice({
           id: provisionalId(),
           title: action.meta.arg.title,
           status: 'todo',
-          estimatedPomodoros: null,
+          // The estimate is the user's own note, so it is shown optimistically alongside the title
+          // for the same reason the title is — unlike points, it is not a claim the server can
+          // contradict.
+          estimatedPomodoros: action.meta.arg.estimatedPomodoros ?? null,
           createdAt: new Date().toISOString(),
           completedAt: null,
           updatedAt: new Date().toISOString(),

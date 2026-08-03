@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import EstimateSelect from './EstimateSelect.jsx';
 import { TITLE_MAX_LENGTH } from '../../services/tasks.js';
 
 /*
@@ -13,11 +14,15 @@ import { TITLE_MAX_LENGTH } from '../../services/tasks.js';
  *     ACTIVE ONE ONLY: the guard used to read "the timer is idle" and was handed to every row
  *     alike, so starting a block froze abandon and delete across the whole backlog. A block pins
  *     the work it is recording against; it has no claim on the rest of the list.
- *     Renaming is fine even there — the running block took its own title snapshot when it started,
- *     so a rename cannot disturb it.
+ *     Editing is fine even there — the running block took its own title snapshot when it started,
+ *     so a rename cannot disturb it, and the estimate is read by nothing at all (§14.3 rule 7).
  *   - A task whose id is still provisional cannot be focused: the id would be sent with the
  *     session and rejected. One round trip, so the state is momentary.
  *   - Empty or unchanged titles are a no-op that restores the previous value, never a request.
+ *
+ * ONE FORM, ONE PATCH, ONLY WHAT CHANGED. §14.5 makes rename and re-estimate a single operation, so
+ * the form edits both and `commit` sends the diff: changing only the estimate sends no `title`, and
+ * changing nothing sends no request. Two fields must not become two round trips that can half-fail.
  */
 
 function TaskRow({
@@ -26,12 +31,13 @@ function TaskRow({
   canChangeTask,
   timerIdle,
   onFocus,
-  onRename,
+  onEdit,
   onSetStatus,
   onDelete,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.title);
+  const [estimateDraft, setEstimateDraft] = useState(task.estimatedPomodoros ?? null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -39,6 +45,8 @@ function TaskRow({
   }, [editing]);
 
   const isPending = Boolean(task.pending) || Boolean(task.removing);
+  /** Absent for most tasks, and absent is the normal resting state — never rendered as 0. */
+  const estimate = task.estimatedPomodoros ?? null;
   const isDone = task.status === 'completed';
   const isAbandoned = task.status === 'abandoned';
   /** This row is the one the running block is recording against, so it cannot be removed. */
@@ -46,6 +54,7 @@ function TaskRow({
 
   function beginEdit() {
     setDraft(task.title);
+    setEstimateDraft(task.estimatedPomodoros ?? null);
     setEditing(true);
   }
 
@@ -53,14 +62,25 @@ function TaskRow({
     event.preventDefault();
     const trimmed = draft.trim();
     setEditing(false);
-    // Nothing to say to the server: an empty title is not a deletion request, and an unchanged
-    // one is not a change.
-    if (!trimmed || trimmed === task.title) return;
-    onRename(task.id, trimmed);
+
+    const patch = {};
+    // An empty title is not a deletion request, and an unchanged one is not a change — so in both
+    // cases the key is simply absent and the stored title is left alone.
+    if (trimmed && trimmed !== task.title) patch.title = trimmed;
+    // `null` here is an instruction — "clear the estimate" — which is why it is compared rather
+    // than treated as absence. The server distinguishes the two (§16.3).
+    const currentEstimate = task.estimatedPomodoros ?? null;
+    if (estimateDraft !== currentEstimate) patch.estimatedPomodoros = estimateDraft;
+
+    // An empty patch is a 422 on the wire (§15) and a write that did nothing on screen. Neither is
+    // worth a round trip.
+    if (Object.keys(patch).length === 0) return;
+    onEdit(task.id, patch);
   }
 
   function cancel() {
     setDraft(task.title);
+    setEstimateDraft(task.estimatedPomodoros ?? null);
     setEditing(false);
   }
 
@@ -88,6 +108,12 @@ function TaskRow({
                 cancel();
               }
             }}
+          />
+          <EstimateSelect
+            id={`task-estimate-${task.id}`}
+            label={`Estimated pomodoros for “${task.title}” (optional)`}
+            value={estimateDraft}
+            onChange={setEstimateDraft}
           />
           <span className="task-edit__actions">
             <button type="submit" className="tasks-tile__action">
@@ -123,6 +149,21 @@ function TaskRow({
         */}
         {isDone && <span className="tasks-tile__tag"> done</span>}
         {isAbandoned && <span className="tasks-tile__tag tasks-tile__tag--abandoned"> abandoned</span>}
+        {/*
+          The user's own plan, echoed back — and nothing more. It is deliberately NOT a progress
+          meter: "est. 3" is a note, "2 of 3" is a scoreboard, and a scoreboard is one step from the
+          timer completing the task on the user's behalf (§14.3 rule 7, §21).
+          Abbreviated for the width the row actually has, with the full sentence for screen readers,
+          since "est. 3" read aloud is a fragment.
+        */}
+        {estimate !== null && (
+          <span className="tasks-tile__estimate">
+            <span aria-hidden="true"> est. {estimate}</span>
+            <span className="timer-visually-hidden">
+              Estimated {estimate} pomodoro{estimate === 1 ? '' : 's'}
+            </span>
+          </span>
+        )}
       </span>
 
       <span className="tasks-tile__actions">

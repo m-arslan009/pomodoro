@@ -529,3 +529,13 @@ verification, and testing. Do not bypass documented decisions silently.
 [On the decision-conflict prompt: chose full removal across both projects — the gate component, hook,
 helpers, and `TITLES[].feature` in both mirrors — and chose to keep titles themselves as identity and
 progression.]
+
+## Task Estimation — optional per-task pomodoro estimate, planning information only
+
+`Title`: Implement Task Estimation on the existing architecture, with no effect on timer, scoring, or completion
+
+`User prompt`: Implement the Task Estimation feature using the existing task, timer, history, and
+gamification architecture. Do not redesign the task model or timer workflow. Allow users to
+optionally estimate how many Pomodoro sessions a task will require before starting work. The
+estimate is planning information only. It must not affect timer behavior, scoring, streaks, or task
+completion logic.

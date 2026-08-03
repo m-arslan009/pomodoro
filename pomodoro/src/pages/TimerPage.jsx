@@ -82,7 +82,7 @@ function TimerPage() {
     gamification,
     backlogHydration,
     addTask,
-    renameTask,
+    editTask,
     setTaskStatus,
     removeTask,
     taskError,
@@ -570,7 +570,7 @@ function TimerPage() {
             failed={backlogHydration.status === 'error'}
             onRetry={reload}
             onFocusTask={handleFocusTask}
-            onRenameTask={renameTask}
+            onEditTask={editTask}
             onSetTaskStatus={handleSetTaskStatus}
             onDeleteTask={setDeleteTarget}
           >

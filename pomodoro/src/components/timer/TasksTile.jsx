@@ -26,7 +26,7 @@ function TasksTile({
   failed,
   onRetry,
   onFocusTask,
-  onRenameTask,
+  onEditTask,
   onSetTaskStatus,
   onDeleteTask,
   children,
@@ -39,7 +39,7 @@ function TasksTile({
     canChangeTask,
     timerIdle,
     onFocus: onFocusTask,
-    onRename: onRenameTask,
+    onEdit: onEditTask,
     onSetStatus: onSetTaskStatus,
     onDelete: onDeleteTask,
   };

@@ -18,7 +18,13 @@ export const TITLE_MAX_LENGTH = 120;
 /** Mirrors TASK_STATUSES. A task is abandoned; a *session* is terminated. */
 export const TASK_STATUSES = ['todo', 'completed', 'abandoned'];
 
-/** Mirrors TASK_ESTIMATE_MIN / MAX. Accepted by the API; no control writes it yet. */
+/**
+ * Mirrors TASK_ESTIMATE_MIN / MAX — the range of `estimatedPomodoros`.
+ *
+ * `EstimateSelect` builds its options from these two numbers rather than listing them, so the range
+ * exists once on this side of the wire and an out-of-range value is unreachable rather than
+ * rejected (CONTRACT.md §15).
+ */
 export const ESTIMATE_LIMITS = { min: 1, max: 20 };
 
 /** Mirrors the `limit` bound on every list endpoint. The largest page the API will serve. */

@@ -510,14 +510,17 @@
 }
 
 /* ------------------------------------------------------------- Add task */
+/* Three controls now, so the row wraps rather than crushing the title field: below roughly 22rem
+   the estimate and the button drop to a second line and the input keeps a usable width. */
 .add-task {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
   align-items: stretch;
 }
 
 .add-task__input {
-  flex: 1 1 auto;
+  flex: 1 1 9rem;
   min-width: 0;
   padding: 10px 14px;
   border-radius: 10px;
@@ -541,6 +544,65 @@
 .add-task__input:focus-visible {
   outline: 2px solid var(--fg-wood);
   outline-offset: 2px;
+}
+
+/* --------------------------------------------- Estimate control (N2) */
+/*
+ * Shared by the add form and the row's edit form, so it is sized in `em` and inherits the type
+ * scale of whichever it is sitting in rather than carrying two variants.
+ *
+ * A native <select> deliberately: it makes an out-of-range value unreachable (§15), it is a real
+ * touch target on mobile with no custom listbox to make accessible, and its options can be read by
+ * a screen reader from the label alone.
+ */
+.estimate-select {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.estimate-select__input {
+  width: 100%;
+  min-width: 0;
+  /* Roomy enough for "No estimate" without pushing the title field to a second line too early. */
+  max-width: 11rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: var(--fs-label);
+  color: var(--fg-brand);
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: border-color 0.18s ease;
+}
+
+.estimate-select__input:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+}
+
+.estimate-select__input:focus {
+  outline: none;
+  border-color: var(--fg-accent);
+}
+
+.estimate-select__input:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.estimate-select__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The open dropdown list is drawn by the OS outside the glass surface, so it cannot inherit a
+   translucent background and needs an OPAQUE one. This is the shell's own forest base — the colour
+   `--glass-bg` is 42% of — kept in step with `AppLayout.css`. Not themeable: the theme editor
+   exposes only accent, leaf and wood (`services/appearance.js`), none of which is a surface. */
+.estimate-select__input option {
+  color: var(--fg-brand);
+  background: #0e1b12;
 }
 
 .add-task__btn {
@@ -705,6 +767,17 @@
   color: var(--timer-danger);
 }
 
+/* The estimate chip (N2). Muted and unemphasised on purpose: it is the user's own note, not a
+   status, not a target, and not something the app is measuring them against. Same muted treatment
+   as the outcome tags, and no new colour. */
+.tasks-tile__estimate {
+  font-size: var(--fs-eyebrow);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  /* A resolved row strikes its title through; the note describing it is not struck. */
+  text-decoration: none;
+}
+
 .tasks-tile__action--danger {
   color: var(--timer-danger);
 }
@@ -787,6 +860,14 @@
 .task-edit__input:focus-visible {
   outline: 2px solid var(--fg-wood);
   outline-offset: 1px;
+}
+
+/* Match the inline title field beside it — the shared control keeps the add form's proportions
+   otherwise, and the edit row is the tighter of the two. */
+.task-edit .estimate-select__input {
+  padding: 8px 10px;
+  background: var(--glass-bg);
+  border-color: var(--fg-wood);
 }
 
 .task-edit__actions {
@@ -893,7 +974,8 @@
   .tasks-tile__item,
   .tasks-tile__action,
   .add-task__input,
-  .add-task__btn {
+  .add-task__btn,
+  .estimate-select__input {
     transition: none;
   }
 }
