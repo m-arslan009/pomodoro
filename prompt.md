@@ -473,3 +473,46 @@ vs. abandoned); second, after a task is marked as completed or terminate after f
 remains visible in the Focus list instead of being removed immediately and shown only in its
 appropriate history section. Analyze the frontend code to fix this issue. If it requires backend
 analysis then mention it before moving into backend.
+
+## Avatar removal — profile
+
+`Title`: Implement avatar removal with a confirmation dialog and full state handling
+
+`User prompt`: implement avatar removal feature by using existing avatart and profile architecture.
+add avatar removal action and make sure it only available/visisble when user has removable custom
+avatart. when user select remove avatar, open confirmation dialog box that explain what will be the
+result of this action. allow the user to cancel this action without any change. on confirm, remove
+the avatar by calling the correct API. handle all states such as success, loading, error, no
+existing avatar. also make sure on loading, user won't be able to perfom confirm button. on success
+close confirmation dialog box, on error keep the avatar untouch. there is new file you can also
+refer about this feature which is Implementation_gap_report.md
+
+## Streak Freeze — frontend display
+
+`Title`: Expose Streak Freeze status in the frontend using existing gamification UI and state patterns
+
+`User prompt`: Implement the frontend portion only of the Streak Freeze feature using the existing
+gamification UI and state patterns. Do not modify backend code. Expose the user's Streak Freeze
+status in the frontend and correctly handle all UI states based on data already provided by the
+backend. Use the existing gamification/profile response fields for available freeze count, whether
+a freeze was recently consumed or not, and current daily streak. Display the freeze status wherever
+the current daily streak or gamification summary is already shown. Do not create a new page for
+this feature. Handle all UI states (loading, no freeze available, freeze consumed, error).
+
+## Streak Freeze — proceed despite the deferral, and record the supersession
+
+`Title`: Ship the freeze display against the "streak freezes are deferred" clause, recording the supersession
+
+`User prompt`: [Asked how to handle the collision with CONTRACT.md §14.2 "no logic reads it" and the
+§21 deferral.] Proceed + record supersession — implement the frontend display, then amend
+CONTRACT.md §14.2/§21 and add the supersession entry to locked_decisions.md noting the frontend now
+reads the field while the backend consumption logic stays deferred.
+
+## Streak Freeze — CONTRACT.md must carry the full backend picture
+
+`Title`: Extend the implementation where the existing model falls short, and document what the backend will need
+
+`User prompt`: [Asked how the "freeze consumed" state should work, given no such field exists on the
+wire.] if the current implement is not enough to implement this feature, update the code and
+implement it. and mention in CONTRACT.md so that when i implementing this feature in backend, it
+must have full picture of what it needs to be updated

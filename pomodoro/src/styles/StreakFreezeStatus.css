@@ -1,0 +1,138 @@
+/*
+ * StreakFreezeStatus — a compact protection panel sized to sit inside any glass tile.
+ *
+ * Reuses the shell's forest/glass tokens (--fg-*, --glass-*) and its own clamp-based type scale, so
+ * it does not depend on a host page's local type or spacing scale (TitleBadge does the same). The
+ * danger tone falls back through both dashboards' names for the shared crimson before its literal,
+ * because the Timer calls it --timer-danger and History calls it --hp-bad.
+ *
+ * Tone is carried by --freeze-tone and applied to the dot and the headline. It is never the only
+ * signal: every state's text differs, so the panel reads correctly with no colour perception at all.
+ */
+
+.streak-freeze {
+  --freeze-tone: var(--fg-muted);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+}
+
+.streak-freeze--good {
+  --freeze-tone: var(--fg-accent);
+}
+
+.streak-freeze--warn {
+  --freeze-tone: var(--fg-wood);
+}
+
+.streak-freeze--bad {
+  --freeze-tone: var(--timer-danger, var(--hp-bad, #e0736b));
+}
+
+.streak-freeze__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.streak-freeze__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--freeze-tone);
+  /* Nudged off the baseline so it optically centres against the headline's cap height. */
+  transform: translateY(-1px);
+}
+
+.streak-freeze__headline {
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--freeze-tone);
+  overflow-wrap: anywhere;
+}
+
+.streak-freeze__detail {
+  margin: 0;
+  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  line-height: 1.45;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+
+/* Occupies the detail line's height so the panel does not resize when the count arrives. */
+.streak-freeze__skeleton {
+  display: block;
+  height: 0.82rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--glass-hover) 0%,
+    var(--glass-border) 50%,
+    var(--glass-hover) 100%
+  );
+  background-size: 200% 100%;
+  animation: streak-freeze-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes streak-freeze-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.streak-freeze__action {
+  align-self: flex-start;
+  min-height: 36px;
+  margin-top: 2px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  font-weight: 600;
+  color: var(--fg-brand);
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.streak-freeze__action:hover {
+  background: var(--glass-bg-strong);
+  border-color: var(--freeze-tone);
+}
+
+.streak-freeze__action:active {
+  transform: translateY(1px);
+}
+
+.streak-freeze__action:focus-visible {
+  outline: 2px solid var(--fg-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak-freeze__skeleton {
+    animation: none;
+  }
+
+  .streak-freeze__action {
+    transition: none;
+  }
+
+  .streak-freeze__action:active {
+    transform: none;
+  }
+}

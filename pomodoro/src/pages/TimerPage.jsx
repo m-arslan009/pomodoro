@@ -87,6 +87,8 @@ function TimerPage() {
     removeTask,
     taskError,
     dismissTaskError,
+    streakFreeze,
+    acknowledgeStreakFreeze,
     finalize,
     retrySync,
     reload,
@@ -543,6 +545,14 @@ function TimerPage() {
             lastDelta={lastDelta}
             dailyGoal={DAILY_GOAL}
             bonusEvery={POINTS.consecutiveThreshold}
+            /*
+             * Freeze status rides the same read as the points beside it, so it gets the same
+             * retry the tasks tile gets — `reload` re-runs all four reads and the banner reports
+             * the rest. The dismiss clears only the "a freeze was used" notice (§14.6).
+             */
+            streakFreeze={streakFreeze}
+            onRetryStreakFreeze={reload}
+            onDismissStreakFreeze={acknowledgeStreakFreeze}
           />
 
           {/*

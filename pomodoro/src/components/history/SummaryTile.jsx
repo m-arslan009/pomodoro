@@ -1,3 +1,5 @@
+import StreakFreezeStatus from '../StreakFreezeStatus.jsx';
+
 /*
  * SummaryTile — the high-level KPI header. A hero point figure anchors the tile,
  * with the day streak beside it, the five status metrics in an auto-fitting grid
@@ -12,6 +14,12 @@
  *
  * The task counts are the same three buckets OutcomeTile draws, so the tile and
  * the chart beside it cannot disagree about the same tasks.
+ *
+ * STREAK PROTECTION IS SHOWN AS A COUNT ONLY (§14.6). The panel's loading, error
+ * and just-consumed states belong to hydration, and hydration belongs to the shell
+ * (§17.4) — this page has no status branch by design, so handing it one here would
+ * reintroduce exactly what §17.4 removed. The Timer's PointsTile renders those
+ * states; here the count travels inside `Summary` like the two streaks it protects.
  */
 
 function SummaryTile({ summary }) {
@@ -19,6 +27,7 @@ function SummaryTile({ summary }) {
     points,
     currentDayStreak,
     longestDayStreak,
+    streakFreezesAvailable,
     completedSessions,
     terminatedSessions,
     completedTasks,
@@ -74,6 +83,8 @@ function SummaryTile({ summary }) {
           </p>
         </div>
       </div>
+
+      <StreakFreezeStatus available={streakFreezesAvailable} dayStreak={currentDayStreak} />
 
       <dl className="hp-summary__grid">
         {kpis.map((kpi) => (

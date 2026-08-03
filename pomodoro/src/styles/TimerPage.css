@@ -372,6 +372,11 @@
   margin-bottom: var(--sp-3);
 }
 
+/* Streak protection sits directly under the stats grid that carries the day streak. */
+.points-tile .streak-freeze {
+  margin-bottom: var(--sp-3);
+}
+
 .points-tile__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

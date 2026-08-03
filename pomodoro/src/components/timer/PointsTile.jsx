@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import StreakFreezeStatus from '../StreakFreezeStatus.jsx';
 import TitleBadge from '../TitleBadge.jsx';
 
 /*
@@ -17,6 +18,12 @@ import TitleBadge from '../TitleBadge.jsx';
  * slot. `sessionRun` is internal to the economy and surfaces only as the milestone
  * dots, because its whole job is to say "one more for +50".
  *
+ * STREAK PROTECTION SITS WITH THE STREAK (§14.6). The freeze panel goes directly
+ * under the stats grid rather than in a corner of its own: a freeze count means
+ * nothing except in relation to the day streak it protects, and this is the tile
+ * that owns the day streak. It is also the surface that knows whether the points
+ * read is loading or failed, so it is the one that can render those states.
+ *
  * Memoised: it re-renders once a session, but sits beside a countdown that used to
  * push new props at it four times a second (defect F6).
  */
@@ -30,6 +37,9 @@ function PointsTile({
   lastDelta,
   dailyGoal,
   bonusEvery,
+  streakFreeze,
+  onRetryStreakFreeze,
+  onDismissStreakFreeze,
 }) {
   const goalReached = Math.min(completedCount, dailyGoal);
   const progressPct = dailyGoal > 0 ? Math.round((goalReached / dailyGoal) * 100) : 0;
@@ -70,6 +80,15 @@ function PointsTile({
           <dd>{terminatedCount}</dd>
         </div>
       </dl>
+
+      <StreakFreezeStatus
+        status={streakFreeze?.status}
+        available={streakFreeze?.available ?? 0}
+        spent={streakFreeze?.spent ?? 0}
+        dayStreak={dayStreak}
+        onRetry={onRetryStreakFreeze}
+        onDismiss={onDismissStreakFreeze}
+      />
 
       <div className="points-tile__goal">
         <div className="points-tile__goal-label">

@@ -7,6 +7,7 @@ import {
   hydrateTimer,
   recordSession,
   sessionFinalized,
+  streakFreezeAcknowledged,
   taskErrorCleared,
   updateTask,
 } from '../store/timerSlice.js';
@@ -20,6 +21,7 @@ import {
   selectRejectedSessions,
   selectResolvedTasks,
   selectSessionsTruncated,
+  selectStreakFreeze,
   selectTaskError,
   selectTimerError,
   selectTimerStatus,
@@ -41,6 +43,10 @@ import {
  *   backlog: object[], resolvedTasks: object[], sessions: object[], gamification: object,
  *   status: 'idle'|'loading'|'ready'|'error', error: string|null, taskError: string|null,
  *   pendingSync: number,
+ *   streakFreeze: {
+ *     status: 'loading'|'error'|'consumed'|'available'|'none', available: number, spent: number,
+ *   },
+ *   acknowledgeStreakFreeze: () => void,
  *   rejectedSessions: object[], hydrationFailures: {key: string, label: string, error: string}[],
  *   backlogHydration: {status: string, error: string|null}, sessionsTruncated: boolean,
  *   addTask: (title: string) => Promise<object>,
@@ -68,6 +74,7 @@ export default function useTimer() {
   const hydrationFailures = useSelector(selectHydrationFailures);
   const backlogHydration = useSelector(selectBacklogHydration);
   const sessionsTruncated = useSelector(selectSessionsTruncated);
+  const streakFreeze = useSelector(selectStreakFreeze);
 
   const addTask = useCallback((title) => dispatch(createTask({ title })), [dispatch]);
 
@@ -84,6 +91,11 @@ export default function useTimer() {
   const removeTask = useCallback((id) => dispatch(deleteTask({ id })), [dispatch]);
 
   const dismissTaskError = useCallback(() => dispatch(taskErrorCleared()), [dispatch]);
+
+  const acknowledgeStreakFreeze = useCallback(
+    () => dispatch(streakFreezeAcknowledged()),
+    [dispatch]
+  );
 
   /**
    * Adopt a finalized record and deliver it.
@@ -117,11 +129,13 @@ export default function useTimer() {
       hydrationFailures,
       backlogHydration,
       sessionsTruncated,
+      streakFreeze,
       addTask,
       renameTask,
       setTaskStatus,
       removeTask,
       dismissTaskError,
+      acknowledgeStreakFreeze,
       finalize,
       retrySync,
       reload,
@@ -139,11 +153,13 @@ export default function useTimer() {
       hydrationFailures,
       backlogHydration,
       sessionsTruncated,
+      streakFreeze,
       addTask,
       renameTask,
       setTaskStatus,
       removeTask,
       dismissTaskError,
+      acknowledgeStreakFreeze,
       finalize,
       retrySync,
       reload,

@@ -104,6 +104,14 @@ export function summarize(sessions = [], tasks = [], gamification = {}) {
     longestDayStreak: Number.isFinite(gamification.longestDayStreak)
       ? gamification.longestDayStreak
       : 0,
+    /*
+     * How many missed days the current streak can survive (§14.6). It belongs to the same
+     * server-owned snapshot as the two streaks above and is meaningless apart from them, so it
+     * travels with them through the seam rather than being read off the store by the tile.
+     */
+    streakFreezesAvailable: Number.isFinite(gamification.streakFreezesAvailable)
+      ? Math.max(0, gamification.streakFreezesAvailable)
+      : 0,
     completedSessions,
     terminatedSessions,
     totalSessions,

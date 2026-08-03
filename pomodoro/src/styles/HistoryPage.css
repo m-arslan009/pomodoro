@@ -223,6 +223,11 @@
   margin-bottom: var(--sp-3);
 }
 
+/* Protection reads immediately after the streak it protects, before the KPI grid. */
+.hp-summary .streak-freeze {
+  margin-bottom: var(--sp-3);
+}
+
 .hp-summary__streak-value {
   display: flex;
   align-items: baseline;

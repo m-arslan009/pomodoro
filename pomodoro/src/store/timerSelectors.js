@@ -135,5 +135,56 @@ export const selectBacklogHydration = createSelector(
   (hydration) => hydration.backlog
 );
 
+/** The points read alone, for the same reason in reverse: freeze status is only as good as it. */
+export const selectGamificationHydration = createSelector(
+  selectHydration,
+  (hydration) => hydration.gamification
+);
+
+/* --------------------------------------------------------- Streak freeze -- */
+
+/** Stable identity, so a slice without the field does not churn the memo (see selectHydration). */
+const EMPTY_STREAK_FREEZE = { lastSeenAvailable: null, spent: 0 };
+
+const selectStreakFreezeState = (state) => state.timer.streakFreeze ?? EMPTY_STREAK_FREEZE;
+
+/**
+ * Everything a surface needs to render streak protection, resolved to ONE status (§14.6).
+ *
+ *   loading   — no snapshot yet and the points read is still in flight
+ *   error     — no snapshot and the points read failed; there is nothing honest to show
+ *   consumed  — the server's count dropped, so a freeze was spent and not yet acknowledged
+ *   available — at least one freeze is banked
+ *   none      — the count is zero; the next missed day ends the streak
+ *
+ * `consumed` outranks `available` because it is news and the count is not: the number is on screen
+ * either way, but "we just used one" is the thing the user did not know. `loading` and `error` are
+ * gated on having NO snapshot at all — once real totals exist, a slow or failed REFRESH must not
+ * replace them with a skeleton, and the shell's banner already names the read that failed (§17.4).
+ */
+export const selectStreakFreeze = createSelector(
+  selectGamification,
+  selectGamificationHydration,
+  selectStreakFreezeState,
+  (gamification, hydration, freeze) => {
+    const available = Number.isFinite(gamification?.streakFreezesAvailable)
+      ? Math.max(0, gamification.streakFreezesAvailable)
+      : 0;
+    const spent = freeze.spent ?? 0;
+    const loaded = freeze.lastSeenAvailable !== null;
+
+    let status;
+    if (!loaded && hydration.status === 'loading') status = 'loading';
+    else if (!loaded && hydration.status === 'error') status = 'error';
+    else if (spent > 0) status = 'consumed';
+    else if (available > 0) status = 'available';
+    else status = 'none';
+
+    // No `error` string here on purpose: the panel's failure copy is fixed, the shell's banner is
+    // what quotes the read's own message, and a field no surface renders is how F14 happened.
+    return { status, available, spent };
+  }
+);
+
 /** True when the §17.2 record cap stopped the session loop short of the full window. */
 export const selectSessionsTruncated = (state) => state.timer.truncated ?? false;

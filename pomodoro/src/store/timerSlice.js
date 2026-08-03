@@ -37,6 +37,26 @@ const EMPTY_GAMIFICATION = {
 };
 
 /**
+ * Streak-freeze observation (CONTRACT.md §14.2, §14.6).
+ *
+ * The server reports `streakFreezesSpent` alongside the count, and that is the authority — the
+ * same transient "what this request did" signal `pointsDelta` and `newlyUnlocked` already are.
+ *
+ * THE COUNTER IS WATCHED ONLY AS A FALLBACK, for a snapshot that carries no such field. It was the
+ * whole mechanism while the display shipped ahead of the server logic, and it is kept because it
+ * still answers correctly — but it cannot see a session that spends a freeze and then earns one
+ * back on the same day, which moves the count by nothing at all. That case is exactly why the
+ * explicit field was added.
+ *
+ * Either way the client still scores nothing and decides nothing about the economy (§14.3 rule 1):
+ * it reads what the server did.
+ *
+ * `lastSeenAvailable` is null until the first snapshot, so a fresh store reading 0 can never be
+ * mistaken for a freeze having been consumed.
+ */
+const EMPTY_STREAK_FREEZE = { lastSeenAvailable: null, spent: 0 };
+
+/**
  * Hydration is FOUR reads, and their outcomes are tracked separately (§17.3 rule 5).
  *
  * Awaiting them as one all-or-nothing unit meant a slow `GET /gamification` could empty a dashboard
@@ -61,6 +81,8 @@ const initialState = {
   tasks: [],
   sessions: [],
   gamification: EMPTY_GAMIFICATION,
+  /** What the server's freeze counter has done since we started watching it. */
+  streakFreeze: { ...EMPTY_STREAK_FREEZE },
   /** Per-resource hydration outcome. The banner reads this; `status` below is its roll-up. */
   hydration: emptyHydration(),
   /** True when the §17.2 record cap stopped the session loop short of the full window. */
@@ -140,6 +162,46 @@ function mergeTasks(existing, incoming) {
   const byId = new Map(existing.map((task) => [task.id, task]));
   for (const task of incoming) byId.set(task.id, { ...byId.get(task.id), ...task });
   return [...byId.values()];
+}
+
+/**
+ * Adopt a server snapshot, noting any freeze the server spent between it and the previous one.
+ *
+ * THE ONLY WAY TOTALS ENTER THE SLICE. Hydration, a recorded session and an outbox flush all route
+ * through here, so there is no path by which a consumption arrives unobserved — which is the whole
+ * reason this is a function rather than three assignments.
+ */
+function adoptGamification(state, snapshot) {
+  // `preloadedState` is a public Redux API, so a slice without this field is a state the store can
+  // genuinely be in — the same reason selectHydration synthesises its fallback.
+  if (!state.streakFreeze) state.streakFreeze = { ...EMPTY_STREAK_FREEZE };
+
+  const previous = state.streakFreeze.lastSeenAvailable;
+  const next = Number.isFinite(snapshot?.streakFreezesAvailable)
+    ? snapshot.streakFreezesAvailable
+    : 0;
+
+  /*
+   * The server now says outright what it spent, so take it at its word and do not second-guess it
+   * with the counter — INCLUDING when it says zero. A read resolves elapsed days for display
+   * without writing them down, so it can report a lower count while spending nothing; letting the
+   * fallback fire there would announce the same covered day twice, once on the read that predicted
+   * it and again on the session that made it real.
+   */
+  const reported = Number.isFinite(snapshot?.streakFreezesSpent)
+    ? snapshot.streakFreezesSpent
+    : null;
+
+  if (reported !== null) {
+    if (reported > 0) state.streakFreeze.spent += reported;
+  } else if (previous !== null && next < previous) {
+    // No explicit signal: fall back to watching the counter. Only a DECREASE is a consumption —
+    // a grant moves it the other way and is not news.
+    state.streakFreeze.spent += previous - next;
+  }
+
+  state.streakFreeze.lastSeenAvailable = next;
+  state.gamification = snapshot;
 }
 
 /** The reason a settled read failed, in the user's language rather than the transport's. */
@@ -253,6 +315,7 @@ function clearTimer(state) {
   state.tasks = [];
   state.sessions = [];
   state.gamification = EMPTY_GAMIFICATION;
+  state.streakFreeze = { ...EMPTY_STREAK_FREEZE };
   state.hydration = emptyHydration();
   state.truncated = false;
   state.status = 'idle';
@@ -296,6 +359,17 @@ const timerSlice = createSlice({
     taskErrorCleared(state) {
       state.taskError = null;
     },
+
+    /**
+     * The user has read the "a freeze was used" notice.
+     *
+     * Only the notice is cleared, never `lastSeenAvailable` — that is our record of what the
+     * server last said, and forgetting it would make the very next snapshot look like a fresh
+     * consumption.
+     */
+    streakFreezeAcknowledged(state) {
+      if (state.streakFreeze) state.streakFreeze.spent = 0;
+    },
   },
 
   extraReducers: (builder) => {
@@ -331,7 +405,7 @@ const timerSlice = createSlice({
           error: reasonFor(gamification, 'We could not load your points.'),
         };
 
-        if (gamification.status === 'fulfilled') state.gamification = gamification.value;
+        if (gamification.status === 'fulfilled') adoptGamification(state, gamification.value);
 
         // A bounded view the user is not told about is a chart that lies (§17.2).
         state.truncated = sessions.status === 'fulfilled' && sessions.value.truncated;
@@ -351,7 +425,7 @@ const timerSlice = createSlice({
 
       .addCase(recordSession.fulfilled, (state, action) => {
         state.sessions = mergeSessions(state.sessions, [action.payload.session]);
-        state.gamification = action.payload.gamification;
+        adoptGamification(state, action.payload.gamification);
       })
       .addCase(recordSession.rejected, (state, action) => {
         const info = action.payload;
@@ -380,7 +454,7 @@ const timerSlice = createSlice({
         }
         // The last delivery carries the freshest totals.
         const last = action.payload.delivered.at(-1);
-        if (last?.gamification) state.gamification = last.gamification;
+        if (last?.gamification) adoptGamification(state, last.gamification);
       })
 
       /*
@@ -484,6 +558,11 @@ const timerSlice = createSlice({
   },
 });
 
-export const { sessionFinalized, sessionsPageLoaded, tasksPageLoaded, taskErrorCleared } =
-  timerSlice.actions;
+export const {
+  sessionFinalized,
+  sessionsPageLoaded,
+  streakFreezeAcknowledged,
+  tasksPageLoaded,
+  taskErrorCleared,
+} = timerSlice.actions;
 export default timerSlice.reducer;
