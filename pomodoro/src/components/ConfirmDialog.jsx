@@ -17,6 +17,7 @@ function ConfirmDialog({
   children,
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
+  busyLabel = 'Deleting…',
   busy = false,
   onConfirm,
   onCancel,
@@ -48,7 +49,7 @@ function ConfirmDialog({
           onClick={onConfirm}
           disabled={busy}
         >
-          {busy ? 'Deleting…' : confirmLabel}
+          {busy ? busyLabel : confirmLabel}
         </button>
       </div>
     </ModalDialog>

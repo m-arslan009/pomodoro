@@ -68,6 +68,22 @@
   font-size: var(--fs-label);
 }
 
+/*
+ * Destructive, so it carries the crimson accent rather than sitting among the neutral ghost
+ * buttons — but only on hover does it fill, so it never competes with Save photo for attention.
+ */
+.avatar-field__remove {
+  background: var(--glass-bg);
+  border: 1px solid var(--pp-bad-border);
+  color: var(--pp-bad);
+}
+
+.avatar-field__remove:hover:not(:disabled) {
+  background: var(--pp-bad);
+  border-color: var(--pp-bad);
+  color: #1a0d0c;
+}
+
 .avatar-field__error {
   margin: 0;
   max-width: 22ch;

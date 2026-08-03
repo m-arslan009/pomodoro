@@ -15,6 +15,15 @@
   --pp-bad-bg: rgba(224, 115, 107, 0.16);
   --pp-bad-border: rgba(224, 115, 107, 0.45);
 
+  /*
+   * The shared ConfirmDialog paints its confirm button with .timer-btn--danger, whose palette is
+   * declared on .timer-page — a block this page never sits in. Aliased to the accent above, which
+   * is the same crimson, so the dialog is styled wherever it is opened from here.
+   */
+  --timer-danger: var(--pp-bad);
+  --timer-danger-bg: var(--pp-bad-bg);
+  --timer-danger-border: var(--pp-bad-border);
+
   /* Fluid type scale */
   --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
   --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
@@ -265,6 +274,15 @@
   margin: var(--gap-1) 0 0;
   font-size: var(--fs-label);
   line-height: 1.4;
+  color: var(--pp-bad);
+  overflow-wrap: anywhere;
+}
+
+/* A failure raised inside a confirmation dialog, shown next to the action that can be retried. */
+.profile-dialog__error {
+  margin: var(--gap-2) 0 0;
+  font-size: var(--fs-label);
+  line-height: 1.45;
   color: var(--pp-bad);
   overflow-wrap: anywhere;
 }

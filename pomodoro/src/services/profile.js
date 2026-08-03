@@ -69,3 +69,16 @@ export async function uploadAvatar(blob) {
   const payload = await api.put('/me/avatar', form);
   return payload.user;
 }
+
+/**
+ * Deletes the avatar, leaving the account showing its initials.
+ *
+ * Idempotent on the server, so removing one that is already gone succeeds. The response carries
+ * the updated profile — its `avatarUpdatedAt` is now null — which is what the caller must adopt.
+ *
+ * @returns {Promise<UserProfile>}
+ */
+export async function removeAvatar() {
+  const payload = await api.del('/me/avatar');
+  return payload.user;
+}

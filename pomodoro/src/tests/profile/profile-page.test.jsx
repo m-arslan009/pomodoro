@@ -31,6 +31,7 @@ vi.mock('../../services/profile.js', () => ({
   updateProfile: vi.fn(),
   fetchAvatarImage: vi.fn(),
   uploadAvatar: vi.fn(),
+  removeAvatar: vi.fn(),
 }));
 
 vi.mock('../../services/auth.js', async (importOriginal) => ({

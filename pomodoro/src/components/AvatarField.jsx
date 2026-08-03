@@ -10,6 +10,11 @@ import '../styles/AvatarField.css';
  * Choosing a file stages it: the crop is applied locally and shown as a preview, and nothing is
  * sent until Save photo. That extra step is deliberate — the image is centre-cropped to a square,
  * so this is where someone finds out what the crop did to their photo.
+ *
+ * Removal is the exception: the button lives here, but the confirmation and the request are the
+ * page's, because the dialog cannot render inside this component. `.profile-identity` carries a
+ * backdrop-filter, which makes it the containing block for fixed-position descendants — a modal
+ * mounted under it would be trapped inside the card instead of covering the viewport.
  */
 
 function describeFailure(error) {
@@ -21,7 +26,14 @@ function describeFailure(error) {
   return 'Could not update your photo. Please try again.';
 }
 
-function AvatarField({ user, initials, onUpdated, onBusyChange, disabled = false }) {
+function AvatarField({
+  user,
+  initials,
+  onUpdated,
+  onBusyChange,
+  onRemoveRequest,
+  disabled = false,
+}) {
   const [savedImage, setSavedImage] = useState(null);
   const [preview, setPreview] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -88,8 +100,26 @@ function AvatarField({ user, initials, onUpdated, onBusyChange, disabled = false
     setError('');
   }
 
-  const shown = preview?.dataUrl ?? savedImage;
+  function handleRemove() {
+    // Asking is all this does; the page owns the confirmation and the request itself.
+    setError('');
+    onRemoveRequest();
+  }
+
+  /*
+   * The marker gates the fetched image rather than a separate "is it gone" flag: once the server
+   * says there is no avatar — after a removal, or because another session removed it — the bytes
+   * held here are stale by definition, and the initials are what belongs in the circle.
+   */
+  const shown = preview?.dataUrl ?? (avatarUpdatedAt ? savedImage : null);
   const locked = disabled || busy;
+  /*
+   * `avatarUpdatedAt` is the server's answer to "is there a stored photo", and the only one worth
+   * asking: the bytes may still be in flight, or may have failed to load, and neither of those
+   * means there is nothing to remove. While a chosen file is staged the control is hidden instead
+   * — Cancel discards that, and offering both would blur what each one throws away.
+   */
+  const removable = Boolean(avatarUpdatedAt) && !preview && Boolean(onRemoveRequest);
 
   return (
     <div className="avatar-field" aria-busy={busy || undefined}>
@@ -133,6 +163,17 @@ function AvatarField({ user, initials, onUpdated, onBusyChange, disabled = false
               Cancel
             </button>
           </>
+        )}
+
+        {removable && (
+          <button
+            type="button"
+            className="profile-btn avatar-field__remove"
+            onClick={handleRemove}
+            disabled={locked}
+          >
+            Remove photo
+          </button>
         )}
       </div>
 

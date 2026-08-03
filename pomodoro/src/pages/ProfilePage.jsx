@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '../components/AppLayout.jsx';
 import AvatarField from '../components/AvatarField.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import Notification from '../components/Notification.jsx';
 import PageLoader from '../components/PageLoader.jsx';
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
 import { changePassword, detectTimeZone } from '../services/auth.js';
-import { fetchProfile, updateProfile } from '../services/profile.js';
+import { fetchProfile, removeAvatar, updateProfile } from '../services/profile.js';
 import {
   validateName,
   validateUsername,
@@ -131,6 +132,16 @@ function ProfilePage() {
   const [savingDetails, setSavingDetails] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
 
+  /*
+   * Avatar removal. The button belongs to AvatarField but the dialog cannot: the identity card is
+   * a backdrop-filtered element, which is a containing block for fixed positioning, so a modal
+   * rendered inside it would be clipped to the card. It is mounted at page level instead, beside
+   * the toast, exactly as the Timer mounts its own.
+   */
+  const [confirmingRemoveAvatar, setConfirmingRemoveAvatar] = useState(false);
+  const [removingAvatar, setRemovingAvatar] = useState(false);
+  const [removeAvatarError, setRemoveAvatarError] = useState('');
+
   const [pwd, setPwd] = useState(EMPTY_PASSWORD_FORM);
   const [pwdErrors, setPwdErrors] = useState({});
   const [savingPassword, setSavingPassword] = useState(false);
@@ -147,6 +158,9 @@ function ProfilePage() {
   const saved = detailsOf(user);
   const details = { ...saved, ...edits };
   const detailsDirty = Object.keys(saved).some((key) => details[key] !== saved[key]);
+
+  // Upload and removal are both profile writes, so either one blocks the details form.
+  const avatarBusy = savingAvatar || removingAvatar;
 
   /*
    * Re-read the profile on arrival, because the account can have changed since the token was
@@ -199,7 +213,7 @@ function ProfilePage() {
     event.preventDefault();
     // Both writes return the whole profile, so letting them overlap would let the slower response
     // overwrite the faster one's result.
-    if (!detailsDirty || savingDetails || savingAvatar) return;
+    if (!detailsDirty || savingDetails || avatarBusy) return;
 
     const found = validateDetails(details);
     const active = Object.fromEntries(Object.entries(found).filter(([, message]) => message));
@@ -248,6 +262,46 @@ function ProfilePage() {
   function handleDetailsReset() {
     setEdits({});
     setDetailErrors({});
+  }
+
+  /* ----------------------------------------------------------------- Avatar */
+  function handleRemoveAvatarRequest() {
+    setRemoveAvatarError('');
+    setConfirmingRemoveAvatar(true);
+  }
+
+  function handleRemoveAvatarCancel() {
+    // Nothing has been sent, so backing out leaves the photo exactly where it was.
+    if (removingAvatar) return;
+    setConfirmingRemoveAvatar(false);
+    setRemoveAvatarError('');
+  }
+
+  async function handleRemoveAvatarConfirm() {
+    if (removingAvatar) return;
+
+    setRemoveAvatarError('');
+    setRemovingAvatar(true);
+    try {
+      // The response is the profile the server stored, with `avatarUpdatedAt` now null — adopting
+      // it is what drops the photo everywhere it is shown, AvatarField included.
+      const updated = await removeAvatar();
+      setUser(updated);
+      setConfirmingRemoveAvatar(false);
+      setNotification({ type: 'success', message: 'Your profile photo has been removed.' });
+    } catch (error) {
+      /*
+       * A failed request changed nothing, so the photo is still there and the dialog stays open
+       * with the reason on it — closing would hide the failure behind an unchanged avatar.
+       */
+      setRemoveAvatarError(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not remove your photo. Please try again.'
+      );
+    } finally {
+      setRemovingAvatar(false);
+    }
   }
 
   /* --------------------------------------------------------------- Password */
@@ -327,6 +381,34 @@ function ProfilePage() {
       />
 
       <div className="profile-page">
+        {/*
+          Inside .profile-page, not beside it: the dialog's danger button is painted from tokens
+          declared on this block. It is still a viewport-level overlay — .profile-page applies no
+          filter or transform, so the fixed positioning inside it escapes to the viewport.
+        */}
+        {confirmingRemoveAvatar && user.avatarUpdatedAt && (
+          <ConfirmDialog
+            title="Remove your profile photo?"
+            confirmLabel="Remove photo"
+            busyLabel="Removing…"
+            busy={removingAvatar}
+            onConfirm={handleRemoveAvatarConfirm}
+            onCancel={handleRemoveAvatarCancel}
+          >
+            <p>
+              Your photo will be deleted from your account, and you will be shown as your initials
+              ({initialsOf(user)}) again everywhere in Evergrove. This is the only copy — putting
+              it back means uploading the original file again.
+            </p>
+            <p>Nothing else about your account changes.</p>
+            {removeAvatarError && (
+              <p className="profile-dialog__error" role="alert">
+                {removeAvatarError}
+              </p>
+            )}
+          </ConfirmDialog>
+        )}
+
         <header className="profile-page__head">
           <h1 className="profile-page__title">Profile</h1>
           <p className="profile-page__subtitle">
@@ -341,7 +423,8 @@ function ProfilePage() {
             initials={initialsOf(user)}
             onUpdated={setUser}
             onBusyChange={setSavingAvatar}
-            disabled={savingDetails}
+            onRemoveRequest={handleRemoveAvatarRequest}
+            disabled={savingDetails || removingAvatar}
           />
           <div className="profile-identity__text">
             <p className="profile-identity__name">
@@ -433,14 +516,14 @@ function ProfilePage() {
               type="button"
               className="profile-btn profile-btn--ghost"
               onClick={handleDetailsReset}
-              disabled={!detailsDirty || savingDetails || savingAvatar}
+              disabled={!detailsDirty || savingDetails || avatarBusy}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="profile-btn profile-btn--primary"
-              disabled={!detailsDirty || savingDetails || savingAvatar}
+              disabled={!detailsDirty || savingDetails || avatarBusy}
             >
               {savingDetails ? 'Saving…' : 'Save changes'}
             </button>
