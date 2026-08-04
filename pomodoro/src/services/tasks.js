@@ -15,9 +15,6 @@ import { api } from './api.js';
 /** Mirrors TASK_TITLE_MAX_LENGTH. */
 export const TITLE_MAX_LENGTH = 120;
 
-/** Mirrors TASK_STATUSES. A task is abandoned; a *session* is terminated. */
-export const TASK_STATUSES = ['todo', 'completed', 'abandoned'];
-
 /**
  * Mirrors TASK_ESTIMATE_MIN / MAX — the range of `estimatedPomodoros`.
  *

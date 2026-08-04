@@ -1,4 +1,4 @@
-import { TITLES, currentTitle, progressToNext, titlesFor } from '../../services/gamification.js';
+import { TITLES, currentTitle, nextTitle, progressToNext } from '../../services/gamification.js';
 
 /*
  * Suite C1/C4 — the title ladder in services/gamification.js.
@@ -23,6 +23,12 @@ import { TITLES, currentTitle, progressToNext, titlesFor } from '../../services/
  * now what pins this mirror to backend/src/domain/gamification.ts (§14). Read
  * these cases as "the ladder resolves correctly", never as "these features are
  * locked" — nothing is.
+ *
+ * These cases assert through `currentTitle`/`nextTitle` rather than the earned
+ * SET, because the set went with the gate: `titlesFor` had no consumer once
+ * nothing needed to ask which tiers a user had passed, and the product renders
+ * exactly one title. Reaching for a set here again is a sign the gate is coming
+ * back — see the warning in services/gamification.js before writing it.
  */
 
 describe('Suite C1 — Threshold & tier ladder', () => {
@@ -39,23 +45,20 @@ describe('Suite C1 — Threshold & tier ladder', () => {
     ]);
 
     TITLES.forEach(({ key, threshold }) => {
-      // One point short is still short — a partially earned rung grants nothing.
-      expect(titlesFor(threshold - 1)).not.toContain(key);
+      // One point short is still short — a partially earned rung grants nothing,
+      // so the rung below (or none at all) is still the standing title.
+      expect(currentTitle(threshold - 1)?.key).not.toBe(key);
       // The comparison is inclusive: landing exactly on the threshold promotes.
-      expect(titlesFor(threshold)).toContain(key);
+      expect(currentTitle(threshold).key).toBe(key);
     });
   });
 
-  it('C1.2 — earns every tier up to the reached one and no tier beyond it', () => {
-    // 4000 lifetime points is exactly The Catalyst's rung: the three tiers at or
-    // below it resolve as earned, and the two above it do not, even though the
-    // user is well past the first threshold.
-    //
-    // Ascending order matters: the earned set is a prefix of the ladder, so a
-    // higher tier can never leak in ahead of a lower one it outranks.
-    expect(titlesFor(4000)).toEqual(['anchor', 'paceSetter', 'catalyst']);
-    expect(titlesFor(4000)).not.toContain('vanguard');
-    expect(titlesFor(4000)).not.toContain('paragon');
+  it('C1.2 — resolves the reached tier and never one beyond it', () => {
+    // 4000 lifetime points is exactly The Catalyst's rung. It is the standing
+    // title, and the tier above it is merely the next goal — being well past the
+    // first threshold never promotes anyone past the rung they actually reached.
+    expect(currentTitle(4000).key).toBe('catalyst');
+    expect(nextTitle(4000).key).toBe('vanguard');
   });
 });
 

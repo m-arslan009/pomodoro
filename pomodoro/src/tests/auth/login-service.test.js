@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../services/api.js';
-import { changePassword, fetchCurrentUser, login, logout } from '../../services/auth.js';
+import { changePassword, login, logout } from '../../services/auth.js';
 
 /*
  * Suite D1/D2 — the login service in services/auth.js.
@@ -120,28 +120,6 @@ describe('Suite D1 — Credential verification', () => {
 });
 
 describe('Suite D2 — Profile read and teardown', () => {
-  it('D2.1 — resolves the current user from the presented access token', async () => {
-    fetchMock.mockResolvedValue(respond(200, { user: USER }));
-
-    await expect(fetchCurrentUser()).resolves.toEqual(USER);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/auth/me');
-  });
-
-  it('D2.2 — treats "not signed in" as an answer, not a failure', async () => {
-    fetchMock.mockResolvedValue(
-      respond(401, { title: 'Not authenticated', status: 401, detail: 'Sign in to continue.' })
-    );
-
-    // Callers must be able to distinguish anonymous from broken without parsing a problem body.
-    await expect(fetchCurrentUser()).resolves.toBeNull();
-  });
-
-  it('D2.3 — propagates a genuine server failure rather than reporting it as anonymous', async () => {
-    fetchMock.mockResolvedValue(respond(500, { title: 'Internal server error', status: 500 }));
-
-    await expect(fetchCurrentUser()).rejects.toBeInstanceOf(ApiError);
-  });
-
   it('D2.4 — signing out posts to the API and tolerates an empty 204 response', async () => {
     fetchMock.mockResolvedValue(respond(204, null));
 

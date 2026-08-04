@@ -38,12 +38,6 @@ export const selectTimerError = (state) => state.timer.error;
  */
 export const selectTaskError = (state) => state.timer.taskError ?? null;
 
-/** Lifetime points drive the title ladder, and never decrease. */
-export const selectLifetimePoints = createSelector(
-  selectGamification,
-  (gamification) => gamification?.lifetimePoints ?? 0
-);
-
 /**
  * Focus intervals only. Breaks are recorded — every path out of a running interval produces a
  * record — but they are not work, and counting them would roughly double every figure the product

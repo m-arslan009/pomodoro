@@ -21,18 +21,6 @@ export const DURATION_LIMITS = {
   break: { min: 1, max: 60 },
 };
 
-/** Mirrors THEMES. 'light' is deferred until a light .app-shell palette exists (§9.3). */
-export const THEME_VALUES = ['system', 'dark'];
-
-/** Mirrors BACKGROUNDS, and the preset keys in appearance.js. */
-export const BACKGROUND_VALUES = ['forest', 'dusk', 'ember', 'midnight'];
-
-/** Mirrors THEME_COLOR_KEYS — the three forest variables the palette editor may override. */
-export const THEME_COLOR_KEYS = ['accent', 'leaf', 'wood'];
-
-/** Mirrors HEX_COLOR_PATTERN. Six-digit hex is the only form <input type="color"> produces. */
-export const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i;
-
 /** Mirrors LABEL_MAX_LENGTH. */
 export const LABEL_MAX_LENGTH = 18;
 

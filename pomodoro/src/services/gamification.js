@@ -13,6 +13,9 @@
  * deleted — `FeatureGate.jsx`, `useFeatureGate.js`, `featureTitle`,
  * `isFeatureUnlocked`, and the `feature` field on every title, on both sides of
  * the mirror. Every product surface is available to every authenticated user.
+ * `titlesFor` followed them: the SET of earned tiers was only ever what a gate
+ * asked for, and the product renders one title — the highest — through
+ * `currentTitle`. The server still reports `unlockedTitles`; nothing reads it.
  *
  * DO NOT REINTRODUCE A GATE HERE. If the cosmetic ladder (N5) ever needs one it
  * gets a fresh mechanism and a `feature` field added back to BOTH mirrors in the
@@ -60,12 +63,6 @@ export const TITLES = [
 /** Coerce any input to a non-negative finite point total. */
 function safePoints(value) {
   return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-/** Title keys unlocked at the given lifetime points, in ascending order. */
-export function titlesFor(lifetimePoints) {
-  const points = safePoints(lifetimePoints);
-  return TITLES.filter((title) => points >= title.threshold).map((title) => title.key);
 }
 
 /** The highest title earned at the given lifetime points, or null if none yet. */

@@ -9,7 +9,7 @@
  * Keep the numbers identical.
  */
 
-import { HEX_COLOR_RE, LABEL_MAX_LENGTH } from './settings.js';
+import { LABEL_MAX_LENGTH } from './settings.js';
 
 // Pragmatic email shape check: something@something.tld with no spaces.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,12 +129,6 @@ export function validateLabel(value) {
   if (value.trim().length > LABEL_MAX_LENGTH) {
     return `Labels must be ${LABEL_MAX_LENGTH} characters or fewer.`;
   }
-  return '';
-}
-
-/** A palette colour — six-digit hex, the only form <input type="color"> produces. */
-export function validateHexColor(value) {
-  if (!HEX_COLOR_RE.test(String(value))) return 'Use a six-digit hex colour.';
   return '';
 }
 
