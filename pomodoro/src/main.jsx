@@ -5,6 +5,8 @@ import { Provider } from 'react-redux';
 import './index.css';
 import App from './App.jsx';
 import { store } from './store/index.js';
+import { bootstrapAuth } from './store/authSlice.js';
+import { hydrateSession } from './store/hydrate.js';
 import { DEFAULT_SETTINGS } from './services/settings.js';
 import { applyBaseTheme } from './services/appearance.js';
 
@@ -19,9 +21,23 @@ import { applyBaseTheme } from './services/appearance.js';
 applyBaseTheme(DEFAULT_SETTINGS.theme);
 
 /*
- * No session bootstrap. The access token is held in memory only, so a page load starts anonymous
- * by definition — there is nothing to ask the server about until the user signs in.
+ * Resume the session, once, before anything renders.
+ *
+ * DO NOT MOVE THIS INTO A useEffect. <StrictMode> deliberately double-invokes effects in
+ * development, so an effect-based bootstrap would fire two refreshes on every cold start. Refresh
+ * tokens rotate: the second would present a token the first had just rotated away, the server would
+ * read that as a replayed token, and it would revoke every session the account has. The symptom is
+ * being signed out on every single page load, in development only, with nothing in the code that
+ * looks wrong. Dispatching from the composition root fires it exactly once.
+ *
+ * The rejection is swallowed on purpose. Most cold starts are anonymous, and finding that out is
+ * what this call is *for* — it is not an error, and the slice records it without setting one.
  */
+store
+  .dispatch(bootstrapAuth())
+  .unwrap()
+  .then(() => hydrateSession(store.dispatch))
+  .catch(() => {});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

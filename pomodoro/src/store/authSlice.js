@@ -12,11 +12,13 @@ import { adoptCacheOwner } from '../services/storage.js';
  * act as the user until it expires — keeping it in memory means a stored XSS payload has to run
  * during the session to steal it, and reloading the page throws it away. Persisting it to
  * localStorage would hand it to every script that ever runs on this origin, for the token's
- * full lifetime.
+ * full lifetime. **That rule is unchanged by ADR-008 rev. 3 and is not negotiable.**
  *
- * Throwing it away on reload is the whole reason `status` starts at 'anonymous' and there is no
- * startup bootstrap: with no cookie and nothing in storage, a cold start has no credential to
- * check, so the answer is known synchronously and the route guards never have to wait.
+ * What rev. 3 changed is that throwing the token away on reload no longer ends the session. There
+ * is a refresh cookie now, and this file cannot read it — it is HttpOnly, which is the entire
+ * reason it is allowed to outlive the tab. So `status` starts at 'loading' rather than 'anonymous':
+ * a cold start genuinely does not know the answer yet, and `bootstrapAuth` is what asks. The route
+ * guards park on PageLoader for exactly as long as that takes.
  */
 
 /**
@@ -33,11 +35,16 @@ import { adoptCacheOwner } from '../services/storage.js';
  * @property {{message: string, fieldErrors: Record<string, string>}|null} error Last failure.
  */
 
-/** @type {AuthState} */
+/**
+ * `status` starts at 'loading', not 'anonymous': a refresh cookie may exist, and only the server
+ * can say. Nothing renders an authenticated or an anonymous view until `bootstrapAuth` answers.
+ *
+ * @type {AuthState}
+ */
 const initialState = {
   user: null,
   accessToken: null,
-  status: 'anonymous',
+  status: 'loading',
   loginStatus: 'idle',
   error: null,
 };
@@ -97,7 +104,30 @@ export const signUp = createAsyncThunk(
 );
 
 /**
- * Sign out. The server revokes nothing, so dropping the token here is what ends the session.
+ * Resume a session from the refresh cookie, once, at startup.
+ *
+ * **Its rejection is the ordinary case, not a failure.** Most cold starts are anonymous, and this
+ * thunk is how we find that out — so the rejected reducer clears to anonymous without setting
+ * `error` or touching `loginStatus`. Anything else would paint "Something went wrong" on a login
+ * form that the user has not yet typed into.
+ *
+ * @type {import('@reduxjs/toolkit').AsyncThunk<AuthSession, void, {}>}
+ */
+export const bootstrapAuth = createAsyncThunk(
+  'auth/bootstrap',
+  async () => {
+    const session = await authService.refresh();
+    // A resumed session is a session start, so the same cache-owner rule applies as at sign-in:
+    // a different account must not inherit the previous one's cached tasks and points.
+    adoptCacheOwner(session.user.id);
+    return session;
+  },
+  thunkOptions
+);
+
+/**
+ * Sign out. The server revokes the refresh session, so this device cannot renew; dropping the
+ * access token here is what ends the session locally, since nothing can revoke that half.
  * Local state clears whether or not the request succeeded — see the reducers.
  * @type {import('@reduxjs/toolkit').AsyncThunk<void, void, {}>}
  */
@@ -156,6 +186,18 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      /*
+       * Deliberately NOT rejectCredentials: nobody submitted a credential. `loginStatus` stays
+       * 'idle' and `error` stays null, so an anonymous cold start looks like what it is — an
+       * anonymous cold start — rather than a failed sign-in attempt.
+       */
+      .addCase(bootstrapAuth.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.accessToken = action.payload.accessToken;
+        state.status = 'authenticated';
+      })
+      .addCase(bootstrapAuth.rejected, clearSession)
+
       .addCase(login.pending, (state) => {
         state.loginStatus = 'pending';
         state.error = null;
@@ -192,7 +234,5 @@ export const { sessionRefreshed, sessionCleared, userUpdated } = authSlice.actio
 export const selectAuthUser = (state) => state.auth.user;
 /** @param {{auth: AuthState}} state */
 export const selectAuthStatus = (state) => state.auth.status;
-/** @param {{auth: AuthState}} state */
-export const selectAccessToken = (state) => state.auth.accessToken;
 
 export default authSlice.reducer;

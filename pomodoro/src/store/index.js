@@ -1,8 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer, { sessionCleared } from './authSlice.js';
+import authReducer, { bootstrapAuth, sessionCleared } from './authSlice.js';
 import settingsReducer from './settingsSlice.js';
 import timerReducer from './timerSlice.js';
-import { setAuthTokenAccessor, setOnAuthFailure } from '../services/api.js';
+import {
+  setAuthRefreshHandler,
+  setAuthTokenAccessor,
+  setOnAuthFailure,
+} from '../services/api.js';
 
 /*
  * The application store: authentication, settings, and the timer's records.
@@ -37,11 +41,20 @@ export const store = configureStore({
  *
  * services/api.js cannot import the store: the store imports the services, so the reverse
  * import closes a cycle — and injection is also what lets the service tests exercise api.js
- * with no store at all. So the store hands api.js the two things it needs and keeps every
+ * with no store at all. So the store hands api.js the three things it needs and keeps every
  * piece of authentication state on this side of the boundary.
  */
 setAuthTokenAccessor(() => store.getState().auth.accessToken);
 
 setOnAuthFailure(() => store.dispatch(sessionCleared()));
+
+/*
+ * Renewal after a mid-session 401. The same thunk as the startup bootstrap, because it is the same
+ * operation — exchange the cookie for a token and install the result — and having one action for it
+ * means the recovered session is indistinguishable from a resumed one.
+ *
+ * api.js calls this at most once per 401 and shares one in-flight promise across concurrent ones.
+ */
+setAuthRefreshHandler(() => store.dispatch(bootstrapAuth()).unwrap());
 
 export default store;

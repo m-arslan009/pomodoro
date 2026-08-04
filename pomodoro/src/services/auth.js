@@ -4,13 +4,16 @@
  * This module knows how to *talk* about authentication and nothing else: no React state, no
  * storage, no routing. State lives in store/authSlice.js, which calls these functions.
  *
- * Authentication is one credential: a JWT returned in the body of login and register, which the
- * caller keeps in memory and api.js sends as a bearer header. There is no refresh token and no
- * cookie, so nothing survives a page reload and there is no way to renew a token — when it
- * expires the user signs in again.
+ * Authentication is two credentials (ADR-008 rev. 3), and this module only ever handles one of
+ * them. The access token is a JWT returned in the body of login, register and refresh; the caller
+ * keeps it in memory and api.js sends it as a bearer header. The refresh token is a `Set-Cookie`
+ * this code never reads and could not read if it tried — it is HttpOnly, which is exactly what
+ * makes it safe to be the long-lived half.
+ *
+ * So `refresh()` below takes no argument and sends no body. The browser supplies the credential.
  */
 
-import { ApiError, api } from './api.js';
+import { api } from './api.js';
 
 /**
  * @typedef {object} UserProfile
@@ -52,23 +55,6 @@ function toSession(payload) {
 }
 
 /**
- * Probes whether the access token is still good: the account when it is, null when it is not.
- *
- * Not used at startup — there is no persisted credential to bootstrap from. Reading the profile
- * is `/me` (services/profile.js); this endpoint answers "is this token alive?".
- */
-export async function fetchCurrentUser() {
-  try {
-    const payload = await api.get('/auth/me');
-    return payload.user;
-  } catch (error) {
-    // Not being signed in is an expected answer, not a failure to report.
-    if (error instanceof ApiError && error.status === 401) return null;
-    throw error;
-  }
-}
-
-/**
  * Accepts an email address or a username in `identifier` — the server resolves which.
  * @returns {Promise<AuthSession>}
  */
@@ -94,20 +80,37 @@ export async function register({ firstName, lastName, email, username, password,
 }
 
 /**
- * Tells the server this device is signing out. It revokes nothing — the token stays valid until
- * it expires — so dropping it from memory is what actually ends the session here.
+ * Renews the access token from the refresh cookie.
+ *
+ * No arguments and no body: the credential is the cookie, which the browser attaches and this code
+ * cannot see. The response is shaped exactly like login's, which is the point — a resumed session
+ * and a fresh sign-in are the same thing to everything downstream.
+ *
+ * @returns {Promise<AuthSession>} Rejects with a 401 ApiError when there is no live session, which
+ *   on a cold start is the ordinary answer rather than an error to show anyone.
+ */
+export async function refresh() {
+  return toSession(await api.post('/auth/refresh'));
+}
+
+/**
+ * Tells the server this device is signing out, and it now revokes for real: the refresh session
+ * the cookie names is killed and the cookie is cleared, so this device cannot renew. The access
+ * token already in memory stays valid until it expires — nothing can shorten that — which is why
+ * dropping it from memory is still part of signing out.
  */
 export async function logout() {
   await api.post('/auth/logout');
 }
 
 /**
- * Changes the password.
+ * Changes the password, which also signs every *other* device out (ADR-008 rev. 3).
  *
- * The response also carries a fresh access token, which is deliberately discarded: with no
- * server-side sessions the token already in memory stays valid for its full lifetime, so
- * adopting the new one would change nothing observable. Note that this does *not* sign other
- * devices out — nothing can, under a stateless token model.
+ * The response carries a fresh access token that is deliberately discarded, and the rotated cookie
+ * that comes with it is adopted by the browser without this code touching it. Discarding is still
+ * correct: the token already in memory is valid for its full lifetime regardless — `JwtGuard` reads
+ * no session row — so adopting the new one would change nothing observable, and when it does expire
+ * the new cookie renews it.
  */
 export async function changePassword({ currentPassword, newPassword }) {
   const payload = await api.post('/auth/change-password', { currentPassword, newPassword });

@@ -73,6 +73,9 @@ let readAccessToken = () => null;
 /** @type {() => void} */
 let handleAuthFailure = () => {};
 
+/** @type {(() => Promise<unknown>) | null} */
+let requestRefresh = null;
+
 /**
  * Supplies the reader for the current access token, called on every request.
  * @param {() => (string | null)} accessor
@@ -88,6 +91,50 @@ export function setAuthTokenAccessor(accessor) {
 export function setOnAuthFailure(onFailure) {
   handleAuthFailure = onFailure;
 }
+
+/**
+ * Supplies the renewal action, invoked at most once per 401 and shared across concurrent ones.
+ *
+ * Injected like the other two, and for the same reason: renewing means dispatching, and importing
+ * the store here would close the cycle this whole seam exists to avoid. Unwired, api.js behaves
+ * exactly as it did before refresh tokens existed — a 401 propagates untouched.
+ *
+ * @param {() => Promise<unknown>} refresher Resolves when a new access token is in the store.
+ */
+export function setAuthRefreshHandler(refresher) {
+  requestRefresh = refresher;
+}
+
+/*
+ * The in-flight renewal, shared by every request that hits a 401 while it runs.
+ *
+ * Single-flight is not an optimisation here, it is a correctness requirement. Refresh tokens
+ * rotate, so four parallel renewals would present the same token four times; the first rotates it
+ * away and the other three look like a *replayed* token, which the server treats as theft and
+ * answers by revoking every session the account has. Landing on /history — which fires four
+ * hydration reads at once — would sign the user out. One promise, shared, is what prevents that.
+ */
+/** @type {Promise<boolean> | null} */
+let inFlightRefresh = null;
+
+/** @returns {Promise<boolean>} whether a usable token is now in place. */
+function refreshOnce() {
+  inFlightRefresh ??= Promise.resolve()
+    .then(() => requestRefresh?.())
+    .then(() => true)
+    .catch(() => false)
+    .finally(() => {
+      inFlightRefresh = null;
+    });
+
+  return inFlightRefresh;
+}
+
+/**
+ * Paths where a 401 means "those credentials are wrong", not "your token aged out".
+ * Retrying any of them is at best pointless and at worst a recursion.
+ */
+const NO_RETRY_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
 
 /** Fires the request itself. Rejects only when the network never answered. */
 async function send(path, method, body, token) {
@@ -106,6 +153,12 @@ async function send(path, method, body, token) {
       method,
       headers: Object.keys(headers).length > 0 ? headers : undefined,
       body: body === undefined || isForm ? body : JSON.stringify(body),
+      /*
+       * The refresh cookie. Strictly belt-and-braces at the moment — the API is same-origin in
+       * every environment (§7.2), and fetch already defaults to 'same-origin' — but it states the
+       * intent, and it is what makes a dev setup that points Vite straight at the API port work.
+       */
+      credentials: 'include',
     });
   } catch {
     throw new ApiError(
@@ -122,16 +175,32 @@ async function send(path, method, body, token) {
  */
 async function request(path, { method = 'GET', body, blob = false } = {}) {
   const token = readAccessToken();
-  const response = await send(path, method, body, token);
+  let response = await send(path, method, body, token);
 
   /*
-   * There is no recovery from a 401 — the access token is the only credential, and nothing can
-   * mint a new one without the password. So the session is dropped and the user is sent back to
-   * the login screen by the route guards.
+   * A 401 on a token-bearing request now usually means the access token aged out mid-session, not
+   * that the session ended — the tokens are short-lived and a refresh cookie exists. So it is worth
+   * exactly one renewal and one replay, after which the user has noticed nothing.
    *
-   * Only a request that actually carried a token can mean "your session ended". A 401 from an
-   * anonymous request is the login endpoint saying the credentials were wrong, which is the
-   * form's business and must not clear anyone's session.
+   * Three bounds, all load-bearing:
+   *
+   *  - ONE replay. If the replayed request 401s again the error propagates. A loop here hangs the
+   *    browser, and "refresh succeeded but the request still fails" is not a token problem.
+   *  - NO retry for the paths in NO_RETRY_PATHS. A 401 from /auth/refresh is the server's final
+   *    answer about the session; retrying it would recurse. A 401 from login or register is a
+   *    rejected credential, which is the form's business.
+   *  - Only when a token was actually sent. An anonymous 401 must not clear anyone's session, for
+   *    the same reason.
+   */
+  if (response.status === 401 && token && !NO_RETRY_PATHS.includes(path)) {
+    if (await refreshOnce()) {
+      response = await send(path, method, body, readAccessToken());
+    }
+  }
+
+  /*
+   * Whatever the recovery attempt did, a 401 that survives it ends the session: nothing else can
+   * mint a token, so the route guards send the user back to the login screen.
    */
   if (response.status === 401 && token) handleAuthFailure();
 

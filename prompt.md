@@ -539,3 +539,46 @@ gamification architecture. Do not redesign the task model or timer workflow. All
 optionally estimate how many Pomodoro sessions a task will require before starting work. The
 estimate is planning information only. It must not affect timer behavior, scoring, streaks, or task
 completion logic.
+
+## Legacy cleanup — remove dead code left from the frontend-only build
+
+`Title`: Clean up legacy mocked, duplicated, unused, and dead frontend code
+
+`User prompt`: Clean up all legacy mocked, duplicated, unused, and dead frontend code left from the
+original frontend-only version of the application. The application now has a real backend. Remove
+obsolete frontend implementations that previously simulated backend behavior, persistence,
+authentication, gamification, tasks, sessions, history, settings, or user data.
+
+## Session persistence — resume the session on startup
+
+`Title`: Keep users signed in across reloads; bootstrap the session at startup and renew the access token transparently
+
+`User prompt`: Update the application's authentication flow so users remain signed in and can resume
+their session after refreshing or reopening the page. On application startup, check for an existing
+authenticated session and, when the access token is missing or expired, automatically request a new
+access token using the refresh token. Store the refresh token securely in an HttpOnly, Secure, and
+SameSite cookie rather than localStorage, and keep the access token in memory where possible.
+
+[Reverses the 2026-07-29 decision recorded under "Align the frontend with the stateless-JWT backend",
+where the user chose to keep the token memory-only and accept that a reload returns the user to
+`/login`. Raised as a decision conflict and confirmed: ADR-008 revision 3 reinstates the two-token
+model. The access token stays in Redux memory only — that constraint is unchanged and the refresh
+token is never readable by JavaScript. Restores `bootstrapAuth`, an initial `status: 'loading'`, and
+single-flight refresh-on-401 with one replay — the machinery deleted on 2026-07-29.]
+
+[Shipped as phase A2, after the backend endpoint existed — a deliberate deviation from CONTRACT.md
+§10.1 rule 2 (frontend first), because `bootstrapAuth` against a missing route would have returned
+404, and a 404 is not a 401, so the thunk would have resolved to anonymous by accident and the
+frontend would have looked correct while testing nothing. Added `store/hydrate.js` so "a session has
+begun" has one definition that a sign-in and a cold bootstrap cannot drift apart on; `authSlice`
+starts at `'loading'` and gains `bootstrapAuth`, whose rejection clears to anonymous **without**
+setting `error` or touching `loginStatus`, since an anonymous cold start is the ordinary case and
+must not paint a failure on the login form. `api.js` gained `credentials: 'include'`, a third
+injection point `setAuthRefreshHandler`, and single-flight refresh-on-401 with exactly one replay —
+`api.js` still imports nothing from the store. The bootstrap is dispatched from `main.jsx` outside
+React on purpose: `<StrictMode>` double-invokes effects, and with rotation the second call would
+present a token the first had just rotated away, which the server reads as a replay and answers by
+revoking every session — signing the user out on every page load, in development only. Browser
+verification was not possible in this session; the single-flight bound, the one-replay bound, the
+never-retry paths, the anonymous-401 rule and the bootstrap reducers were exercised directly against
+the real modules instead.]

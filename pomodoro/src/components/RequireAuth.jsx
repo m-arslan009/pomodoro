@@ -5,10 +5,10 @@ import useAuth from '../hooks/useAuth.js';
 /*
  * RequireAuth — guards the internal application pages.
  *
- * The access token lives in memory, so on a cold load the answer is known synchronously and
- * `isLoading` never holds in practice. The branch stays because the store still models a
- * loading state and rendering the page — or a redirect — against an unresolved session would be
- * wrong if anything ever reintroduces one.
+ * The loading branch is live (ADR-008 rev. 3). A cold load no longer knows the answer
+ * synchronously: there may be a refresh cookie, and only `bootstrapAuth` can say. Redirecting to
+ * /login before that resolves would bounce a signed-in user off the page they asked for, so the
+ * guard waits — briefly, and honestly — instead.
  *
  * The originally requested location travels in navigation state so the login flow can return
  * the user there.

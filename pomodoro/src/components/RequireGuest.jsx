@@ -6,9 +6,9 @@ import useAuth from '../hooks/useAuth.js';
  * RequireGuest — guards the public pages (landing, log in, sign up). A signed-in user is sent
  * into the app until they log out.
  *
- * Mirrors RequireAuth's loading branch for the same reason: it does not hold today, and
- * rendering the login form only to yank it away would be worse than a brief, honest wait if it
- * ever did.
+ * Mirrors RequireAuth's loading branch, and it matters here too: with a refresh cookie a cold load
+ * may turn out to be signed in, and rendering the login form only to yank it away a moment later is
+ * worse than a brief, honest wait.
  */
 function RequireGuest({ children }) {
   const location = useLocation();
