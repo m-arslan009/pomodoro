@@ -1,0 +1,101 @@
+/*
+ * OAuthButtons — the provider entry control shared by the Log In and Sign Up cards.
+ *
+ * The two pages scope their palettes to `.login` and `.signup` with different variable prefixes
+ * (--lg-* / --su-*), so this component cannot reach for either. It declares its own tokens on
+ * `.oauth` instead, defaulted to the values both cards already use; a page that ever needs a
+ * different treatment overrides them rather than restyling the component.
+ *
+ * The button's own colours are fixed by Google's branding requirements, not by our theme: white
+ * surface, #1F1F1F label, #747775 border, and the mark drawn in its four official colours. They are
+ * literals here on purpose — giving them semantic names would imply they are ours to change.
+ */
+
+.oauth {
+  --oauth-line: rgba(243, 247, 236, 0.22);
+  --oauth-muted: #aab8a0;
+  --oauth-focus: #e6b184;
+
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------------------------------------------------------------- Button -- */
+.oauth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  /* Matches .login-submit / .signup-submit so the two actions read as one stack. */
+  padding: 13px 20px;
+  border-radius: 10px;
+  border: 1.5px solid #747775;
+  background: #fff;
+  color: #1f1f1f;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.oauth-button:hover {
+  background: #f2f2f2;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.7);
+}
+
+.oauth-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* The wood outline is used for focus across both auth cards; keep it visible on white. */
+.oauth-button:focus-visible {
+  outline: 2px solid var(--oauth-focus);
+  outline-offset: 2px;
+}
+
+.oauth-mark {
+  flex-shrink: 0;
+}
+
+/* Let the label wrap on a very narrow card instead of pushing the button past it. */
+.oauth-button__label {
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------- Divider -- */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--oauth-muted);
+  text-transform: lowercase;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--oauth-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oauth-button {
+    transition: none;
+  }
+
+  .oauth-button:hover {
+    transform: none;
+  }
+}

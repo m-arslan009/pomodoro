@@ -236,6 +236,18 @@
   cursor: not-allowed;
 }
 
+/*
+ * The "signed up with Google?" line. Quiet on purpose: it is a signpost for a small group, not a
+ * warning, and it must not compete with the submit button directly above it.
+ */
+.login-hint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--lg-muted);
+}
+
 .login-redirect {
   margin-top: 20px;
   text-align: center;

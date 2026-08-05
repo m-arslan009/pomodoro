@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Notification from '../components/Notification.jsx';
+import OAuthButtons from '../components/OAuthButtons.jsx';
 import {
   validateName,
   validateEmail,
@@ -235,6 +236,14 @@ function SignUpPage() {
 
           <h1 className="signup-title">Create your account</h1>
           <p className="signup-subtitle">Plant your focus and start growing your streak.</p>
+
+          {/*
+           * The same control as the login page, deliberately. With a provider there is no
+           * difference between signing up and signing in — the server decides which one happened
+           * by looking for an existing identity (§4.12.1), so offering two labels would be
+           * inventing a distinction the flow does not have.
+           */}
+          <OAuthButtons />
 
           <form className="signup-form" onSubmit={handleSubmit} noValidate>
             <div className="signup-row">

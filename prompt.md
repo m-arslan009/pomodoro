@@ -582,3 +582,71 @@ revoking every session — signing the user out on every page load, in developme
 verification was not possible in this session; the single-flight bound, the one-replay bound, the
 never-retry paths, the anonymous-401 rule and the bootstrap reducers were exercised directly against
 the real modules instead.]
+
+## Google sign-in — OAuth 2.0 + OpenID Connect
+
+`Title`: Add OAuth 2.0 / OIDC provider sign-in alongside the existing password authentication
+
+`User prompt`: Review the existing authentication system and prepare a detailed implementation plan
+for adding OAuth 2.0 authentication to the application. Inspect the current frontend and backend
+authentication flow, including login, logout, access-token handling, refresh-token handling, session
+restoration, protected routes, user storage, API middleware, cookies, and environment configuration.
+Determine whether OpenID Connect is also required for user authentication and identity information.
+The plan should cover the recommended OAuth 2.0 authorization flow, preferably Authorization Code
+Flow with PKCE where appropriate, the selected identity providers, redirect and callback routes,
+state and nonce validation, PKCE generation and verification, secure token exchange, user profile
+retrieval, account creation and linking, handling users with the same email address, access-token
+and refresh-token storage, token rotation, session restoration after page reloads, logout and
+provider revocation, protected API access, error handling, CSRF protection, XSS risks, cookie
+security, required scopes, environment variables, database changes, and provider configuration.
+Break the work into clear implementation phases with dependencies and acceptance criteria. Do not
+generate or change application code until the plan has been reviewed and approved.
+
+[Four decisions settled during planning: **backend-driven BFF flow** over SPA-side PKCE — the SPA
+never sees a code, verifier, or provider token, so the locked memory-only rule is structurally
+unreachable rather than merely respected; **Google only**; **auto-link an existing account only when
+the provider asserts `email_verified: true`**; and **scope includes link/unlink management**, not
+sign-in alone.]
+
+[Collided with the deferral in ADR-008 and with this file's own 2026-07-29 entry, which recorded the
+instruction *"do not implement … social login."* Raised as a decision conflict and confirmed.
+Recorded as **ADR-008a** — a new ADR rather than an ADR-008 revision, because ADR-008's session
+model is untouched. The frontend's entire contribution is an `<a href>` to a backend URL and a
+query-parameter read on the way back: `api.js`, `authSlice.js`, `store/index.js`, `store/hydrate.js`,
+`useAuth.js`, `main.jsx` and both route guards take **zero** changes, and no new route is needed
+because `main.jsx` already bootstraps a session on every cold load.]
+
+## Google sign-in — governance before implementation
+
+`Title`: Update governance, architecture, contract, and prompt history before any OAuth code is written
+
+`User prompt`: Review the complete OAuth 2.0 + OpenID Connect (Google) Implementation Plan. Do not
+modify application code, frontend components, backend services, Prisma schema, migrations,
+environment files, dependencies, or tests during this task. The objective is to update the project's
+governance, architecture, contract, and prompt-history files so that the Google OAuth implementation
+can begin without contradicting existing recorded decisions.
+
+[Phase O0, executed as documentation only. `.claude/locked_decisions.md` gains a frontend
+sign-in-methods row and the supersession entry; `CONTRACT.md` gains §1.5, §2.3, §3.2 and
+§4.11–§4.17, with §4 preamble, §5, §6, §7.2, §9, §9.7, §10.2, §11, §12 and §21 amended. The new
+§7.2 paragraph names the eight frontend files that must appear in **no** OAuth diff, so a phase that
+touches one stops rather than proceeds.]
+
+## Google sign-in — the frontend is a link and nothing more
+
+`Title`: Frontend-only OAuth entry, with the client barred from every OAuth secret
+
+`User prompt`: Work on the frontend only and do not modify the backend, session model,
+refresh-token flow, access-token handling, route guards, authentication bootstrap, or
+browser-storage behaviour. Preserve the existing password registration and login experience. The
+OAuth flow is backend-driven, so the frontend must never receive, parse, store, or process a Google
+authorization code, PKCE verifier, OAuth state, nonce, ID token, Google access token, or Google
+refresh token, and it must not create an OAuth callback page or perform an AJAX-based
+authorization-code exchange.
+
+[Phase O3. Restates ADR-008a's client contract as a hard implementation constraint and adds one it
+did not: **no AJAX code exchange**, which forecloses the shortcut of fetching the callback instead of
+navigating to it — a fetch would swallow the redirect chain and the `Set-Cookie` at the end of it.
+Delivered as `components/OAuthButtons.jsx` + its CSS and a query-parameter read on `LogInPage`;
+`api.js`, `authSlice.js`, `store/index.js`, `store/hydrate.js`, `useAuth.js`, `main.jsx`,
+`storage.js` and both route guards took zero changes, as §7.2 requires.]

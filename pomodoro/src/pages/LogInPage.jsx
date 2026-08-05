@@ -1,11 +1,33 @@
 import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import Notification from '../components/Notification.jsx';
+import OAuthButtons from '../components/OAuthButtons.jsx';
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
 import '../styles/LogInPage.css';
 
 const APP_NAME = 'Evergrove';
+
+/*
+ * A provider sign-in that fails comes back as a redirect to /login?oauth_error=<code>, not as a
+ * Problem Document — a browser navigation renders whatever it is given, and a JSON body would land
+ * the user on a page of raw JSON (CONTRACT §4.12). The server sends a code and nothing else; every
+ * word the user reads is written here, and the provider's own error_description is never forwarded.
+ */
+const OAUTH_ERRORS = {
+  access_denied: 'Sign-in was cancelled.',
+  invalid_request: 'That sign-in link expired. Please try again.',
+  email_unverified: 'Google has not verified that email address.',
+  email_exists:
+    'An Evergrove account already uses that email. Sign in with your password, then connect Google from your profile.',
+  already_linked: 'That Google account is already connected to another Evergrove account.',
+  provider_unavailable: 'Google could not be reached. Please try again.',
+};
+
+// An unrecognised code still gets a sentence. It is never logged: an unknown value here means the
+// server grew a code this build has not seen, which is a deployment fact, not something to shout
+// about in the user's console.
+const OAUTH_ERROR_FALLBACK = 'Sign-in with Google did not complete. Please try again.';
 
 function LeafIcon() {
   return (
@@ -48,12 +70,50 @@ function describeFailure(error) {
 function LogInPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { signIn } = useAuth();
 
   const [values, setValues] = useState({ identifier: '', password: '' });
   const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'success'
   const [notification, setNotification] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // The page the user was originally sent here from, reused by both sign-in methods so they cannot
+  // land somewhere different. The server re-validates it before redirecting (§4.11).
+  const intended = location.state?.from?.pathname;
+
+  /*
+   * A failed provider sign-in is reported by the URL, so the toast for it is derived rather than
+   * stored: copying the parameter into state on mount would be an effect whose only job is to
+   * mirror something React can already see. A password failure is a live event and does own state,
+   * and it takes precedence — it describes what the user just did, not what happened before.
+   */
+  const oauthError = searchParams.get('oauth_error');
+  const shownNotification =
+    notification ??
+    (oauthError
+      ? { type: 'error', message: OAUTH_ERRORS[oauthError] ?? OAUTH_ERROR_FALLBACK }
+      : null);
+
+  /*
+   * Dismissing consumes the parameter as well as the state. Left in place it would re-raise a
+   * message about a finished attempt on every reload, and would resurface underneath the next
+   * password failure the moment that one cleared.
+   */
+  function dismissNotification() {
+    setNotification(null);
+    if (!oauthError) return;
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('oauth_error');
+        return next;
+      },
+      // `state` is carried across explicitly: this is still a navigation, and dropping it would
+      // lose the page the user was originally headed for.
+      { replace: true, state: location.state },
+    );
+  }
 
   const isLoading = status === 'loading';
   const isSuccess = status === 'success';
@@ -73,13 +133,13 @@ function LogInPage() {
     if (disabled) return;
 
     setStatus('loading');
-    setNotification(null);
+    dismissNotification();
 
     try {
       await signIn({ identifier: values.identifier, password: values.password });
       setStatus('success');
       // The token is in the store; go where the user was headed.
-      navigate(location.state?.from?.pathname ?? '/timer', { replace: true });
+      navigate(intended ?? '/timer', { replace: true });
     } catch (error) {
       setStatus('idle');
       // No field highlighting — a single global toast reports the failure.
@@ -90,9 +150,9 @@ function LogInPage() {
   return (
     <div className="login">
       <Notification
-        type={notification?.type}
-        message={notification?.message}
-        onClose={() => setNotification(null)}
+        type={shownNotification?.type}
+        message={shownNotification?.message}
+        onClose={dismissNotification}
       />
 
       <main className="login-main">
@@ -106,6 +166,8 @@ function LogInPage() {
           <p className="login-subtitle">
             Log in to return to your focus and keep your streak growing.
           </p>
+
+          <OAuthButtons returnTo={intended} />
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             <div className="login-field">
@@ -159,6 +221,14 @@ function LogInPage() {
               {isLoading ? 'Logging in…' : isSuccess ? 'Logged in' : 'Log In'}
             </button>
           </form>
+
+          {/*
+           * An account created through Google has no password, and the form above cannot say so:
+           * answering "that account has no password" to anyone who types an email would turn the
+           * login form into an account-enumeration endpoint. The rejection stays generic and this
+           * static line is the way out — it is shown to everyone and reveals nothing.
+           */}
+          <p className="login-hint">Signed up with Google? Use Continue with Google above.</p>
 
           <p className="login-redirect">
             Don&apos;t have an account?{' '}
