@@ -9,6 +9,7 @@ import HistoryTile from '../components/timer/HistoryTile.jsx';
 import AddTask from '../components/timer/AddTask.jsx';
 import TerminateReason from '../components/timer/TerminateReason.jsx';
 import SessionRecovery from '../components/timer/SessionRecovery.jsx';
+import ReportInvitation from '../components/timer/ReportInvitation.jsx';
 import usePomodoroTimer from '../hooks/usePomodoroTimer.js';
 import useSettings from '../hooks/useSettings.js';
 import useTimer from '../hooks/useTimer.js';
@@ -510,6 +511,13 @@ function TimerPage() {
           banner (§17.4). One message about the account's data, in one place, on every page —
           rather than a Timer-only dialect of it that History never showed at all.
         */}
+
+        {/*
+          Renders only for an account that was never asked about email reports, and only until it
+          answers. It is here rather than on History because History may not reach the network even
+          transitively (§17.4), and because this is the page an account lands on after signing in.
+        */}
+        <ReportInvitation />
 
         <div className="timer-dashboard">
           <TimerEngineTile

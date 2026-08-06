@@ -291,3 +291,71 @@
     transition: none;
   }
 }
+
+/* ------------------------------------------------------ Email report choice */
+/*
+ * One choice among three, as a radiogroup — a fieldset is what tells a screen reader that the
+ * three options are alternatives rather than three unrelated checkboxes. Nothing is preselected:
+ * reports are never enabled without an explicit answer, and a default here would turn "submitted
+ * without reading" into a consent.
+ */
+.signup-choice {
+  margin: 4px 0 0;
+  padding: 16px;
+  border: 1px solid var(--su-line);
+  border-radius: 12px;
+  background: rgba(10, 22, 15, 0.35);
+}
+
+.signup-choice__legend {
+  padding: 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--su-heading);
+}
+
+.signup-choice__hint {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--su-muted);
+}
+
+.signup-choice__options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Row layout only once there is room for three labels side by side. */
+@media (min-width: 577px) {
+  .signup-choice__options {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+}
+
+.signup-choice__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* A comfortable touch target even when the label itself is two words. */
+  min-height: 40px;
+  font-size: 0.92rem;
+  color: var(--su-text);
+  cursor: pointer;
+}
+
+.signup-choice__option input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--su-moss);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.signup-choice__option input:focus-visible {
+  outline: 2px solid var(--su-wood);
+  outline-offset: 2px;
+}

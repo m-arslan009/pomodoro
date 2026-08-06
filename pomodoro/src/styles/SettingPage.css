@@ -619,3 +619,26 @@
     transition: none;
   }
 }
+
+/* --------------------------------------------------------- Email reports */
+/*
+ * The status line under the frequency control — what the server currently says is true, which is
+ * not always what the buttons show (a chosen frequency may still be waiting on confirmation).
+ */
+.reports-status {
+  margin-top: var(--gap-2);
+}
+
+.reports-segment {
+  margin-top: var(--gap-2);
+}
+
+/*
+ * Only rendered while a confirmation is outstanding. Left-aligned and sized to its label rather
+ * than stretched, so it reads as a follow-up to the notice above it and not as the card's
+ * primary action — the frequency buttons are that.
+ */
+.reports-resend {
+  margin-top: var(--gap-2);
+  flex: 0 0 auto;
+}

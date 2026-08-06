@@ -1,0 +1,154 @@
+/*
+ * Report token pages — the two surfaces opened from a link in an email:
+ * /reports/confirm and /reports/unsubscribe.
+ *
+ * Same forest aesthetic and the same palette variables as the auth pages, at a
+ * fraction of the size: these pages carry one sentence and one action, and are
+ * often the first thing a reader sees of Evergrove on a phone they have never
+ * signed in on. Scoped to `.rtp` so the global theme in index.css and the
+ * signed-in shell are both untouched (per convention.md).
+ */
+
+/*
+ * Break out of the centered #root column so the background fills the viewport,
+ * exactly as the auth pages do. Scoped with :has() so every other page keeps
+ * the column.
+ */
+#root:has(.rtp) {
+  width: 100%;
+  max-width: 100%;
+  border-inline: none;
+  text-align: left;
+}
+
+.rtp {
+  --rtp-brand: #cfe6b4;
+  --rtp-moss: #a9c98d;
+  --rtp-wood: #d59b6c;
+  --rtp-heading: #f3f7ec;
+  --rtp-text: #d3ddca;
+  --rtp-muted: #aab8a0;
+  --rtp-line: rgba(243, 247, 236, 0.22);
+  --rtp-on-brand: #10200f;
+  --rtp-danger: #f2a3a3;
+
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  color: var(--rtp-text);
+
+  background-image:
+    linear-gradient(
+      105deg,
+      rgba(8, 18, 12, 0.86) 0%,
+      rgba(8, 18, 12, 0.62) 55%,
+      rgba(8, 18, 12, 0.5) 100%
+    ),
+    url('../assets/forest-bg.svg');
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+  background-position:
+    center,
+    center bottom;
+  background-attachment: fixed;
+}
+
+.rtp-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 4vw, 48px) clamp(16px, 5vw, 48px);
+}
+
+.rtp-card {
+  width: 100%;
+  max-width: 460px;
+  padding: clamp(24px, 5vw, 40px);
+  border-radius: 18px;
+  border: 1px solid var(--rtp-line);
+  background: rgba(10, 22, 15, 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+}
+
+.rtp-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--rtp-heading);
+}
+
+.rtp-text {
+  /* Long words and addresses must wrap rather than widen the card. */
+  margin: 16px 0 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--rtp-text);
+  overflow-wrap: anywhere;
+}
+
+.rtp-text--alert {
+  color: var(--rtp-danger);
+}
+
+.rtp-btn {
+  margin-top: 24px;
+  width: 100%;
+  min-height: 44px;
+  padding: 13px 24px;
+  border-radius: 10px;
+  border: 1.5px solid var(--rtp-moss);
+  background: var(--rtp-moss);
+  color: var(--rtp-on-brand);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.rtp-btn:hover:not(:disabled) {
+  background: var(--rtp-brand);
+  border-color: var(--rtp-brand);
+}
+
+.rtp-btn:focus-visible {
+  outline: 2px solid var(--rtp-wood);
+  outline-offset: 2px;
+}
+
+.rtp-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.rtp-link {
+  display: inline-block;
+  margin-top: 24px;
+  color: var(--rtp-brand);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rtp-link:hover {
+  text-decoration: underline;
+}
+
+.rtp-link:focus-visible {
+  outline: 2px solid var(--rtp-wood);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rtp-btn {
+    transition: none;
+  }
+}

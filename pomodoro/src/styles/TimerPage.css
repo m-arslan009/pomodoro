@@ -979,3 +979,35 @@
     transition: none;
   }
 }
+
+/* ------------------------------------------------- Email report invitation */
+/*
+ * A one-time offer, shown above the dashboard for an account that has never been asked about
+ * email reports. It borrows .timer-tile's surface but not its height floor — the tile minimum
+ * exists to keep the dashboard grid even, and this card sits outside that grid.
+ */
+.report-invite {
+  min-height: 0;
+  margin-bottom: clamp(16px, 2vw, 26px);
+}
+
+.report-invite__title {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.report-invite__text {
+  margin: 8px 0 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--fg-muted);
+}
+
+.report-invite__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}

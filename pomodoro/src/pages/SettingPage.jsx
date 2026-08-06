@@ -5,6 +5,7 @@ import TimerDurations from '../components/settings/TimerDurations.jsx';
 import BaseTheme from '../components/settings/BaseTheme.jsx';
 import ThemeEditor from '../components/settings/ThemeEditor.jsx';
 import BackgroundLabels from '../components/settings/BackgroundLabels.jsx';
+import EmailReports from '../components/settings/EmailReports.jsx';
 import useSettings from '../hooks/useSettings.js';
 import '../styles/SettingPage.css';
 
@@ -121,6 +122,14 @@ function SettingPage() {
             saving={saving}
             onNotify={notify}
           />
+
+          {/*
+           * The one section that is not part of /me/settings. It owns its own read and write
+           * because a report subscription lives in its own table with delivery state the settings
+           * payload must never carry (§23.1) — so it takes no settings props and is not remounted
+           * by `savedAt`.
+           */}
+          <EmailReports onNotify={notify} />
         </div>
       </div>
     </AppLayout>

@@ -13,6 +13,7 @@ import {
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
 import { detectTimeZone } from '../services/auth.js';
+import { REPORT_FREQUENCIES, updateReportFrequency } from '../services/reports.js';
 import '../styles/SignUpPage.css';
 
 const APP_NAME = 'Evergrove';
@@ -24,6 +25,13 @@ const EMPTY_FORM = {
   username: '',
   password: '',
   confirmPassword: '',
+  /*
+   * Email reports. Deliberately UNSET, and deliberately not required: reports are never enabled
+   * without an explicit answer (CONTRACT.md §23.0 P3), and a preselected radio would make the
+   * commonest path — submitting without reading — into a consent nobody gave. Skipping it leaves
+   * the account `unasked`, which is what the dashboard's one-time invitation renders on.
+   */
+  reportFrequency: '',
 };
 
 // Single source of truth for validating one field, reused on blur and on change.
@@ -197,6 +205,28 @@ function SignUpPage() {
         timezone: detectTimeZone() ?? undefined,
       });
 
+      /*
+       * The report answer is a second call, not a field on registration (§25.7 as amended).
+       *
+       * Applying it server-side would have meant the auth module depending on the report module and
+       * the report module already depending on auth — a circular dependency — and it would have put
+       * an outbound confirmation email inside the transaction that creates the account. This runs
+       * on the access token registration just returned, through the same endpoint Settings uses, so
+       * there is exactly one implementation of what a choice does.
+       *
+       * A failure here is deliberately NOT fatal. The account exists and the user is signed in;
+       * losing them the account over a preference they can set again in Settings would be a far
+       * worse outcome than a preference that quietly did not stick. Skipping the answer leaves them
+       * `unasked`, so the dashboard's invitation asks once more.
+       */
+      if (values.reportFrequency) {
+        try {
+          await updateReportFrequency(values.reportFrequency);
+        } catch {
+          // Intentionally ignored — see above.
+        }
+      }
+
       setStatus('success');
       // Registering signs the account in, so land on the dashboard rather than the login form.
       navigate('/timer', { replace: true });
@@ -329,6 +359,33 @@ function SignUpPage() {
                 {showConfirm ? 'Hide' : 'Show'}
               </button>
             </Field>
+
+            {/*
+             * A radiogroup rather than three buttons: it is one choice among three, only one of
+             * which can hold, and a fieldset is what says so to a screen reader. Nothing is
+             * preselected and the form submits without it — see EMPTY_FORM.
+             */}
+            <fieldset className="signup-choice">
+              <legend className="signup-choice__legend">Email reports (optional)</legend>
+              <p className="signup-choice__hint">
+                A PDF summary of your focus sessions, sent to you. You can change this later in
+                Settings.
+              </p>
+              <div className="signup-choice__options">
+                {REPORT_FREQUENCIES.map((option) => (
+                  <label key={option.key} className="signup-choice__option">
+                    <input
+                      type="radio"
+                      name="reportFrequency"
+                      value={option.key}
+                      checked={values.reportFrequency === option.key}
+                      onChange={handleChange}
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <button type="submit" className="signup-submit" disabled={disabled}>
               {isLoading ? 'Creating account…' : isSuccess ? 'Account created' : 'Sign Up'}
