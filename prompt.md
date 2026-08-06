@@ -650,3 +650,26 @@ navigating to it — a fetch would swallow the redirect chain and the `Set-Cooki
 Delivered as `components/OAuthButtons.jsx` + its CSS and a query-parameter read on `LogInPage`;
 `api.js`, `authSlice.js`, `store/index.js`, `store/hydrate.js`, `useAuth.js`, `main.jsx`,
 `storage.js` and both route guards took zero changes, as §7.2 requires.]
+
+## Periodic email reports — how users enable them (P3)
+
+`User prompt`: Reports should not be automatically enabled. During signup, let new users choose:
+Weekly, Monthly, or No email reports. Do not automatically subscribe existing users. Show existing
+users a one-time in-app invitation. Provide controls in Settings. Include unsubscribe and
+change-frequency links in every email.
+
+[The frontend half of the email-reporting feature, planned as **phase R3** in `CONTRACT.md` §28.1.
+Four surfaces, not one: a choice control on `SignUpPage` with **no preselection** (the third option,
+"No email reports", is a real answer that gets stored — `status: 'declined'` — because "no row" has
+to keep meaning *never asked* for the invitation to know when to appear); a control in `/setting`;
+the one-time invitation card, which renders **only** on `status: "unasked"` from `GET /me/reports`;
+and `/reports/confirm` + `/reports/unsubscribe` pages under `RequireGuest`, since both are opened
+from an email on a device that may not be signed in.
+
+Two consequences worth carrying into the work. **Google-created accounts never see the signup
+choice** — `SignUpPage` is the password path only, and an account created inside the OAuth callback
+has no form to answer; those accounts meet the invitation instead. And **the confirm/unsubscribe
+pages must POST, not act on load**: corporate mail scanners follow links in incoming mail, so a page
+that consumed its single-use token on mount would be consumed by the scanner before the human
+clicked. R2 (backend) lands before R3, which is a recorded deviation from §10.1 rule 2 — the failure
+paths here (expired token, re-used token, decline vs silence) are not falsifiable against a mock.]
