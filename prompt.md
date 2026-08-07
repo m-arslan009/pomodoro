@@ -723,3 +723,33 @@ relevant UI states properly: initial loading, loading more, loaded, empty search
 error/offline state, and per-request loading where applicable. Do not use mocked data. Do not create
 a new Redux slice. Do not implement disable/reactivate, revoke sessions, role changes, confirmation
 dialogs, stats, or other user-management actions in this task.
+
+[Builds the panel's first real page against `admin_role_plan.md` §6.1, replacing the "Coming Soon"
+placeholder at `/admin`. Fixes three shapes for the surface: the results are a cursor list with a
+*Load more* rather than page numbers, because the endpoint publishes no total; search, role and
+status are all applied server-side, so the page never filters what it has already loaded; and the
+whole read lives in a hook with local state rather than a slice, since the directory has one reader
+and is discarded whenever a filter moves. The instruction to use no mocked data is what makes the
+error state real work rather than a formality — the page shipped before the endpoint existed, so its
+first behaviour was its own failure state.]
+
+## Post-login navigation must follow the authenticated role
+
+Fix the post-login navigation so users are redirected according to their authenticated role.
+Currently, when an admin logs in successfully, the application navigates to the normal user Timer
+page. This is incorrect. After authentication is completed and the authenticated `UserProfile` is
+available, determine the destination from `user.role`. For `role === 'admin'`, navigate to the admin
+landing page `/admin`. For `role === 'user'`, preserve the existing normal-user behavior and
+navigate to the Timer page or whatever current default user route is already used. Make sure this
+works consistently for every authentication/hydration path that can result in a logged-in user,
+including normal login and any existing session restore/refresh flow where a default redirect is
+performed. Do not create separate admin authentication logic or duplicate auth state; use the
+existing authenticated user and its role as the source of truth.
+
+[Turns the landing rule from something two call sites happened to share into a property of *every*
+path that can produce a session. Two did not have it: registration hard-coded `/timer`, and
+`OAuthButtons` sent `returnTo=/timer` on every Google click — the latter being the documented gap in
+`CONTRACT.md` §2.4, and the one an admin actually hits, since a provider sign-in is decided by the
+server before this bundle runs. The fix that follows from "use the authenticated user as the source
+of truth" is that the client stops defaulting at all: it sends `returnTo` only when a page was
+genuinely requested, and the server chooses when it knows whose session it opened.]

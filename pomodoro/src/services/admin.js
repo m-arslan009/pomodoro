@@ -16,11 +16,12 @@
  * non-admin on its own authority, from the bearer token, on every route it will eventually expose.
  * That backend half is deliberately not built yet.
  *
- * Standing constraints this file sits under: `CONTRACT.md` §12 still lists RBAC as out of scope, and
- * ADR-010 (`.claude/locked_decisions.md:64`) chose ownership-as-a-query-constraint so that no roles
- * table would exist. Neither has been reopened — the frontend is being built first by explicit
- * instruction (2026-08-07), and no endpoint returns `role` yet. Until one does, every account reads
- * as a normal user and the panel stays closed, which is the correct default for a missing claim.
+ * Standing constraints this file sits under: ADR-010 (`.claude/locked_decisions.md:64`) chose
+ * ownership-as-a-query-constraint so that no roles table would exist; `role` is a column on `users`
+ * rather than a reopening of that (see the ADR's supersession note, 2026-08-07). Every auth payload
+ * now carries it — login, register, refresh and `/me` all serialise the same profile — and an
+ * account whose payload somehow omits it reads as a normal user, which is the correct default for a
+ * missing claim.
  */
 
 /**
@@ -48,9 +49,14 @@ export const ADMIN_LANDING_PATH = '/admin';
  * Which page to open once a session starts and no particular destination was requested.
  *
  * An admin lands on the panel, everyone else on the Timer. It lives here beside `isAdmin` for the
- * same reason that predicate does: the two call sites — the login form and `RequireGuest` — must
- * never disagree about where signing in leads, and a landing rule split across two files is exactly
- * how they would drift apart.
+ * same reason that predicate does: every path that can end in a live session — the login form, the
+ * sign-up form, and `RequireGuest`, which is the one a restored session takes — must never disagree
+ * about where signing in leads, and a landing rule split across those files is exactly how they
+ * would drift apart.
+ *
+ * Provider sign-in is the one path that cannot call this, and it does not have its own copy either:
+ * a Google login ends in a server-issued redirect, decided before this bundle runs. `domain/oauth.ts`
+ * applies the same rule to the profile it just authenticated, and the two are written to match.
  *
  * **A REQUESTED DESTINATION ALWAYS WINS OVER THIS.** Callers pass the page the user was originally
  * headed for first and fall back to this — an admin bounced off `/history` by an expired session is

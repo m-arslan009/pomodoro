@@ -12,6 +12,7 @@ import {
 } from '../services/validation.js';
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
+import { landingPathFor } from '../services/admin.js';
 import { detectTimeZone } from '../services/auth.js';
 import { REPORT_FREQUENCIES, updateReportFrequency } from '../services/reports.js';
 import '../styles/SignUpPage.css';
@@ -195,7 +196,7 @@ function SignUpPage() {
     setNotification(null);
 
     try {
-      await signUp({
+      const user = await signUp({
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
@@ -228,8 +229,15 @@ function SignUpPage() {
       }
 
       setStatus('success');
-      // Registering signs the account in, so land on the dashboard rather than the login form.
-      navigate('/timer', { replace: true });
+      /*
+       * Registering signs the account in, so land on a page of the app rather than the login form —
+       * and on whichever page this account starts on, through the same rule the login form uses.
+       *
+       * Registration mints ordinary users only (no public write path sets `role`), so today this
+       * always resolves to the Timer. It is written this way regardless: the rule for "where does a
+       * new session land" has one home, and a second copy of it here is how the two drift apart.
+       */
+      navigate(landingPathFor(user), { replace: true });
     } catch (error) {
       setStatus('idle');
 

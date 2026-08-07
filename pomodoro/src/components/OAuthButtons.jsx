@@ -24,9 +24,19 @@ import '../styles/OAuthButtons.css';
 // boundary and this is a navigation, not a request — O3 leaves that module untouched (§7.2).
 const OAUTH_START_PATH = '/api/v1/auth/oauth/google/start';
 
-// Where to land after a successful sign-in. The server re-validates this against its own allow-list
-// and falls back to /timer, so a value from here can widen nothing (§4.11).
-const DEFAULT_RETURN_TO = '/timer';
+/*
+ * Where to land after a successful sign-in — and, deliberately, THE PARAMETER IS OMITTED WHEN THERE
+ * IS NOTHING TO SAY.
+ *
+ * There is no default here, because a default here would be the wrong answer for an administrator
+ * and this component cannot tell: role lives on the authenticated account, and nobody is
+ * authenticated when this link is clicked. Sending nothing lets the server choose once it knows who
+ * signed in — the panel for an admin, the Timer for everyone else — which is the same rule
+ * `services/admin.js` applies to the password form.
+ *
+ * A value that *is* sent is still only a request: the server re-validates it against its own
+ * allow-list, so nothing chosen here can widen where a sign-in may land (§4.11).
+ */
 
 function GoogleMark() {
   return (
@@ -58,18 +68,20 @@ function GoogleMark() {
   );
 }
 
-function OAuthButtons({ returnTo = DEFAULT_RETURN_TO }) {
+function OAuthButtons({ returnTo }) {
   /*
    * Memoised because the login form re-renders on every keystroke, and resolving the zone means
    * constructing an Intl.DateTimeFormat each time. The zone cannot change mid-render anyway.
    */
   const href = useMemo(() => {
-    const params = new URLSearchParams({ returnTo: returnTo || DEFAULT_RETURN_TO });
+    const params = new URLSearchParams();
+    if (returnTo) params.set('returnTo', returnTo);
     // Same reason sign-up sends it: the server buckets the account's days by zone, and an account
     // created through Google has no other chance to tell it. Omitted rather than guessed on failure.
     const timezone = detectTimeZone();
     if (timezone) params.set('tz', timezone);
-    return `${OAUTH_START_PATH}?${params.toString()}`;
+    const query = params.toString();
+    return query ? `${OAUTH_START_PATH}?${query}` : OAUTH_START_PATH;
   }, [returnTo]);
 
   return (

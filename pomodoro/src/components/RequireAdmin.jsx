@@ -14,12 +14,12 @@ import '../styles/AdminLayout.css';
  * RequireAuth's loading branch would be a second copy of a rule that already has one home.
  *
  * The answer comes from `services/admin.js` and nowhere else — the same function the navigation uses
- * to choose its link set, so the two cannot disagree about who an admin is. Until the backend returns
- * `role`, that answer is "no" for every account, which is the correct default for a missing claim.
+ * to choose its link set and the same one that decides where a sign-in lands, so none of the three
+ * can disagree about who an admin is.
  *
- * It guards RENDERING, not data. The API has no admin routes yet and no admin guard; when it does,
- * refusing a non-admin is its job, from the bearer token. This component only decides what the client
- * is willing to draw.
+ * It guards RENDERING, not data. `AdminGuard` on the API refuses a non-admin on its own authority,
+ * from the bearer token, and answers 404 rather than 403. This component only decides what the
+ * client is willing to draw, and it can be edited by whoever holds the browser.
  *
  * Denied renders a plain notice rather than redirecting. A silent bounce to /timer would make an
  * unbuilt panel and a broken route indistinguishable — from the outside, and from the inside while
