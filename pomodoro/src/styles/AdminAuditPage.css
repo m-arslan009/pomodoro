@@ -1,0 +1,636 @@
+/*
+ * AdminAuditPage — the audit record at /admin/audit, scoped inside .admin-panel.
+ *
+ * IT ADDS NO DESIGN SYSTEM AND NO BREAKPOINT, for the same reason AdminUsersPage.css and
+ * AdminLayout.css do not. Every colour is one of the shell's tokens (--fg-*, --glass-*, declared on
+ * .app-shell in AppLayout.css) or the --au-bad error tone declared once on .admin-shell; the spacing
+ * and type scales are the .admin-shell values this page renders inside; and the controls repeat the
+ * idioms AdminUsersPage already established — 12px radius, --glass-bg-strong field, --fg-wood focus
+ * ring, opaque <option> background, 44px touch floor.
+ *
+ * TWO TONES IN TOTAL, AND NEITHER CARRIES A MESSAGE ON ITS OWN. --fg-accent marks a change of
+ * authority and --au-bad marks access taken away or a security event the system detected; everything
+ * routine is left in --fg-muted, so a normal week of audit rows is not a wall of colour. Every badge
+ * states its action in words, which is what keeps the record readable on a monochrome screen and to
+ * a colour-blind operator — the rule AdminUserBadges states, applied to a second surface.
+ *
+ * THE COLOUR IS ON THE BADGE, ESSENTIALLY ALONE. Red cards used to carry a left rule as well as a
+ * red badge; saying it twice turned any feed containing a disable into a red-edged column, so the
+ * rule was dropped and only the accent one on `--privilege` remains — that category has no coloured
+ * badge of its own to fall back on.
+ *
+ * There is no media query here. The filter row wraps, the feed is a single column, the fact grids
+ * auto-fit, and every long value (address, request id, user agent) wraps rather than widening its
+ * container — the layout is driven by available space rather than by a viewport size, which is what
+ * keeps it correct between the breakpoints as well as at them. The sidebar's own responsive
+ * behaviour is AppLayout's and is unchanged here.
+ */
+
+.admin-audit__head {
+  margin-bottom: var(--sp-2);
+}
+
+.admin-audit__lead {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ Filters */
+/*
+ * One wrapping row of five controls plus a reset. The two id fields are given a wider basis than the
+ * action select and the dates because they hold a 36-character uuid; none is given a fixed width, so
+ * the row collapses to one control per line on a phone without a breakpoint saying so.
+ */
+.admin-audit__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.admin-audit__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* a flex child may not be wider than its content; without this it can be */
+  flex: 1 1 9rem;
+}
+
+.admin-audit__field--id {
+  flex: 2 1 14rem;
+}
+
+.admin-audit__field--date {
+  flex: 1 1 9.5rem;
+}
+
+/*
+ * The reset sits in the row as a sixth control so it wraps with the rest, and is pushed to the row's
+ * end where a destructive-feeling control belongs. It aligns to the fields' inputs rather than their
+ * labels, which is what the top margin is for — there is no label above it to occupy that band.
+ */
+.admin-audit__field--reset {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.admin-audit__label {
+  margin-bottom: 6px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.admin-audit__input,
+.admin-audit__select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px; /* the touch-target floor the rest of the app's controls use */
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  font: inherit;
+  font-size: var(--fs-body);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-audit__select {
+  cursor: pointer;
+}
+
+/*
+ * The native date picker — its calendar glyph and its popup — is drawn by the browser, which picks
+ * its palette from color-scheme rather than from any property of ours. Without this the icon renders
+ * for a light page and is very nearly invisible on the shell's dark glass.
+ */
+.admin-audit__input[type='date'] {
+  color-scheme: dark;
+}
+
+.admin-audit__input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.7;
+}
+
+.admin-audit__input:hover,
+.admin-audit__select:hover {
+  border-color: var(--fg-wood);
+}
+
+.admin-audit__input:focus,
+.admin-audit__select:focus {
+  outline: none;
+  border-color: var(--fg-wood);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.admin-audit__input:focus-visible,
+.admin-audit__select:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/*
+ * A filter the endpoint would refuse. The border states it as well as the message, because the
+ * message sits below the fold of a wrapped row on a narrow screen and the field itself has to carry
+ * the fact that it is the one at fault.
+ */
+.admin-audit__input[aria-invalid='true'] {
+  border-color: var(--au-bad-border);
+}
+
+.admin-audit__input[aria-invalid='true']:focus {
+  border-color: var(--au-bad);
+  box-shadow: 0 0 0 3px var(--au-bad-bg);
+}
+
+/*
+ * The open dropdown is drawn by the OS outside the glass surface, so it cannot inherit a translucent
+ * background and needs an opaque one — the shell's own forest base, kept in step with AppLayout.css
+ * exactly as AdminUsersPage's select is.
+ */
+.admin-audit__select option {
+  color: var(--fg-brand);
+  background: #0e1b12;
+}
+
+.admin-audit__field-error {
+  margin: 6px 0 0;
+  color: var(--au-bad);
+  font-size: var(--fs-eyebrow);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------ Status line */
+/*
+ * The live region. It keeps its height while empty so the feed does not jump up and down as it
+ * changes between "Loading…", "Filtering…" and a count.
+ */
+.admin-audit__status {
+  margin: 0 0 var(--sp-2);
+  min-height: 1.4em;
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------------- Feed */
+/*
+ * ONE COLUMN, unlike the directory's auto-fitting grid. The feed is a timeline read top to bottom and
+ * cards of unequal height side by side would break the reading order that ordering is the whole point
+ * of — and every card here holds long values that want the full width rather than half of it.
+ */
+.admin-audit__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-audit__item {
+  display: flex;
+  min-width: 0;
+}
+
+.admin-audit-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-2);
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-text);
+}
+
+/*
+ * The left rule, and what is left of it.
+ *
+ * THE RED ONE IS GONE. `--danger` and `--security` used to carry a red left border as well as a red
+ * badge, which stated the same fact twice and made a feed containing any disable or any detection
+ * read as a wall of red down its left edge. Nothing is lost by dropping it: the badge still names
+ * the action in words and still carries the tone, which was always the part that had to survive a
+ * monochrome screen.
+ *
+ * The accent rule on `--privilege` stays. It is the one category with no red badge to fall back on,
+ * and it marks the events an auditor opens this page for — a role change or a bootstrap grant.
+ */
+.admin-audit-card--privilege {
+  border-left: 3px solid var(--fg-accent);
+}
+
+.admin-audit-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px var(--sp-2);
+}
+
+/*
+ * The action is the card's heading and its badge at once. It overrides the global h3 size the way the
+ * panel's other titles override theirs, and it is the same pill geometry as .admin-badge so the two
+ * surfaces' badges read as one family.
+ */
+.admin-audit-card__action {
+  margin: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.admin-audit-card__action--privilege {
+  color: var(--fg-accent);
+  background: var(--glass-hover);
+  border-color: var(--fg-accent);
+  font-weight: 600;
+}
+
+.admin-audit-card__action--danger {
+  color: var(--au-bad);
+  background: var(--au-bad-bg);
+  border-color: var(--au-bad-border);
+  font-weight: 600;
+}
+
+/*
+ * Dashed, where the destructive tone is solid. It is the one thing on the page no administrator did
+ * — the system detected it and recorded it against itself — and an operator must be able to tell
+ * "somebody disabled this account" from "we caught a stolen token" without reading the words twice.
+ */
+.admin-audit-card__action--security {
+  color: var(--au-bad);
+  background: transparent;
+  border-color: var(--au-bad);
+  border-style: dashed;
+  font-weight: 600;
+}
+
+.admin-audit-card__time {
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  white-space: nowrap; /* a timestamp broken across two lines is unreadable, and it is short */
+}
+
+/* ---------------------------------------------------------------- Parties */
+/*
+ * Actor and target, as two label/value rows that become two columns when the card is wide enough to
+ * hold both without squeezing an address. auto-fit rather than a breakpoint, so this is decided by
+ * the card's own width — it is correct inside a narrow panel on a wide screen too.
+ */
+.admin-audit-card__parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: center;
+  gap: 6px var(--sp-2);
+}
+
+/*
+ * CENTRED, NOT BASELINE-ALIGNED, and that is the fix rather than a preference. The Filter control is
+ * a 44px touch target sitting beside ~20px of text; under `align-items: baseline` the browser lines
+ * up the button's *text* baseline with the address's, which pushes the button down by the padding
+ * above its label and leaves Actor, Filter and Target visibly stepped from one another. Centring
+ * aligns the boxes instead of their text, so all three sit on one line whatever the button's height.
+ */
+.admin-audit-card__party {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.admin-audit-card__party-label {
+  flex: 0 0 auto;
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-audit-card__party-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.admin-audit-card__email,
+.admin-audit-card__email-link {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.9em;
+  line-height: 1.4;
+  overflow-wrap: anywhere; /* addresses and ids have no spaces to break at */
+}
+
+.admin-audit-card__email {
+  color: var(--fg-text);
+}
+
+.admin-audit-card__email-link {
+  color: var(--fg-brand);
+  text-decoration: underline;
+  text-decoration-color: var(--glass-border);
+  text-underline-offset: 2px;
+}
+
+.admin-audit-card__email-link:hover {
+  color: var(--fg-accent);
+  text-decoration-color: currentColor;
+}
+
+.admin-audit-card__email-link:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * "System" and "Account deleted" — the two facts a null id carries, said in words. Neither is an
+ * error and neither is toned: a system-written event is normal, and a deleted target is what the
+ * email snapshot exists to survive.
+ */
+.admin-audit-card__party-note {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--glass-border);
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  white-space: nowrap;
+}
+
+.admin-audit-card__absent {
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  font-style: italic;
+}
+
+/*
+ * A text button, not a pill: it is a secondary affordance on a card whose content is the point, and
+ * it must not compete with the addresses beside it. It still meets the 44px touch floor honestly —
+ * with a min-height rather than with padding pulled back by a negative margin, which would let two
+ * wrapped rows' targets overlap each other on exactly the touch screens the floor exists for.
+ */
+.admin-audit-card__filter {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--fg-accent);
+  font: inherit;
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.admin-audit-card__filter:hover {
+  color: var(--fg-brand);
+}
+
+.admin-audit-card__filter:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------- Metadata */
+/*
+ * The per-action detail. auto-fit again: a role change's two short values sit side by side, while a
+ * disable reason — the one free-text value that reaches this table — takes the row it needs.
+ */
+.admin-audit-card__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  padding-top: var(--sp-1);
+  border-top: 1px solid var(--glass-border);
+}
+
+.admin-audit-card__meta-item {
+  min-width: 0;
+}
+
+.admin-audit-card__meta-label {
+  margin: 0 0 2px;
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-audit-card__meta-value {
+  margin: 0;
+  color: var(--fg-text);
+  font-size: var(--fs-label);
+  line-height: 1.45;
+  overflow-wrap: anywhere; /* a reason, a user agent and an id all break the layout without this */
+}
+
+.admin-audit-card__meta-value--mono {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--fg-muted);
+}
+
+/* -------------------------------------------------------- Loading placeholder */
+/*
+ * Sized from the same tokens as a real card, so the skeleton occupies the space the events will and
+ * the page does not shift when they arrive.
+ */
+.admin-audit__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: var(--sp-2);
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-audit__skeleton-line {
+  height: 0.85em;
+  border-radius: 6px;
+  background: var(--glass-hover);
+  animation: admin-audit-pulse 1.4s ease-in-out infinite;
+}
+
+.admin-audit__skeleton-line--action {
+  width: 38%;
+  height: 1.05em;
+}
+
+.admin-audit__skeleton-line--parties {
+  width: 72%;
+}
+
+.admin-audit__skeleton-line--meta {
+  width: 55%;
+}
+
+@keyframes admin-audit-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* ------------------------------------------------------- Empty and error */
+.admin-audit__empty {
+  margin: 0;
+  padding: var(--sp-3) 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/*
+ * The shared error surface. Deliberately NOT a flex container: the range message is a sentence with
+ * <strong> inside it, and flex would promote each inline run to a flex item and space them apart —
+ * the sentence would render with gaps in the middle of it. Only the variant that has to sit beside a
+ * button becomes a row.
+ */
+.admin-audit__notice {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 12px;
+  border: 1px solid var(--au-bad-border);
+  background: var(--au-bad-bg);
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit__notice--error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.admin-audit__notice-text {
+  flex: 1 1 16rem;
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* ----------------------------------------------------------- Load more */
+.admin-audit__more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  margin-top: var(--sp-3);
+}
+
+.admin-audit__more-error {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--au-bad);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-audit__btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.admin-audit__btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.admin-audit__btn:disabled {
+  opacity: 0.6;
+  cursor: progress; /* the only disabled state either button has is "a request is running" */
+}
+
+.admin-audit__btn--primary {
+  color: #0f1c12;
+  background: var(--fg-accent);
+  border: 1px solid var(--fg-accent);
+}
+
+.admin-audit__btn--primary:hover:not(:disabled) {
+  background: var(--fg-leaf);
+  border-color: var(--fg-leaf);
+}
+
+.admin-audit__btn--ghost {
+  color: var(--fg-brand);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-audit__btn--ghost:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+  color: var(--fg-wood);
+}
+
+/* --------------------------------------------------------- Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .admin-audit__input,
+  .admin-audit__select,
+  .admin-audit__btn {
+    transition: none;
+  }
+
+  /* The placeholder still reads as a placeholder without the pulse — it holds a steady dim tone. */
+  .admin-audit__skeleton-line {
+    animation: none;
+    opacity: 0.6;
+  }
+}
