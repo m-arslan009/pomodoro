@@ -1,0 +1,440 @@
+/*
+ * AdminUsersPage — the account directory at /admin, scoped inside .admin-panel.
+ *
+ * IT ADDS NO DESIGN SYSTEM AND NO BREAKPOINT, for the same reason AdminLayout.css does not. Every
+ * colour is one of the shell's tokens (--fg-*, --glass-*, declared on .app-shell in AppLayout.css);
+ * the spacing and body type come from the .admin-shell scale this page renders inside; the two small
+ * scale values below repeat HistoryPage's clamps exactly, so a label here and a label there are the
+ * same size; and the controls repeat the idioms SettingPage and EstimateSelect already established —
+ * 12px radius, --glass-bg-strong field, --fg-wood focus ring, opaque <option> background.
+ *
+ * There is no media query in this file. The filter row wraps, the results are an auto-fitting grid,
+ * and each card is a single column at every width — the layout is driven by available space rather
+ * than by a viewport size, which is what keeps it correct at the widths between the breakpoints as
+ * well as at them. The sidebar's own responsive behaviour is AppLayout's and is unchanged here.
+ */
+
+.admin-users {
+  /* Repeats HistoryPage's two smaller steps; --fs-body and the spacing scale are inherited. */
+  --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
+
+  /* The one tone the shell has no token for. Same value SettingPage and HistoryPage both use. */
+  --au-bad: #e0736b;
+  --au-bad-bg: rgba(224, 115, 107, 0.16);
+  --au-bad-border: rgba(224, 115, 107, 0.45);
+}
+
+.admin-users__head {
+  margin-bottom: var(--sp-2);
+}
+
+.admin-users__lead {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ Filters */
+/*
+ * One wrapping row. The search field is given a much larger flex-grow and a wider basis than the two
+ * selects, so it takes the slack on a laptop and is the first thing to claim a full row of its own on
+ * a phone — without any width being written down.
+ */
+.admin-users__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.admin-users__field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* a flex child may not be wider than its content; without this it can be */
+  flex: 1 1 9rem;
+}
+
+.admin-users__field--search {
+  flex: 4 1 16rem;
+}
+
+.admin-users__label {
+  margin-bottom: 6px;
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-brand);
+}
+
+.admin-users__input,
+.admin-users__select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px; /* the touch-target floor the rest of the app's controls use */
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  font: inherit;
+  font-size: var(--fs-body);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-users__select {
+  cursor: pointer;
+}
+
+.admin-users__input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.7;
+}
+
+.admin-users__input:hover,
+.admin-users__select:hover {
+  border-color: var(--fg-wood);
+}
+
+.admin-users__input:focus,
+.admin-users__select:focus {
+  outline: none;
+  border-color: var(--fg-wood);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.admin-users__input:focus-visible,
+.admin-users__select:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/*
+ * The open dropdown is drawn by the OS outside the glass surface, so it cannot inherit a translucent
+ * background and needs an opaque one — the shell's own forest base, kept in step with AppLayout.css
+ * exactly as EstimateSelect's list is.
+ */
+.admin-users__select option {
+  color: var(--fg-brand);
+  background: #0e1b12;
+}
+
+.admin-users__hint {
+  margin: 6px 0 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------------ Status line */
+/*
+ * The live region. It keeps its height while empty so the results do not jump up and down as it
+ * changes between "Loading…", "Searching…" and a count.
+ */
+.admin-users__status {
+  margin: 0 0 var(--sp-2);
+  min-height: 1.4em;
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------- Results */
+/*
+ * auto-fit with a min() floor: as many columns as fit, and never a column wider than the container —
+ * the min() is what stops a 320px track from overflowing a 300px panel on a narrow phone.
+ */
+.admin-users__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-users__item {
+  display: flex; /* so the card stretches to the row's height rather than to its own content */
+  min-width: 0;
+}
+
+.admin-user-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-2);
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-text);
+  text-decoration: none;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.admin-user-card:hover {
+  border-color: var(--fg-wood);
+  background: var(--glass-hover);
+}
+
+.admin-user-card:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.admin-user-card__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-user-card__name {
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere; /* a long single-word display name wraps instead of widening the grid */
+}
+
+.admin-user-card__handle,
+.admin-user-card__email {
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  overflow-wrap: anywhere; /* addresses have no spaces to break at */
+}
+
+.admin-user-card__email {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+/* -------------------------------------------------------------- Badges */
+.admin-user-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/*
+ * Only the states an operator scans for are given a tone; the ordinary ones stay quiet, so a screen
+ * full of normal accounts is not a screen full of colour. Every badge says what it is in words —
+ * the colour is reinforcement and never the message.
+ */
+.admin-badge--role-user,
+.admin-badge--role-unknown,
+.admin-badge--active,
+.admin-badge--verified,
+.admin-badge--unknown {
+  color: var(--fg-muted);
+  background: var(--glass-bg);
+}
+
+.admin-badge--role-admin {
+  color: var(--fg-accent);
+  background: var(--glass-hover);
+  border-color: var(--fg-accent);
+  font-weight: 600;
+}
+
+.admin-badge--disabled {
+  color: var(--au-bad);
+  background: var(--au-bad-bg);
+  border-color: var(--au-bad-border);
+  font-weight: 600;
+}
+
+.admin-badge--unverified {
+  color: var(--fg-wood);
+  border-color: var(--fg-wood);
+  border-style: dashed;
+  background: transparent;
+}
+
+.admin-user-card__joined {
+  margin-top: auto; /* pinned to the bottom, so it lines up across cards of unequal height */
+  padding-top: 2px;
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+}
+
+/* -------------------------------------------------------- Loading placeholder */
+/*
+ * Sized from the same tokens as a real card, so the skeleton occupies the space the results will and
+ * the page does not shift when they arrive.
+ */
+.admin-users__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: var(--sp-2);
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-users__skeleton-line {
+  height: 0.85em;
+  border-radius: 6px;
+  background: var(--glass-hover);
+  animation: admin-users-pulse 1.4s ease-in-out infinite;
+}
+
+.admin-users__skeleton-line--name {
+  width: 55%;
+  height: 1.05em;
+}
+
+.admin-users__skeleton-line--meta {
+  width: 80%;
+}
+
+.admin-users__skeleton-line--badges {
+  width: 65%;
+}
+
+@keyframes admin-users-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* ------------------------------------------------------- Empty and error */
+.admin-users__empty {
+  margin: 0;
+  padding: var(--sp-3) 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.admin-users__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 12px;
+  border: 1px solid var(--au-bad-border);
+  background: var(--au-bad-bg);
+}
+
+.admin-users__notice-text {
+  flex: 1 1 16rem;
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* ----------------------------------------------------------- Load more */
+.admin-users__more {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  margin-top: var(--sp-3);
+}
+
+.admin-users__more-error {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--au-bad);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-users__btn {
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.admin-users__btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.admin-users__btn:disabled {
+  opacity: 0.6;
+  cursor: progress; /* the only disabled state either button has is "a request is running" */
+}
+
+.admin-users__btn--primary {
+  color: #0f1c12;
+  background: var(--fg-accent);
+  border: 1px solid var(--fg-accent);
+}
+
+.admin-users__btn--primary:hover:not(:disabled) {
+  background: var(--fg-leaf);
+  border-color: var(--fg-leaf);
+}
+
+.admin-users__btn--ghost {
+  color: var(--fg-brand);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-users__btn--ghost:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+  color: var(--fg-wood);
+}
+
+/* --------------------------------------------------------- Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .admin-users__input,
+  .admin-users__select,
+  .admin-user-card,
+  .admin-users__btn {
+    transition: none;
+  }
+
+  /* The placeholder still reads as a placeholder without the pulse — it holds a steady dim tone. */
+  .admin-users__skeleton-line {
+    animation: none;
+    opacity: 0.6;
+  }
+}
