@@ -217,7 +217,15 @@ export const api = {
   post: (path, body) => request(path, { method: 'POST', body }),
   patch: (path, body) => request(path, { method: 'PATCH', body }),
   put: (path, body) => request(path, { method: 'PUT', body }),
-  /** Resolves to the parsed body, or to null when the API answers 204 with no content. */
-  del: (path) => request(path, { method: 'DELETE' }),
+  /**
+   * Resolves to the parsed body, or to null when the API answers 204 with no content.
+   *
+   * `body` is optional and is almost always omitted — a DELETE says everything it needs to in its
+   * path. The one exception is the admin account deletion, which the server will only accept with a
+   * typed confirmation of the address in the body (`admin_role_plan.md` §6.9), so that the check is
+   * the server's rather than a dialog's. Omitting it sends exactly what this method always sent: no
+   * body and no Content-Type.
+   */
+  del: (path, body) => request(path, { method: 'DELETE', body }),
   getBlob: (path) => request(path, { blob: true }),
 };

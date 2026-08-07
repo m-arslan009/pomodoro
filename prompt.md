@@ -753,3 +753,43 @@ path that can produce a session. Two did not have it: registration hard-coded `/
 server before this bundle runs. The fix that follows from "use the authenticated user as the source
 of truth" is that the client stops defaulting at all: it sends `returnTo` only when a page was
 genuinely requested, and the server chooses when it knows whose session it opened.]
+
+## Admin User Detail page and the user-management actions
+
+Implement the Admin User Detail page at `/admin/users/:id` using the existing admin layout. Load the
+selected user using `GET /api/v1/admin/users/:id` and display their account information, including
+name, username, email, role, status, email verification, timezone, authentication identities,
+session summary, gamification summary, task/focus-session counts, and report status. Never expose
+passwords, hashes, tokens, OAuth-sensitive values, task contents, or focus-session contents.
+
+Also implement an Admin Actions section for managing the user. Support the relevant user-management
+actions: Disable User, Reactivate User, Revoke Sessions, Change Role (user/admin), and Delete User.
+Use the corresponding admin APIs and refresh/update the displayed user state from the server
+response after successful actions. Disable and role-change actions must require confirmation,
+disabling should require a reason if required by the API, and permanent deletion must require a
+strong confirmation such as typing the user's exact email before proceeding. Clearly distinguish
+reversible actions from permanent deletion.
+
+Respect the domain restrictions: an admin must not be able to disable, delete, or change their own
+role, and the last admin must not be demoted or disabled. Surface backend 409, validation, and other
+API errors clearly instead of assuming an action succeeded. Session revocation should explain that
+it revokes existing refresh sessions, while disabling the account is the immediate way to block
+access. Use the existing `services/admin.js` / `api.js` architecture and local page state; do not
+create a Redux slice or use mock data. Handle loading, not-found, error, action-in-progress,
+action-success, and disabled-action states. Prevent duplicate action submissions and only update the
+UI after the server confirms success. Keep the page responsive and consistent with the existing
+admin design. Include a way back to the Users page, keep Users active in navigation while viewing
+the detail route, and ensure confirmation dialogs are keyboard-accessible. Focus only on the User
+Detail and user-related admin actions; do not implement the Audit page, system statistics, settings,
+or unrelated admin functionality.
+
+[Turns the panel from a directory into a console: this is the first surface in the product that
+*writes* to another account. Three shapes follow from the instruction and are now fixed. The server
+is the only authority on what the account is — every action re-renders from the payload the API
+answered with, and revoke-sessions, which answers a count rather than a user, re-reads the account
+instead of guessing. The three domain rules are the server's; the client renders the two it can know
+as disabled controls with the reason written beside them, and surfaces the 409 for the one it cannot
+(the last-admin count lives in a feature this task excludes). And the reversible/permanent split
+becomes visual and procedural rather than a matter of wording — deletion has its own region, its own
+tone, and a typed address that the server verifies as well, because a confirmation only a client
+enforces protects nobody.]

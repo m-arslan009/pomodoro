@@ -13,6 +13,8 @@
 .admin-shell {
   /* Fluid type scale — same values as HistoryPage, so the two surfaces share one scale. */
   --fs-body: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
   --fs-section-title: clamp(1.05rem, 0.92rem + 0.6vw, 1.3rem);
   --fs-page-title: clamp(1.5rem, 1rem + 2.4vw, 2.35rem);
 
@@ -21,6 +23,15 @@
   --sp-2: clamp(10px, 0.6vw + 6px, 16px);
   --sp-3: clamp(14px, 1vw + 8px, 22px);
   --panel-pad: clamp(18px, 1.4vw + 12px, 30px);
+
+  /*
+   * The one tone the shell has no token for — the same value SettingPage and HistoryPage both use.
+   * Declared here rather than per page because every admin page has an error state and they must
+   * all be the same red.
+   */
+  --au-bad: #e0736b;
+  --au-bad-bg: rgba(224, 115, 107, 0.16);
+  --au-bad-border: rgba(224, 115, 107, 0.45);
 
   width: 100%;
   max-width: 1240px;
@@ -133,6 +144,158 @@
   border-radius: 6px;
 }
 
+/* ---------------------------------------------------------------- Badges */
+/*
+ * The panel's state badges (AdminUserBadges), shared by the directory's cards and the detail page's
+ * header. They live in the shell's stylesheet rather than in either page's because both surfaces
+ * render them and each page imports only its own file — a rule kept next to one of them would style
+ * the badge on that page and leave it unstyled on the other.
+ */
+.admin-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/*
+ * Only the states an operator scans for are given a tone; the ordinary ones stay quiet, so a screen
+ * full of normal accounts is not a screen full of colour. Every badge says what it is in words —
+ * the colour is reinforcement and never the message.
+ */
+.admin-badge--role-user,
+.admin-badge--role-unknown,
+.admin-badge--active,
+.admin-badge--verified,
+.admin-badge--unknown {
+  color: var(--fg-muted);
+  background: var(--glass-bg);
+}
+
+.admin-badge--role-admin {
+  color: var(--fg-accent);
+  background: var(--glass-hover);
+  border-color: var(--fg-accent);
+  font-weight: 600;
+}
+
+.admin-badge--disabled {
+  color: var(--au-bad);
+  background: var(--au-bad-bg);
+  border-color: var(--au-bad-border);
+  font-weight: 600;
+}
+
+.admin-badge--unverified {
+  color: var(--fg-wood);
+  border-color: var(--fg-wood);
+  border-style: dashed;
+  background: transparent;
+}
+
+/* --------------------------------------------------------------- Buttons */
+/*
+ * The panel's buttons. Here for the same reason the badges are: the detail page and its dialogs
+ * both need them, and neither should carry its own copy of a button.
+ *
+ * 44px is the touch-target floor every control in the app already uses, and the tokens are the
+ * shell's own — this adds no colour and no new interaction language. (`.admin-users__btn` predates
+ * this block with identical values; it stays where it is rather than being rewritten mid-task.)
+ */
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.admin-btn:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+/*
+ * A disabled admin button is one of two things — a rule forbids the action, or a request is running
+ * — and the cursor says which. `not-allowed` on a permanently refused action, `progress` while
+ * something is in flight; the reason itself is always written out beside the control, never left to
+ * the cursor alone.
+ */
+.admin-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-btn[aria-busy='true']:disabled {
+  cursor: progress;
+}
+
+.admin-btn--primary {
+  color: #0f1c12;
+  background: var(--fg-accent);
+  border: 1px solid var(--fg-accent);
+}
+
+.admin-btn--primary:hover:not(:disabled) {
+  background: var(--fg-leaf);
+  border-color: var(--fg-leaf);
+}
+
+.admin-btn--ghost {
+  color: var(--fg-brand);
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-btn--ghost:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+  color: var(--fg-wood);
+}
+
+/*
+ * The destructive tone. Outlined rather than filled, and never the visual default in a group: the
+ * action that cannot be undone should not be the one a hurried eye reads as the primary button.
+ */
+.admin-btn--danger {
+  color: var(--au-bad);
+  background: var(--au-bad-bg);
+  border: 1px solid var(--au-bad-border);
+}
+
+.admin-btn--danger:hover:not(:disabled) {
+  color: var(--fg-brand);
+  background: var(--au-bad);
+  border-color: var(--au-bad);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-btn {
+    transition: none;
+  }
+}
+
 /* ------------------------------------------------------- Denied (RequireAdmin) */
 /*
  * What a non-admin sees at /admin. Deliberately quiet: it is not an error, and nothing has gone
@@ -188,7 +351,8 @@
 }
 
 /*
- * No media query and no reduced-motion block: with the navigation living in the app sidebar, nothing
- * on this surface changes structure by width or animates. Both belong to AppLayout.css, which
- * already has them and needed no change for roles.
+ * No media query: with the navigation living in the app sidebar, nothing on this surface changes
+ * structure by width — the panel is one fluid column and the pages inside it reflow on available
+ * space. That responsive behaviour belongs to AppLayout.css, which already has it and needed no
+ * change for roles. The one reduced-motion block above covers the only thing here that animates.
  */

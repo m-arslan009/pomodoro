@@ -1,0 +1,310 @@
+/*
+ * AdminActions — the action section on the account detail page, and the dialogs it opens.
+ *
+ * Same rules as the rest of the panel: no new design system, no new breakpoint, no colour that is
+ * not one of the shell's tokens. The buttons are .admin-btn from AdminLayout.css and the dialog
+ * frame is .modal-dialog from ModalDialog.css; what is here is the arrangement of the rows and the
+ * fields, which is all this component adds.
+ *
+ * THE PERMANENT GROUP IS DRAWN DIFFERENTLY, AND ONLY IT. Reversible actions sit on the panel's own
+ * surface; deletion sits inside an outlined region in the error tone with its own heading. The
+ * separation is the point — the visual distinction and the typed-address confirmation both exist so
+ * that the one action nobody can undo cannot be reached by the muscle memory of the four that can.
+ *
+ * No media query: each row is a flex line that wraps its control onto its own line when the copy
+ * beside it no longer fits, so a control never overflows and never has to be hunted for at the
+ * bottom of a narrow screen.
+ */
+
+.admin-actions {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--glass-border);
+}
+
+.admin-actions__title {
+  margin: 0 0 var(--sp-1);
+  color: var(--fg-brand);
+  font-size: var(--fs-section-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.admin-actions__lead {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* The live region. It holds its height while empty so confirming something does not move the rows. */
+.admin-actions__status {
+  margin: var(--sp-2) 0 0;
+  min-height: 1.4em;
+  max-width: 70ch;
+  color: var(--fg-accent);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.admin-actions__alert {
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-2);
+  border-radius: 12px;
+  border: 1px solid var(--au-bad-border);
+  background: var(--au-bad-bg);
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Why several controls below are disabled. Referenced by aria-describedby, so it is never only visual. */
+.admin-actions__note {
+  margin: var(--sp-2) 0 0;
+  max-width: 70ch;
+  padding: var(--sp-2);
+  border-radius: 12px;
+  border: 1px dashed var(--glass-border);
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- Groups */
+.admin-actions__group {
+  margin-top: var(--sp-3);
+}
+
+.admin-actions__group--danger {
+  padding: var(--sp-2);
+  border-radius: 14px;
+  border: 1px solid var(--au-bad-border);
+  background: var(--au-bad-bg);
+}
+
+.admin-actions__group-title {
+  margin: 0 0 var(--sp-1);
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-actions__group--danger .admin-actions__group-title {
+  color: var(--au-bad);
+}
+
+/* ----------------------------------------------------------------- Rows */
+/*
+ * Copy on the left, control on the right, wrapping to two lines when the copy can no longer share
+ * the row. The control keeps a comfortable basis so it never collapses to a sliver of a button.
+ */
+.admin-actions__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--glass-border);
+}
+
+.admin-actions__row:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.admin-actions__copy {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.admin-actions__action-name {
+  display: block;
+  margin: 0 0 2px;
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.admin-actions__hint {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+}
+
+.admin-actions__hint + .admin-actions__hint {
+  margin-top: 6px;
+}
+
+.admin-actions__hint--warn {
+  color: var(--fg-wood);
+}
+
+/* The role row's select and button. They wrap onto separate lines before either shrinks. */
+.admin-actions__control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  flex: 0 1 auto;
+}
+
+.admin-actions__select {
+  min-height: 44px; /* the touch-target floor the rest of the app's controls use */
+  min-width: 8rem;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-brand);
+  font: inherit;
+  font-size: var(--fs-body);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-actions__select:hover:not(:disabled) {
+  border-color: var(--fg-wood);
+}
+
+.admin-actions__select:focus {
+  outline: none;
+  border-color: var(--fg-wood);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.admin-actions__select:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+}
+
+.admin-actions__select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/*
+ * The open dropdown is drawn by the OS outside the glass surface, so it cannot inherit a
+ * translucent background and needs an opaque one — the shell's own forest base, kept in step with
+ * AppLayout.css exactly as the directory's filters are.
+ */
+.admin-actions__select option {
+  color: var(--fg-brand);
+  background: #0e1b12;
+}
+
+/* -------------------------------------------------------------- Dialogs */
+.admin-dialog__form {
+  display: block;
+}
+
+.admin-dialog__field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: clamp(14px, 1.2vw + 10px, 22px);
+  min-width: 0;
+}
+
+.admin-dialog__label {
+  margin-bottom: 6px;
+  color: var(--fg-brand, #eaf3e2);
+  font-size: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
+  font-weight: 600;
+}
+
+/* The address the operator has to type back. Mono so a lookalike character is visible as one. */
+.admin-dialog__target {
+  font-family: var(--mono);
+  font-size: 0.95em;
+  color: var(--fg-accent);
+  overflow-wrap: anywhere;
+}
+
+.admin-dialog__input,
+.admin-dialog__textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--glass-bg-strong, rgba(24, 38, 28, 0.75));
+  border: 1px solid var(--glass-border, rgba(207, 230, 180, 0.22));
+  color: var(--fg-brand, #eaf3e2);
+  font: inherit;
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.admin-dialog__textarea {
+  resize: vertical; /* horizontal resizing could push the dialog wider than the viewport */
+  line-height: 1.5;
+}
+
+.admin-dialog__input:hover,
+.admin-dialog__textarea:hover {
+  border-color: var(--fg-wood, #cfe6b4);
+}
+
+.admin-dialog__input:focus,
+.admin-dialog__textarea:focus {
+  outline: none;
+  border-color: var(--fg-wood, #cfe6b4);
+  box-shadow: 0 0 0 3px rgba(213, 155, 108, 0.22);
+}
+
+.admin-dialog__input:focus-visible,
+.admin-dialog__textarea:focus-visible {
+  outline: 2px solid var(--fg-wood, #cfe6b4);
+  outline-offset: 2px;
+}
+
+.admin-dialog__input[aria-invalid='true'],
+.admin-dialog__textarea[aria-invalid='true'] {
+  border-color: var(--au-bad, #e0736b);
+}
+
+.admin-dialog__hint {
+  margin: 6px 0 0;
+  color: var(--fg-muted, #b9cbb2);
+  font-size: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
+  line-height: 1.45;
+}
+
+/* A rejection from the server, shown where the retry is rather than behind the dialog. */
+.admin-dialog__error {
+  margin: 0 0 clamp(14px, 1.2vw + 10px, 22px);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--au-bad-border, rgba(224, 115, 107, 0.45));
+  background: var(--au-bad-bg, rgba(224, 115, 107, 0.16));
+  color: var(--fg-brand, #eaf3e2);
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* The dialog's two buttons share the row and wrap rather than overflow, as ConfirmDialog's do. */
+.modal-dialog__actions .admin-btn {
+  flex: 1 1 9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-actions__select,
+  .admin-dialog__input,
+  .admin-dialog__textarea {
+    transition: none;
+  }
+}

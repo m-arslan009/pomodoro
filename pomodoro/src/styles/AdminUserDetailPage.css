@@ -1,0 +1,286 @@
+/*
+ * AdminUserDetailPage — one account at /admin/users/:id, scoped inside .admin-panel.
+ *
+ * IT ADDS NO DESIGN SYSTEM AND NO BREAKPOINT, for the same reason AdminLayout.css and
+ * AdminUsersPage.css do not. Every colour is one of the shell's tokens (--fg-*, --glass-*, declared
+ * on .app-shell in AppLayout.css); the type and spacing scales and the --au-bad error tone are
+ * .admin-shell's and are inherited; the badges and the buttons are the panel's shared vocabulary and
+ * live in AdminLayout.css.
+ *
+ * There is no media query in this file. The fact groups are an auto-fitting grid and each group is
+ * a single column of label/value pairs at every width, so the layout is driven by the space the
+ * panel actually has rather than by a viewport size — which is what keeps it correct at the widths
+ * *between* the breakpoints as well as at them. Long addresses, ids and time zone names wrap
+ * instead of widening anything: no value in here is allowed to set the page's width.
+ */
+
+/* ------------------------------------------------------------------ Back link */
+/*
+ * Above the heading rather than below the content: it is how you leave, and a way out found only
+ * after scrolling past everything is not a way out on a phone.
+ */
+.admin-user-detail__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: var(--sp-1);
+  color: var(--fg-accent);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.admin-user-detail__back:hover {
+  color: var(--fg-brand);
+}
+
+.admin-user-detail__back:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --------------------------------------------------------------------- Head */
+.admin-user-detail__head {
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.admin-user-detail__identity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--sp-2);
+  margin: 0 0 var(--sp-1);
+  min-width: 0;
+}
+
+.admin-user-detail__handle,
+.admin-user-detail__email {
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  overflow-wrap: anywhere; /* addresses have no spaces to break at */
+}
+
+.admin-user-detail__email {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+/* ------------------------------------------------------------ Status + states */
+/*
+ * The live line. It keeps its height while empty so the content below does not jump as it changes.
+ */
+.admin-user-detail__status {
+  margin: var(--sp-2) 0 0;
+  min-height: 1.4em;
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+}
+
+.admin-user-detail__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 12px;
+  border: 1px solid var(--au-bad-border);
+  background: var(--au-bad-bg);
+}
+
+.admin-user-detail__notice-text {
+  flex: 1 1 16rem;
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The deleted state's heading takes focus programmatically (it is what replaced the dialog the
+ * operator was in), so it needs a visible ring — a focus move a sighted keyboard user cannot see is
+ * a focus move that has lost them.
+ */
+.admin-panel__title:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* What is left after a deletion: a completed action, so it is stated plainly and not in the bad tone. */
+.admin-user-detail__terminal {
+  margin: var(--sp-2) 0 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------- Fact groups */
+/*
+ * auto-fit with a min() floor: as many columns as fit, and never a column wider than the container
+ * — the min() is what stops a 20rem track from overflowing a narrower panel on a phone.
+ */
+.admin-user-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.admin-facts {
+  min-width: 0;
+  padding: var(--sp-2);
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-facts__title {
+  margin: 0 0 var(--sp-1);
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.admin-facts__note {
+  margin: 0 0 var(--sp-1);
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  line-height: 1.45;
+}
+
+.admin-facts__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+}
+
+/*
+ * Label above value, always. A two-column label/value row reads well until the value is a 320
+ * character address or a title list, at which point one column is squeezed to nothing; stacking is
+ * the arrangement that survives every value the API can send.
+ */
+.admin-facts__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-facts__label {
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-facts__value {
+  margin: 0;
+  min-width: 0;
+  color: var(--fg-text);
+  font-size: var(--fs-label);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-facts__mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  color: var(--fg-brand);
+}
+
+/*
+ * A missing value is written out — "Not recorded" — rather than drawn as a dash: the pair is
+ * announced as a unit by a screen reader, and a dash announces as nothing at all. Dimmed so it
+ * still reads as an absence at a glance.
+ */
+.admin-facts__absent {
+  color: var(--fg-muted);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.admin-facts__identities {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-facts__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.admin-facts__identity-name {
+  color: var(--fg-brand);
+  font-weight: 600;
+}
+
+.admin-facts__identity-meta {
+  color: var(--fg-muted);
+  font-size: var(--fs-eyebrow);
+  line-height: 1.4;
+}
+
+/* ------------------------------------------------------- Loading placeholder */
+/*
+ * Sized from the same tokens as the real header, so the skeleton occupies roughly the space the
+ * content will and the page does not shift when it arrives.
+ */
+.admin-user-detail__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-2);
+}
+
+.admin-user-detail__skeleton-line {
+  height: 0.85em;
+  border-radius: 6px;
+  background: var(--glass-hover);
+  animation: admin-detail-pulse 1.4s ease-in-out infinite;
+}
+
+.admin-user-detail__skeleton-line--title {
+  width: 45%;
+  height: 1.4em;
+}
+
+.admin-user-detail__skeleton-line--meta {
+  width: 65%;
+}
+
+.admin-user-detail__skeleton-line--badges {
+  width: 55%;
+}
+
+@keyframes admin-detail-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The placeholder still reads as a placeholder without the pulse — it holds a steady dim tone. */
+  .admin-user-detail__skeleton-line {
+    animation: none;
+    opacity: 0.6;
+  }
+}

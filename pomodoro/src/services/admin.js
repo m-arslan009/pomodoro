@@ -12,9 +12,11 @@
  * pages the guard then refuses is worse than either component being wrong alone.
  *
  * **This predicate is a UX gate, never enforcement.** It decides what the client bothers to render.
- * Everything in this file can be edited by whoever is holding the browser, so the API must refuse a
- * non-admin on its own authority, from the bearer token, on every route it will eventually expose.
- * That backend half is deliberately not built yet.
+ * Everything in this file can be edited by whoever is holding the browser, so the API refuses a
+ * non-admin on its own authority, from the bearer token, on every route in the namespace — that is
+ * `AdminGuard`, and it answers 404 rather than 403 so a probing account cannot even confirm the
+ * routes exist. The role it reads is re-read from the database on every request rather than carried
+ * in the token, so a demotion takes effect on the account's next call.
  *
  * Standing constraints this file sits under: ADR-010 (`.claude/locked_decisions.md:64`) chose
  * ownership-as-a-query-constraint so that no roles table would exist; `role` is a column on `users`

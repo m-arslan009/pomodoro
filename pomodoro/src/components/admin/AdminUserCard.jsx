@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import AdminUserBadges from './AdminUserBadges.jsx';
 
 /*
  * AdminUserCard — one account in the /admin results, and the way into its detail page.
@@ -15,31 +16,9 @@ import { Link } from 'react-router-dom';
  * would otherwise be the entire card read as one string — the fields stay in the accessibility tree
  * either way, so nothing is hidden by naming it.
  *
- * The detail page it points at is a placeholder for now, deliberately (see AdminUserDetailPage).
- * This component's job is to route to it correctly, which it can do before that page has content.
- *
- * EVERY STATE IS A WORD, NEVER A COLOUR. Disabled and unverified are the two facts an operator is
- * scanning for, and they are the two that must survive a monochrome screen or a colour-blind reader.
- * The tone classes only reinforce a label that already says it.
+ * The three state badges are AdminUserBadges, shared with the detail page this card opens: the same
+ * three facts about the same account must not be able to read differently on the two surfaces.
  */
-
-const ROLE_LABELS = { user: 'User', admin: 'Admin' };
-const STATUS_LABELS = { active: 'Active', disabled: 'Disabled' };
-
-/*
- * Renders a value the API sends that we do not have a label for, rather than dropping it. A role or
- * status added server-side should degrade to readable text — a blank badge would tell the operator
- * the field is empty, which is a different and false statement.
- */
-function labelFor(labels, value) {
-  if (!value) return 'Unknown';
-  return labels[value] ?? String(value).replace(/_/g, ' ');
-}
-
-/** The tone class suffix, restricted to values we actually style. */
-function toneFor(labels, value) {
-  return value && value in labels ? value : 'unknown';
-}
 
 /** Absolute date, in the reader's locale. Null when the value is missing or unparseable. */
 function formatJoined(iso) {
@@ -82,19 +61,7 @@ function AdminUserCard({ user }) {
           <span className="admin-user-card__email">{user.email}</span>
         </span>
 
-        <span className="admin-user-card__badges">
-          <span className={`admin-badge admin-badge--role-${toneFor(ROLE_LABELS, user.role)}`}>
-            {labelFor(ROLE_LABELS, user.role)}
-          </span>
-          <span className={`admin-badge admin-badge--${toneFor(STATUS_LABELS, user.status)}`}>
-            {labelFor(STATUS_LABELS, user.status)}
-          </span>
-          <span
-            className={`admin-badge admin-badge--${user.emailVerified ? 'verified' : 'unverified'}`}
-          >
-            {user.emailVerified ? 'Email verified' : 'Email unverified'}
-          </span>
-        </span>
+        <AdminUserBadges user={user} />
 
         {joined && (
           <span className="admin-user-card__joined">

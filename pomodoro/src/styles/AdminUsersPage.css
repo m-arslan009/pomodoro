@@ -14,16 +14,12 @@
  * well as at them. The sidebar's own responsive behaviour is AppLayout's and is unchanged here.
  */
 
-.admin-users {
-  /* Repeats HistoryPage's two smaller steps; --fs-body and the spacing scale are inherited. */
-  --fs-label: clamp(0.72rem, 0.66rem + 0.3vw, 0.82rem);
-  --fs-eyebrow: clamp(0.66rem, 0.6rem + 0.25vw, 0.74rem);
-
-  /* The one tone the shell has no token for. Same value SettingPage and HistoryPage both use. */
-  --au-bad: #e0736b;
-  --au-bad-bg: rgba(224, 115, 107, 0.16);
-  --au-bad-border: rgba(224, 115, 107, 0.45);
-}
+/*
+ * Every token this file reads — the type and spacing scales, and the --au-bad error tone — is
+ * declared once on .admin-shell in AdminLayout.css and inherited here. They moved there when a
+ * second admin page needed the same values: one declaration is what keeps a label on this page and
+ * a label on the next one the same size, and an error on both the same red.
+ */
 
 .admin-users__head {
   margin-bottom: var(--sp-2);
@@ -220,59 +216,11 @@
   font-size: 0.9em;
 }
 
-/* -------------------------------------------------------------- Badges */
-.admin-user-card__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.admin-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--glass-border);
-  font-size: var(--fs-eyebrow);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
 /*
- * Only the states an operator scans for are given a tone; the ordinary ones stay quiet, so a screen
- * full of normal accounts is not a screen full of colour. Every badge says what it is in words —
- * the colour is reinforcement and never the message.
+ * The badges themselves are in AdminLayout.css, not here: the detail page shows the same three and
+ * only imports the shell's stylesheet, so a rule kept in this file would style them on one admin
+ * page and not the other.
  */
-.admin-badge--role-user,
-.admin-badge--role-unknown,
-.admin-badge--active,
-.admin-badge--verified,
-.admin-badge--unknown {
-  color: var(--fg-muted);
-  background: var(--glass-bg);
-}
-
-.admin-badge--role-admin {
-  color: var(--fg-accent);
-  background: var(--glass-hover);
-  border-color: var(--fg-accent);
-  font-weight: 600;
-}
-
-.admin-badge--disabled {
-  color: var(--au-bad);
-  background: var(--au-bad-bg);
-  border-color: var(--au-bad-border);
-  font-weight: 600;
-}
-
-.admin-badge--unverified {
-  color: var(--fg-wood);
-  border-color: var(--fg-wood);
-  border-style: dashed;
-  background: transparent;
-}
 
 .admin-user-card__joined {
   margin-top: auto; /* pinned to the bottom, so it lines up across cards of unequal height */
