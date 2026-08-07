@@ -6,10 +6,11 @@
  * frame is .modal-dialog from ModalDialog.css; what is here is the arrangement of the rows and the
  * fields, which is all this component adds.
  *
- * THE PERMANENT GROUP IS DRAWN DIFFERENTLY, AND ONLY IT. Reversible actions sit on the panel's own
- * surface; deletion sits inside an outlined region in the error tone with its own heading. The
- * separation is the point — the visual distinction and the typed-address confirmation both exist so
- * that the one action nobody can undo cannot be reached by the muscle memory of the four that can.
+ * THE TWO GROUPS ARE THE SAME CARD IN DIFFERENT TONES. Both take the fact groups' shape — the same
+ * padding, radius, border and surface — and the permanent one takes the error tone throughout: its
+ * border, its background and its heading. The separation is the point, and the tone plus the typed
+ * address is what carries it, so that the one action nobody can undo cannot be reached by the muscle
+ * memory of the four that can.
  *
  * No media query: each row is a flex line that wraps its control onto its own line when the copy
  * beside it no longer fits, so a control never overflows and never has to be hunted for at the
@@ -75,18 +76,44 @@
 }
 
 /* --------------------------------------------------------------- Groups */
+/*
+ * BOTH GROUPS ARE CARDS, ON THE SAME TERMS AS THE FACT GROUPS ABOVE — same padding, same 14px
+ * radius, same one-pixel border, same `--glass-bg` surface. Only the permanent group was carded
+ * before, which left the reversible actions lying flat on the panel directly beneath six raised
+ * cards, reading as leftover page rather than as a section of it.
+ *
+ * GIVING THEM THE SAME SHAPE DOES NOT COST THE DISTINCTION, because the distinction was never the
+ * shape: the permanent group keeps the error tone, its own heading, its own colour, and the typed
+ * address behind the one control it holds. Two cards where one is red is a clearer statement than a
+ * card beside a bare region, since it says the two are the same kind of thing and one of them is
+ * dangerous — which is exactly what is true.
+ *
+ * The gap between them stays `--sp-3` rather than dropping to the `--sp-2` the fact cards use. They
+ * are two answers to different questions, not two items in one grid, and the wider gap is where the
+ * lead copy's "everything above the divider / everything below it" actually points.
+ */
 .admin-actions__group {
   margin-top: var(--sp-3);
+  padding: var(--sp-2);
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
 }
 
 .admin-actions__group--danger {
-  padding: var(--sp-2);
-  border-radius: 14px;
-  border: 1px solid var(--au-bad-border);
+  border-color: var(--au-bad-border);
   background: var(--au-bad-bg);
 }
 
+/*
+ * The accent rule the fact cards' titles carry, so a group heading here and a group heading there
+ * are the same object. It takes the group's own tone: muted-with-accent for the reversible set, the
+ * error tone for the permanent one.
+ */
 .admin-actions__group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0 0 var(--sp-1);
   color: var(--fg-muted);
   font-size: var(--fs-eyebrow);
@@ -95,8 +122,22 @@
   text-transform: uppercase;
 }
 
+.admin-actions__group-title::before {
+  content: '';
+  flex: none;
+  align-self: stretch;
+  width: 3px;
+  min-height: 0.95em;
+  border-radius: 2px;
+  background: var(--fg-accent);
+}
+
 .admin-actions__group--danger .admin-actions__group-title {
   color: var(--au-bad);
+}
+
+.admin-actions__group--danger .admin-actions__group-title::before {
+  background: var(--au-bad);
 }
 
 /* ----------------------------------------------------------------- Rows */
@@ -114,9 +155,18 @@
   border-top: 1px solid var(--glass-border);
 }
 
+/*
+ * The outermost rows shed the padding on the side the group's own now supplies, so the space above
+ * the first row and below the last is the card's padding and not the card's plus the row's. The
+ * permanent group holds a single row, which is both, and correctly loses both.
+ */
 .admin-actions__row:first-of-type {
   border-top: none;
   padding-top: 0;
+}
+
+.admin-actions__row:last-of-type {
+  padding-bottom: 0;
 }
 
 .admin-actions__copy {

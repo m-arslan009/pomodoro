@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import AdminActions from '../components/admin/AdminActions.jsx';
-import AdminUserBadges from '../components/admin/AdminUserBadges.jsx';
+import AdminUserBadges, {
+  RoleBadge,
+  StatusBadge,
+  VerifiedBadge,
+} from '../components/admin/AdminUserBadges.jsx';
 import { describeAdminFailure } from '../components/admin/actionFailure.js';
 import useAdminUser from '../hooks/useAdminUser.js';
 import useAuth from '../hooks/useAuth.js';
@@ -84,14 +88,22 @@ function humanize(value) {
 }
 
 /**
- * One labelled fact. `value` of null renders the absence in words — a bare dash is unreadable when
- * a screen reader announces the pair, and "Not recorded" is what the missing value actually means.
+ * One labelled fact, drawn as a cell in its group's grid. `value` of null renders the absence in
+ * words — a bare dash is unreadable when a screen reader announces the pair, and "Not recorded" is
+ * what the missing value actually means.
+ *
+ * `wide` takes the cell across every column of its group. It is for the values that have no width
+ * they can be held to — an address, an id, a list of linked providers — and it is what lets the rest
+ * of the fields sit in narrow columns without any of them being squeezed by the longest one.
+ *
+ * `metric` is for a bare count. Those are the values an operator reads at a glance rather than
+ * reads, so they are set larger; it changes nothing about the markup or what is announced.
  */
-function Fact({ label, value, children }) {
+function Fact({ label, value, children, wide = false, metric = false }) {
   return (
-    <div className="admin-facts__item">
+    <div className={`admin-facts__item${wide ? ' admin-facts__item--wide' : ''}`}>
       <dt className="admin-facts__label">{label}</dt>
-      <dd className="admin-facts__value">
+      <dd className={`admin-facts__value${metric ? ' admin-facts__value--metric' : ''}`}>
         {children ??
           (value === null || value === undefined || value === '' ? (
             <span className="admin-facts__absent">Not recorded</span>
@@ -103,12 +115,14 @@ function Fact({ label, value, children }) {
   );
 }
 
-/** A titled group of facts. */
+/** A titled group of facts. The title and its note are one block, ruled off from the fields. */
 function FactGroup({ title, children, note }) {
   return (
     <section className="admin-facts">
-      <h3 className="admin-facts__title">{title}</h3>
-      {note && <p className="admin-facts__note">{note}</p>}
+      <div className="admin-facts__head">
+        <h3 className="admin-facts__title">{title}</h3>
+        {note && <p className="admin-facts__note">{note}</p>}
+      </div>
       <dl className="admin-facts__list">{children}</dl>
     </section>
   );
@@ -270,16 +284,24 @@ function AdminUserDetailPage() {
     <section className="admin-panel admin-user-detail" aria-labelledby="admin-user-detail-title">
       {back}
 
+      {/*
+        Name on the left, state on the right, wrapping to two rows only when there is not room for
+        both. The badges duplicate three of the Account card's fields on purpose: the header is the
+        answer to "what is going on with this account" before any reading, and the card below is the
+        record. Both render the same component, so they cannot come to disagree.
+      */}
       <header className="admin-user-detail__head">
-        <h2 id="admin-user-detail-title" className="admin-panel__title">
-          {heading}
-        </h2>
-        <p className="admin-user-detail__identity">
-          {fullName && user.username && (
-            <span className="admin-user-detail__handle">@{user.username}</span>
-          )}
-          <span className="admin-user-detail__email">{user.email}</span>
-        </p>
+        <div className="admin-user-detail__head-identity">
+          <h2 id="admin-user-detail-title" className="admin-panel__title">
+            {heading}
+          </h2>
+          <p className="admin-user-detail__identity">
+            {fullName && user.username && (
+              <span className="admin-user-detail__handle">@{user.username}</span>
+            )}
+            <span className="admin-user-detail__email">{user.email}</span>
+          </p>
+        </div>
         <AdminUserBadges user={user} />
       </header>
 
@@ -287,19 +309,26 @@ function AdminUserDetailPage() {
         <FactGroup title="Account">
           <Fact label="Username" value={user.username} />
           <Fact label="Full name" value={fullName || null} />
-          <Fact label="Email address">
-            <span className="admin-facts__mono">{user.email}</span>
+          <Fact label="Role">
+            <RoleBadge role={user.role} />
           </Fact>
-          <Fact label="Email verification" value={user.emailVerified ? 'Verified' : 'Unverified'} />
-          <Fact label="Role" value={user.role === 'admin' ? 'Administrator' : 'User'} />
-          <Fact label="Status" value={user.status === 'disabled' ? 'Disabled' : 'Active'} />
+          <Fact label="Status">
+            <StatusBadge status={user.status} />
+          </Fact>
+          <Fact label="Email verification">
+            <VerifiedBadge verified={user.emailVerified} />
+          </Fact>
           <Fact label="Time zone" value={user.timezone} />
           <Fact label="Joined" value={formatDateTime(user.createdAt)} />
           {user.disabledAt && (
             <Fact label="Disabled since" value={formatDateTime(user.disabledAt)} />
           )}
           <Fact label="Avatar updated" value={formatDateTime(user.avatarUpdatedAt)} />
-          <Fact label="Account ID">
+          {/* Both are unbreakable strings of unbounded length, so both take the full row. */}
+          <Fact label="Email address" wide>
+            <span className="admin-facts__mono">{user.email}</span>
+          </Fact>
+          <Fact label="Account ID" wide>
             <span className="admin-facts__mono">{user.id}</span>
           </Fact>
         </FactGroup>
@@ -315,7 +344,7 @@ function AdminUserDetailPage() {
         >
           <Fact label="Password" value={user.hasPassword ? 'Set' : 'Not set'} />
           <Fact label="Password changed" value={formatDateTime(user.passwordChangedAt)} />
-          <Fact label="Linked sign-ins">
+          <Fact label="Linked sign-ins" wide>
             {identities.length === 0 ? (
               <span className="admin-facts__absent">None linked</span>
             ) : (
@@ -337,30 +366,43 @@ function AdminUserDetailPage() {
         </FactGroup>
 
         <FactGroup title="Sessions">
-          <Fact label="Active sessions" value={formatCount(user.sessions?.activeCount)} />
+          <Fact label="Active sessions" value={formatCount(user.sessions?.activeCount)} metric />
           <Fact label="Last seen" value={formatDateTime(user.sessions?.lastSeenAt)} />
         </FactGroup>
 
         <FactGroup title="Progress">
-          <Fact label="Lifetime points" value={formatCount(user.gamification?.lifetimePoints)} />
-          <Fact label="Balance" value={formatCount(user.gamification?.balance)} />
+          <Fact
+            label="Lifetime points"
+            value={formatCount(user.gamification?.lifetimePoints)}
+            metric
+          />
+          <Fact label="Balance" value={formatCount(user.gamification?.balance)} metric />
           <Fact
             label="Current day streak"
             value={formatCount(user.gamification?.currentDayStreak)}
+            metric
           />
           <Fact
             label="Longest day streak"
             value={formatCount(user.gamification?.longestDayStreak)}
+            metric
           />
           <Fact
             label="Streak freezes available"
             value={formatCount(user.gamification?.streakFreezesAvailable)}
+            metric
           />
-          <Fact label="Titles unlocked">
+          <Fact label="Titles unlocked" wide>
             {titles.length === 0 ? (
               <span className="admin-facts__absent">None yet</span>
             ) : (
-              titles.map((key) => TITLE_NAMES[key] ?? humanize(key)).join(', ')
+              <ul className="admin-facts__chips">
+                {titles.map((key) => (
+                  <li key={key} className="admin-facts__chip">
+                    {TITLE_NAMES[key] ?? humanize(key)}
+                  </li>
+                ))}
+              </ul>
             )}
           </Fact>
         </FactGroup>
@@ -369,8 +411,8 @@ function AdminUserDetailPage() {
           title="Activity"
           note="Totals only. No task or focus-session content is available to administrators."
         >
-          <Fact label="Tasks" value={formatCount(user.counts?.tasks)} />
-          <Fact label="Focus sessions" value={formatCount(user.counts?.focusSessions)} />
+          <Fact label="Tasks" value={formatCount(user.counts?.tasks)} metric />
+          <Fact label="Focus sessions" value={formatCount(user.counts?.focusSessions)} metric />
         </FactGroup>
 
         <FactGroup title="Email reports">

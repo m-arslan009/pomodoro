@@ -7,11 +7,18 @@
  * .admin-shell's and are inherited; the badges and the buttons are the panel's shared vocabulary and
  * live in AdminLayout.css.
  *
- * There is no media query in this file. The fact groups are an auto-fitting grid and each group is
- * a single column of label/value pairs at every width, so the layout is driven by the space the
- * panel actually has rather than by a viewport size — which is what keeps it correct at the widths
- * *between* the breakpoints as well as at them. Long addresses, ids and time zone names wrap
- * instead of widening anything: no value in here is allowed to set the page's width.
+ * There is no media query in this file, and the two levels of column layout are the reason it needs
+ * none. The groups flow down independent columns (`columns: 20rem`) and the fields *inside* each
+ * group are an auto-fitting grid, so both counts are decided by the space actually available rather
+ * than by a viewport size: a group that has room for two columns of fields takes two, and the same
+ * group in a narrow panel — or on a phone, where both levels collapse to one column — takes one
+ * without a breakpoint being consulted. That is what keeps the page correct at the widths *between*
+ * 576px and 768px as well as at them.
+ *
+ * Long addresses, ids and time zone names wrap instead of widening anything: no value in here is
+ * allowed to set the page's width. The ones with no natural width at all — the address, the account
+ * id, the linked-provider list, the title list — take a full row of their own (`--wide`) rather than
+ * being squeezed into half of one.
  */
 
 /* ------------------------------------------------------------------ Back link */
@@ -41,9 +48,24 @@
 }
 
 /* --------------------------------------------------------------------- Head */
+/*
+ * Name and address on one side, state badges on the other, on a single row while both fit. It wraps
+ * to two rows on its own when the flex basis below can no longer be met, which on a phone is
+ * immediately — no width is written down and no breakpoint is consulted.
+ */
 .admin-user-detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-1) var(--sp-2);
   padding-bottom: var(--sp-3);
   border-bottom: 1px solid var(--glass-border);
+}
+
+.admin-user-detail__head-identity {
+  flex: 1 1 18rem;
+  min-width: 0; /* a flex child may not be narrower than its content without this */
 }
 
 .admin-user-detail__identity {
@@ -123,94 +145,228 @@
 
 /* ---------------------------------------------------------- Fact groups */
 /*
- * auto-fit with a min() floor: as many columns as fit, and never a column wider than the container
- * — the min() is what stops a 20rem track from overflowing a narrower panel on a phone.
+ * COLUMNS THAT FLOW INDEPENDENTLY, NOT A GRID OF ROWS — and the difference is the whole point.
+ *
+ * A grid lays these out in rows, and a row is as tall as its tallest cell. Account carries eleven
+ * fields and Authentication three, so an Account/Authentication row is Account's height and the
+ * short card is followed by a band of nothing until the next row starts. Neither alignment value
+ * fixes that, because both accept the row: `start` leaves the band empty below the card, `stretch`
+ * fills it by inflating a three-field card to eleven fields' height. The gap is the row, so the row
+ * is what had to go.
+ *
+ * Multi-column has no rows. Each column is filled to its own height and the next group starts
+ * immediately after the previous one in that column, which is exactly the behaviour asked for, and
+ * it needs no second element to hold a second column — so the markup, the card order in the DOM and
+ * the reading order are all untouched. `break-inside: avoid` is what keeps a card whole: without it
+ * a group would be split down the middle and continued in the next column.
+ *
+ * `columns: 20rem` is a column *width*, and it computes the count the same way the `auto-fit` grid
+ * it replaces did: as many 20rem columns as fit, and a single full-width column when 20rem does not
+ * — which is the phone case, reached without a media query and with the same 20rem the grid used, so
+ * the cards keep the widths they had.
+ */
+/*
+ * The negative bottom margin cancels the one the last card of every column carries (see below). A
+ * multi-column container establishes a block formatting context, so that trailing margin is trapped
+ * inside it and the container ends a gap taller than its content; -1 gap here restores the intended
+ * distance to the actions section beneath.
  */
 .admin-user-detail__facts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-  gap: var(--sp-2);
+  columns: 20rem;
+  column-gap: var(--sp-2);
   margin-top: var(--sp-3);
+  margin-bottom: calc(-1 * var(--sp-2));
 }
 
+/*
+ * The row gap, as a margin: multi-column has no `row-gap` to set, because it has no rows. It is the
+ * same token the column gap uses, so the spacing between two stacked cards and two side-by-side ones
+ * is identical.
+ *
+ * It is not stripped from `:last-child`, which in a multi-column layout is only the last card of the
+ * *last* column — every other column's final card would keep its margin and the columns would end at
+ * different heights. The container cancels it once instead.
+ */
 .admin-facts {
   min-width: 0;
+  margin-bottom: var(--sp-2);
   padding: var(--sp-2);
   border-radius: 14px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
+  break-inside: avoid;
 }
 
+/* The title block, ruled off from the fields so the group reads as heading-then-content. */
+.admin-facts__head {
+  margin-bottom: var(--sp-2);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/*
+ * The accent rule before the title is the one piece of decoration on this page, and it earns its
+ * place: with six groups stacked in a grid, the thing a reader needs first is where each one starts.
+ * It is drawn with ::before rather than a border so it sizes to the text rather than to the box.
+ */
 .admin-facts__title {
-  margin: 0 0 var(--sp-1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   color: var(--fg-brand);
   font-size: var(--fs-body);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.admin-facts__title::before {
+  content: '';
+  flex: none;
+  align-self: stretch;
+  width: 3px;
+  min-height: 0.95em;
+  border-radius: 2px;
+  background: var(--fg-accent);
 }
 
 .admin-facts__note {
-  margin: 0 0 var(--sp-1);
+  margin: 6px 0 0;
   color: var(--fg-muted);
   font-size: var(--fs-eyebrow);
   line-height: 1.45;
 }
 
+/*
+ * The fields, as their own auto-fitting grid. Two columns wherever a group is wide enough for two
+ * 10rem tracks, one below that — a phone and a narrow panel get the same single column, and the
+ * change happens at the width where a second column would actually have fitted rather than at a
+ * viewport size somebody picked.
+ *
+ * THE 10rem FLOOR IS LOAD-BEARING AT BOTH ENDS and was arrived at from the three widths this page
+ * is actually laid out at. On a desktop the groups sit three across, leaving each about 21rem
+ * inside, which takes two tracks. Around a tablet the groups drop to one across and each is roughly
+ * twice that — wide enough for three tracks, and a smaller floor would let a fourth in, at which
+ * point a column is too narrow for "Aug 7, 2026, 02:30 PM" and every date on the page wraps. A
+ * larger floor costs the desktop its second column instead. Ten is the value that holds both.
+ */
 .admin-facts__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: 6px;
   margin: 0;
 }
 
 /*
- * Label above value, always. A two-column label/value row reads well until the value is a 320
- * character address or a title list, at which point one column is squeezed to nothing; stacking is
- * the arrangement that survives every value the API can send.
+ * Label above value inside each cell. A label *beside* its value reads well until the value is a
+ * 320-character address, at which point one of the two columns is squeezed to nothing; stacking
+ * within the cell survives every value the API can send, and the grid supplies the second column
+ * instead.
+ *
+ * The cell has a surface rather than a separator line. Six groups of hairline-ruled rows is a lot of
+ * lines, and a filled cell also gives each pair an unambiguous extent when the grid is two columns
+ * wide — which a rule between rows cannot do.
  */
 .admin-facts__item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--glass-hover);
+}
+
+/* Values with no width they can be held to take the whole row. `1 / -1` rather than `span 2`: in a
+   group that is currently one column wide, `span 2` would invent a second one and overflow. */
+.admin-facts__item--wide {
+  grid-column: 1 / -1;
 }
 
 .admin-facts__label {
   color: var(--fg-muted);
   font-size: var(--fs-eyebrow);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .admin-facts__value {
   margin: 0;
   min-width: 0;
-  color: var(--fg-text);
-  font-size: var(--fs-label);
-  line-height: 1.45;
+  color: var(--fg-brand);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
+/*
+ * A badge in a field cell may wrap, unlike one in the header. The three states have short labels, but
+ * `AdminUserBadges` deliberately falls back to printing a role or status the API sends that it has no
+ * label for — and the shared badge's `nowrap` would carry an unbounded string of one straight out of
+ * a half-width cell. Overridden here rather than there: a header badge has the whole row to sit on
+ * and should still not break mid-word.
+ */
+.admin-facts__value > .admin-badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * A bare count, set large: these are read at a glance rather than read, and the size is what makes
+ * a group of them scannable as a row of figures. It applies only to numbers — a date or a name at
+ * this size would be a heading, not a value.
+ */
+.admin-facts__value--metric {
+  font-size: var(--fs-section-title);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The absence of a count is words, not a figure, so it drops back to the ordinary value size. */
+.admin-facts__value--metric .admin-facts__absent {
+  font-size: var(--fs-label);
+}
+
+/* A technical value: an address or an id. Boxed so it reads as literal text, and allowed to wrap
+   inside its box, because these are the only values on the page with no spaces to break at. */
 .admin-facts__mono {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 7px;
+  border-radius: 7px;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--fg-accent);
   font-family: var(--mono);
-  font-size: 0.92em;
-  color: var(--fg-brand);
+  font-size: 0.9em;
+  font-weight: 400;
+  overflow-wrap: anywhere;
 }
 
 /*
  * A missing value is written out — "Not recorded" — rather than drawn as a dash: the pair is
- * announced as a unit by a screen reader, and a dash announces as nothing at all. Dimmed so it
- * still reads as an absence at a glance.
+ * announced as a unit by a screen reader, and a dash announces as nothing at all. Dimmed and
+ * lightened so it still reads as an absence beside the values that are present.
  */
 .admin-facts__absent {
   color: var(--fg-muted);
+  font-weight: 400;
   font-style: italic;
-  opacity: 0.85;
+  opacity: 0.8;
 }
 
+/*
+ * The linked providers. A wrapping row of small boxes rather than a stacked list: an account has
+ * one or two of these, and two side by side is shorter than two in a column without either being
+ * harder to read. The 12rem basis is what puts them on separate rows when the group is narrow.
+ */
 .admin-facts__identities {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -219,9 +375,14 @@
 
 .admin-facts__identity {
   display: flex;
+  flex: 1 1 12rem;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  padding: 6px 9px;
+  border-radius: 9px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
 }
 
 .admin-facts__identity-name {
@@ -233,6 +394,32 @@
   color: var(--fg-muted);
   font-size: var(--fs-eyebrow);
   line-height: 1.4;
+}
+
+/*
+ * Unlocked titles. Chips rather than a comma-joined sentence: the list is a set of discrete things,
+ * and a wrapping row of them is both shorter and easier to count than a line of prose. Deliberately
+ * toneless — these carry no state an operator has to act on, so they borrow the badge's shape and
+ * none of its colour.
+ */
+.admin-facts__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-facts__chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  color: var(--fg-text);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* ------------------------------------------------------- Loading placeholder */

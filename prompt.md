@@ -793,3 +793,92 @@ as disabled controls with the reason written beside them, and surfaces the 409 f
 becomes visual and procedural rather than a matter of wording — deletion has its own region, its own
 tone, and a typed address that the server verifies as well, because a confirmation only a client
 enforces protects nobody.]
+
+## Compact the Admin User Detail information cards
+
+Improve the visual presentation of the Admin User Detail page information cards. The current cards
+display every field vertically as a label followed by a value, which creates too much empty space
+and makes the page look long, plain, and difficult to scan. Keep the existing data and functionality
+unchanged, but redesign how information is presented so it looks polished, compact, modern, and
+consistent with the existing application theme. For desktop/tablet, display information using a
+clean 2-column or responsive grid of label/value items inside each card. Use stronger visual
+hierarchy: section titles should be prominent, field labels should be smaller and muted, and values
+should be easier to scan. Use subtle separators, spacing, and grouping rather than large blank gaps.
+Represent important state fields visually where appropriate — show Active, Disabled, Verified, User,
+and Admin as small badges/chips instead of plain text — using the application's existing colors and
+styling conventions; do not introduce a new design system or excessive colors. Empty values such as
+"Not recorded" should remain visually secondary. For fields such as email and Account ID, make sure
+long values wrap correctly and never overflow the card; consider a compact monospace style,
+optionally with an existing copy-to-clipboard pattern if the project already has one, but do not add
+unnecessary functionality. Apply the same improved information-display pattern consistently to all
+tiles on the page, including Account, Authentication, Sessions, Gamification, Activity/Counts, and
+Reports, with consistent padding, title spacing, field alignment, border/radius treatment, and
+vertical rhythm. On mobile, gracefully collapse the information grid to a single column while
+keeping the layout compact and readable, following the application's existing responsive breakpoints
+and accessibility conventions, without introducing page-level horizontal scrolling. Do not change
+API calls, backend behavior, user actions, data fields, routing, or business logic — this is
+strictly a UI/UX improvement of how existing user-detail information is displayed.
+
+[Presentation only, and the constraint that shaped the work is that it had to stay presentation
+only: the same fields, the same six groups, the same reads. Three things follow. The label/value
+pair stays stacked but becomes a cell in a grid, so two columns come from the space a group actually
+has rather than from a breakpoint — which is what makes the same rule serve a phone, a tablet and a
+desktop. The values with no width they can be held to (address, id, provider list, title list) take
+a full row instead of being squeezed into half of one. And Role, Status and Email verification stop
+being text and start rendering the badge components the header and the directory already use, so
+the page cannot come to disagree with itself about what "disabled" is called.]
+
+## Flow the User Detail cards down independent columns
+
+Improve the Admin User Detail page card layout so the large vertical gaps between cards are removed.
+In the current two-column layout, a taller card such as Account determines the row height, causing
+the shorter Authentication card to leave a large empty area before the next card (Progress).
+Refactor only the page layout/CSS, without changing card contents, APIs, or functionality. Inspect
+the existing grid implementation and use the simplest reliable CSS approach: prefer either
+stretching cards within the same grid row to equal height if that looks visually balanced, or
+arrange the desktop layout as two independently flowing columns so the next card in each column
+starts immediately after the previous one instead of waiting for the tallest card in the opposite
+column. Keep consistent spacing between all cards, preserve the existing card widths and visual
+design, and ensure cards never overlap. On smaller screens, collapse naturally to a single-column
+layout using the existing breakpoints.
+
+[Settles which of the two offered fixes the page uses, and rules out the other. Both alignment
+values accept the grid row, and the row is the defect: `start` leaves the band below a short card
+empty, `stretch` fills it by inflating a three-field card to eleven fields' height. So the row had
+to go rather than be aligned differently. Multi-column has no rows, needs no second element to hold
+a second column, and therefore leaves the markup, the card order in the DOM and the reading order
+untouched — the change is one property plus `break-inside: avoid`.]
+
+## Admin Audit page — the §6.8 feed, filters and cursor pagination
+
+Implement only the frontend of the Admin Audit page at /admin/audit using the existing admin panel
+layout, navigation, and the already-defined backend endpoint. Do not change backend code in this
+task. Use GET /api/v1/admin/audit-events to load audit events. Support the defined query parameters:
+targetUserId, actorUserId, action, from, to, cursor, and limit. Use the existing services/admin.js
+and api.js transport pattern, and keep the audit data in local page state rather than creating a
+Redux slice. Display audit events in a clean, readable layout consistent with the rest of the admin
+panel. Show the event action, actor, target user, timestamp, relevant metadata, request ID, IP
+address, and user agent when available. Make important actions such as user.disabled,
+user.reactivated, user.role_changed, user.sessions_revoked, admin.bootstrap_granted, and security
+events easy to distinguish visually, but avoid excessive colors or a new design system. Add useful
+filters for action, actor/target user, and date range based on the endpoint's supported query
+parameters. Use cursor-based pagination with nextCursor and a Load More action. Reset the current
+list and cursor whenever filters change. Handle all relevant frontend states: initial loading,
+loading more, loaded, empty results, API error, and offline/error recovery. Do not use mock data.
+Audit events are read-only, so do not add edit/delete actions. Follow the existing responsive
+behavior, breakpoints, accessibility, active-navigation styling, and mobile patterns already used by
+the admin panel. Ensure there is no page-level horizontal scrolling and that long values such as
+emails, request IDs, IPs, and user agents wrap or truncate safely. Keep the scope strictly to the
+Audit page frontend and integration with the already-defined GET /api/v1/admin/audit-events
+endpoint. Do not implement or modify stats, settings, user-detail actions, backend controllers,
+DTOs, guards, repositories, or database schema in this task.
+
+[Turns the third admin route from a placeholder into a working surface, and fixes the read side's
+vocabulary while doing it. The endpoint is defined in `admin_role_plan.md` §6.8 but not yet built,
+so the page is written against that spec alone — no fixture, no fallback — exactly as the Users page
+was. Two constraints in the prompt settle design questions the code then follows: read-only is a
+property of an append-only table rather than a UI choice, so there is no control to leave out; and
+"no new design system" means the action tones reuse --fg-accent and --au-bad only, with every badge
+still saying its action in words. The filter set is the endpoint's, which makes both user filters
+uuids — hence the per-event Filter button, without which those two parameters are unusable by anyone
+who does not already have an id on their clipboard.]
