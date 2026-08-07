@@ -673,3 +673,53 @@ pages must POST, not act on load**: corporate mail scanners follow links in inco
 that consumed its single-use token on mount would be consumed by the scanner before the human
 clicked. R2 (backend) lands before R3, which is a recorded deviation from §10.1 rule 2 — the failure
 paths here (expired token, re-used token, decline vs silence) are not falsifiable against a mock.]
+
+## Admin panel — frontend structure only, incremental build
+
+`Title`: Establish the admin panel route/layout skeleton with a RequireAdmin guard, no admin functionality
+
+`User prompt`: We are going to implement the admin panel incrementally. For this task, do not implement any admin functionality, API integration, forms, tables, actions, or backend changes. The goal is only to establish the frontend structure/skeleton so that individual admin pages can be implemented one by one later. Set up these admin routes: /admin → AdminUsersPage, /admin/users/:id → AdminUserDetailPage, /admin/audit → AdminAuditPage. All admin routes must be protected by a RequireAdmin component composed with the application's existing authentication guard. Do not create a separate stats/dashboard page at this stage. Create a reusable admin layout/shell that will be shared by all admin pages. The layout should contain: admin panel header/title; navigation/sidebar appropriate for the existing application design; navigation links for Users and Audit; an area where the active admin page is rendered; responsive/mobile-friendly behavior; and a clear active navigation state. /admin/users/:id is a detail route and does not need its own navigation item. Keep the design consistent with the application's existing components, typography, spacing, colors, responsive rules, and overall visual language. Do not introduce a separate design system specifically for admin.
+
+## Admin role source deferred rather than reopening ADR-010
+
+`Title`: Ship the admin skeleton without deciding where "is an admin" comes from
+
+`User prompt`: [Decision on the surfaced conflict between the admin panel and CONTRACT.md §12 ("RBAC. There are no roles.") / ADR-010 (ownership as a query constraint, no RBAC).] Skeleton now, decide the role source later: RequireAdmin ships as pure structure, composing RequireAuth and then delegating to one clearly-marked `isAdmin(user)` predicate that no server currently populates. No decision file is edited yet; the reopening happens when the first real admin page needs data. Accepted cost: /admin denies every account in the running app, so the shell cannot be visually checked without a temporary local override.
+
+## Frontend role-based auth and admin navigation
+
+`Title`: Implement frontend-only role-based access and replace user navigation with admin navigation for admins
+
+`User prompt`: The admin panel skeleton and routes already exist. For this task, implement frontend-only role-based authentication and admin navigation. Do not implement any admin page functionality yet; all admin pages must continue showing `Coming Soon`. Assume the authenticated `UserProfile` contains `role: 'user' | 'admin'`. Preserve this field in the existing frontend auth state and use the current authenticated user as the single source of truth, e.g. `user?.role === 'admin'`. Do not create a separate admin auth state, token flow, or Redux slice. Protect `/admin`, `/admin/users/:id`, and `/admin/audit` so only authenticated admins can render them. Unauthenticated users should follow the existing auth redirect behavior, and normal users must not see admin content. For `role === 'admin'`, replace the normal user navigation with an Admin navigation. Keep the existing navigation unchanged for normal users. Admin navigation should include `Users` → `/admin`, `Audit` → `/admin/audit`, and `Logout`. `/admin/users/:id` should remain a detail route and should keep `Users` active in navigation. Reuse the existing logout flow; do not create admin-specific logout logic. Follow the same responsive behavior, breakpoints, accessibility, styling, and mobile navigation pattern already used by the normal user navigation. Do not introduce a separate design system or new breakpoints. For now, make frontend changes only. Do not modify backend code, APIs, DTOs, guards, database models, or migrations. We will update the backend role support separately after this frontend setup is complete.
+
+
+`Title`: Land an admin on /admin after login, not the Timer
+
+`User prompt`: Make sure when admin logs in, app navigates the admin to /admin page and not the
+timer page.
+
+[Sets the post-sign-in destination per role, which had been `/timer` for every account. Implemented
+as one rule in `services/admin.js` (`landingPathFor`) rather than a comparison at each call site, so
+the login form and `RequireGuest` — the cold-load path — cannot disagree about where a session
+starts. An explicitly requested destination still wins over it, so returning to an interrupted page
+is unchanged. Google sign-in is unaffected: its landing page is chosen by the server's
+`ALLOWED_RETURN_TO` allow-list, which does not include `/admin`.]
+
+## Admin Users page — listing and search only
+
+`Title`: Implement the Admin Users listing/search page against GET /api/v1/admin/users
+
+`User prompt`: Implement the Admin Users page at /admin using the existing admin panel skeleton and
+navigation. This task should implement only the user listing/search page; do not implement the user
+detail page, audit page, stats, or any admin actions yet. Use `GET /api/v1/admin/users` to load
+users. Support the existing query parameters: `q`, `role`, `status`, `cursor`, and `limit`. Add a
+debounced search input that searches by email/username, a role filter (user / admin), and a status
+filter (active / disabled). Display the returned user information including name, username, email,
+role, status, email verification status, and created date. Clicking/viewing a user should navigate
+to `/admin/users/:id`, but do not implement that page's functionality in this task. Use the API's
+cursor pagination and `nextCursor`; provide a Load More action instead of page-number/offset
+pagination. Reset the current results and cursor whenever search or filters change. Handle all
+relevant UI states properly: initial loading, loading more, loaded, empty search results, API
+error/offline state, and per-request loading where applicable. Do not use mocked data. Do not create
+a new Redux slice. Do not implement disable/reactivate, revoke sessions, role changes, confirmation
+dialogs, stats, or other user-management actions in this task.

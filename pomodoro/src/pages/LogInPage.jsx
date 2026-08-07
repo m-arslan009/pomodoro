@@ -4,6 +4,7 @@ import Notification from '../components/Notification.jsx';
 import OAuthButtons from '../components/OAuthButtons.jsx';
 import useAuth from '../hooks/useAuth.js';
 import { ApiError } from '../services/api.js';
+import { landingPathFor } from '../services/admin.js';
 import '../styles/LogInPage.css';
 
 const APP_NAME = 'Evergrove';
@@ -136,10 +137,17 @@ function LogInPage() {
     dismissNotification();
 
     try {
-      await signIn({ identifier: values.identifier, password: values.password });
+      const user = await signIn({ identifier: values.identifier, password: values.password });
       setStatus('success');
-      // The token is in the store; go where the user was headed.
-      navigate(intended ?? '/timer', { replace: true });
+      /*
+       * The token is in the store; go where the user was headed, and otherwise to whichever page
+       * this account starts on — the panel for an admin, the Timer for everyone else.
+       *
+       * `signIn`'s return value is read rather than the `user` from `useAuth()`: the store has been
+       * updated by now, but this closure still holds the render's value, which is null. The resolved
+       * account is the only thing here that is not one render behind.
+       */
+      navigate(intended ?? landingPathFor(user), { replace: true });
     } catch (error) {
       setStatus('idle');
       // No field highlighting — a single global toast reports the failure.

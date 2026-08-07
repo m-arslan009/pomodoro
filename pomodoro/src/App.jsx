@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import RequireAuth from './components/RequireAuth.jsx';
 import RequireGuest from './components/RequireGuest.jsx';
+import RequireAdmin from './components/RequireAdmin.jsx';
+import AdminLayout from './components/admin/AdminLayout.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LogInPage from './pages/LogInPage.jsx';
 import SignUpPage from './pages/SignUpPage.jsx';
@@ -10,6 +12,9 @@ import SettingPage from './pages/SettingPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
 import ReportConfirmPage from './pages/ReportConfirmPage.jsx';
 import ReportUnsubscribePage from './pages/ReportUnsubscribePage.jsx';
+import AdminUsersPage from './pages/AdminUsersPage.jsx';
+import AdminUserDetailPage from './pages/AdminUserDetailPage.jsx';
+import AdminAuditPage from './pages/AdminAuditPage.jsx';
 
 function App() {
   return (
@@ -82,6 +87,34 @@ function App() {
           </RequireAuth>
         }
       />
+
+      {/*
+        Admin panel — a LAYOUT ROUTE, unlike every other page above.
+
+        The two guards are composed and stated once: RequireAuth answers "is the session resolved,
+        and is anyone signed in", and only then does RequireAdmin ask "is it this account". Order
+        matters — RequireAdmin deliberately has no loading or anonymous branch of its own, so it
+        must never be reached before RequireAuth has settled both.
+
+        The shell and the guard pair wrap the nested routes rather than each page wrapping itself
+        (the pattern the other pages follow with AppLayout), so adding an admin page later is one
+        <Route> and no shell wiring. Users is the `index` route — /admin IS the users page, and
+        there is no /admin/users list path.
+      */}
+      <Route
+        path="/admin"
+        element={
+          <RequireAuth>
+            <RequireAdmin>
+              <AdminLayout />
+            </RequireAdmin>
+          </RequireAuth>
+        }
+      >
+        <Route index element={<AdminUsersPage />} />
+        <Route path="users/:id" element={<AdminUserDetailPage />} />
+        <Route path="audit" element={<AdminAuditPage />} />
+      </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -25,6 +25,11 @@ import { api } from './api.js';
  * @property {string} timezone IANA zone. Not a display preference — it is how the server buckets
  *   the account's days, so a wrong value mis-groups every session it will ever record.
  * @property {boolean} emailVerified Always false today: nothing verifies addresses yet.
+ * @property {'user'|'admin'} role Which navigation and which routes the account gets. **The server
+ *   is the sole authority.** The client only ever reads it — through `services/admin.js`, never by
+ *   comparing this string in a component — and reading it decides what to bother rendering, never
+ *   what is allowed: the API enforces the same fact on its own side, from the bearer token.
+ *   Absent from every payload until the backend ships role support, which reads as a normal user.
  * @property {string|null} avatarUpdatedAt ISO 8601, or null when the account has no photo. The
  *   bytes are never inlined here — this is what decides whether to fetch them.
  * @property {string} createdAt ISO 8601.

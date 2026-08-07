@@ -1,0 +1,194 @@
+/*
+ * AdminLayout — the admin panel's shell, scoped inside the forest .app-shell.
+ *
+ * IT DEFINES NO NEW DESIGN SYSTEM, AND NO NEW BREAKPOINT. Every colour here is one of the shell's
+ * own tokens (--fg-*, --glass-*, declared on .app-shell in AppLayout.css and inherited), and the
+ * fluid type/space scale repeats the clamp values HistoryPage already uses, so a panel heading and a
+ * History heading are literally the same size. Nothing below needs a media query: the admin surface
+ * is one fluid column that reflows on its own, and the panel's navigation is the app sidebar, whose
+ * responsive behaviour — docked at ≥577px, slide-in overlay below it — already lives in
+ * AppLayout.css and is unchanged by roles.
+ */
+
+.admin-shell {
+  /* Fluid type scale — same values as HistoryPage, so the two surfaces share one scale. */
+  --fs-body: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  --fs-section-title: clamp(1.05rem, 0.92rem + 0.6vw, 1.3rem);
+  --fs-page-title: clamp(1.5rem, 1rem + 2.4vw, 2.35rem);
+
+  /* Fluid spacing scale — likewise. */
+  --sp-1: clamp(6px, 0.4vw + 4px, 10px);
+  --sp-2: clamp(10px, 0.6vw + 6px, 16px);
+  --sp-3: clamp(14px, 1vw + 8px, 22px);
+  --panel-pad: clamp(18px, 1.4vw + 12px, 30px);
+
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------------------- Panel head */
+.admin-shell__head {
+  margin-bottom: var(--sp-3);
+}
+
+/*
+ * Overrides index.css's global 56px h1, exactly as .history-page__title does — the shell's pages
+ * share one page-title size regardless of which one you are on.
+ */
+.admin-shell__title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-page-title);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--fg-brand);
+}
+
+.admin-shell__subtitle {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------ Page surface */
+/*
+ * The frosted card every admin page renders into, so pages built later inherit the panel's
+ * container instead of each inventing one.
+ */
+.admin-panel {
+  padding: var(--panel-pad);
+  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-panel__title {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-section-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg-brand);
+}
+
+/*
+ * "Coming Soon" — the whole content of every admin page for now, so it reads as a status rather than
+ * as body copy. Accent colour plus weight, which is the shell's existing way of marking something as
+ * live information; it is a plain <p>, so nothing here claims to be a control.
+ */
+.admin-panel__coming {
+  margin: 0;
+  color: var(--fg-accent);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.admin-panel__coming + .admin-panel__note {
+  margin-top: var(--sp-1);
+}
+
+.admin-panel__note {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--fg-muted);
+  font-size: var(--fs-body);
+  line-height: 1.55;
+  overflow-wrap: anywhere; /* ids and long values wrap instead of widening the page */
+}
+
+.admin-panel__note + .admin-panel__note {
+  margin-top: var(--sp-1);
+}
+
+/* A record id shown in placeholder copy — the app's mono treatment, sized to the surrounding text. */
+.admin-panel__value {
+  font-family: var(--mono);
+  font-size: 0.95em;
+  color: var(--fg-text);
+}
+
+.admin-panel__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--sp-2);
+  color: var(--fg-accent);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.admin-panel__back:hover {
+  color: var(--fg-brand);
+}
+
+.admin-panel__back:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ------------------------------------------------------- Denied (RequireAdmin) */
+/*
+ * What a non-admin sees at /admin. Deliberately quiet: it is not an error, and nothing has gone
+ * wrong — the area simply is not theirs. Centred container, left-aligned text, per the styling rule.
+ */
+.admin-denied {
+  width: 100%;
+  max-width: 60ch;
+  margin: 0 auto;
+  padding: clamp(18px, 1.4vw + 12px, 30px);
+  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+}
+
+.admin-denied__title {
+  margin: 0 0 clamp(6px, 0.4vw + 4px, 10px);
+  font-size: clamp(1.5rem, 1rem + 2.4vw, 2.35rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--fg-brand);
+}
+
+.admin-denied__body {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  line-height: 1.55;
+}
+
+.admin-denied__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: clamp(10px, 0.6vw + 6px, 16px);
+  color: var(--fg-accent);
+  font-size: clamp(0.82rem, 0.76rem + 0.35vw, 0.94rem);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.admin-denied__link:hover {
+  color: var(--fg-brand);
+}
+
+.admin-denied__link:focus-visible {
+  outline: 2px solid var(--fg-wood);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/*
+ * No media query and no reduced-motion block: with the navigation living in the app sidebar, nothing
+ * on this surface changes structure by width or animates. Both belong to AppLayout.css, which
+ * already has them and needed no change for roles.
+ */

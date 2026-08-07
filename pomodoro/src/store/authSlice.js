@@ -179,9 +179,21 @@ const authSlice = createSlice({
     /**
      * A profile edit saved elsewhere (ProfilePage). Ignored when nobody is signed in: there is
      * no user to update, and inventing one would fake an authenticated state.
+     *
+     * `role` SURVIVES A PROFILE EDIT, AND THAT IS THE ONE FIELD MERGED RATHER THAN REPLACED. Every
+     * payload that reaches here comes from a *profile* endpoint — `PATCH /me`, the avatar routes, or
+     * ProfilePage's `/me` re-read — and those answer questions about the profile, not about
+     * authorization. So an omitted `role` means "unchanged", not "revoked": replacing wholesale
+     * would demote an admin the moment they saved their surname or changed their avatar, and the
+     * navigation would swap out from under them mid-session.
+     *
+     * A genuine role change still lands. It arrives at a SESSION BOUNDARY — login, signUp,
+     * bootstrap, or `sessionRefreshed` — none of which pass through this reducer, and every one of
+     * which takes the server's word for the whole user.
      */
     userUpdated(state, action) {
-      if (state.user) state.user = action.payload;
+      if (!state.user) return;
+      state.user = { ...action.payload, role: action.payload.role ?? state.user.role };
     },
   },
   extraReducers: (builder) => {
